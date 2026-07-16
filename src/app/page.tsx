@@ -19,9 +19,14 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { siteConfig } from "@/config/site.config";
-import { DEPARTMENTS } from "@/lib/departments";
-import { STATES } from "@/lib/states-registry";
-import { getStateFlagUrl } from "@/lib/state-flags";
+
+const departments = [
+  { slug: "loans", name: "Loan Calculators", description: "Estimate monthly payments, total interest, and amortization schedules for any loan type.", icon: "Landmark", live: false, href: "/loans" },
+  { slug: "debt", name: "Debt Calculators", description: "Build payoff strategies, compare snowball vs. avalanche, and see your debt-free date.", icon: "CreditCard", live: false, href: "/debt" },
+  { slug: "auto", name: "Auto Calculators", description: "Factor in car payments, insurance, depreciation, and total cost of ownership.", icon: "Car", live: false, href: "/auto" },
+  { slug: "home-buying", name: "Home Buying", description: "Crunch mortgage numbers, property taxes, PMI, and closing costs.", icon: "Home", live: false, href: "/home-buying" },
+  { slug: "insurance", name: "Insurance", description: "Estimate coverage needs and premiums for health, life, auto, and homeowners insurance.", icon: "Shield", live: false, href: "/insurance" },
+];
 
 const deptIcons: Record<string, React.ReactNode> = {
   DollarSign: <DollarSign className="h-7 w-7" />,
@@ -58,7 +63,7 @@ export const metadata = {
 export default function HomePage() {
   return (
     <>
-      {/* ─── Hero ─── */}
+      {/* Hero */}
       <section className="relative overflow-hidden border-b border-border/50 bg-gradient-to-b from-slate-50 to-background">
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.03]"
@@ -76,9 +81,8 @@ export default function HomePage() {
               <span className="block text-ember">Financial Calculators</span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-              Free, accurate, and instant. Calculate your take-home pay, plan
-              loans, and understand your finances with tools built on
-              up-to-date&nbsp;2026 tax data.
+              Free, accurate, and instant. Plan your finances with tools built
+              for loans, debt, auto, home, and insurance.
             </p>
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <Button
@@ -86,123 +90,58 @@ export default function HomePage() {
                 size="lg"
                 className="bg-ember hover:bg-ember-hover text-white font-semibold px-8 py-6 text-base"
               >
-                <Link href="/paycheck">Paycheck Calculators</Link>
+                <Link href="/loans">Explore Calculators</Link>
               </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ─── Departments Grid ─── */}
+      {/* Departments Grid */}
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <div className="text-center">
           <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             Departments
           </h2>
+          <p className="mt-3 text-muted-foreground">
+            Financial calculators across every category. More tools coming soon.
+          </p>
         </div>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {DEPARTMENTS.map((dept) => {
+          {departments.map((dept) => {
             const Icon = deptIcons[dept.icon] ?? <DollarSign className="h-7 w-7" />;
             return (
               <Card
                 key={dept.slug}
-                className={`relative transition-shadow ${dept.live ? "hover:shadow-md" : "opacity-60"}`}
+                className="relative transition-shadow hover:shadow-md"
               >
                 <CardHeader className="flex flex-row items-start gap-3 pb-2">
-                  <div
-                    className={`mt-0.5 shrink-0 ${dept.live ? "text-ember" : "text-muted-foreground"}`}
-                  >
+                  <div className="mt-0.5 shrink-0 text-muted-foreground">
                     {Icon}
                   </div>
                   <div className="min-w-0 flex-1">
                     <CardTitle className="text-base">{dept.name}</CardTitle>
                   </div>
-                  {!dept.live && (
-                    <Badge variant="secondary" className="text-xs font-medium shrink-0">
-                      Coming Soon
-                    </Badge>
-                  )}
+                  <Badge variant="secondary" className="text-xs font-medium shrink-0">
+                    Coming Soon
+                  </Badge>
                 </CardHeader>
                 <CardContent>
                   <CardDescription className="text-sm leading-relaxed">
                     {dept.description}
                   </CardDescription>
-                  {dept.live && (
-                    <p className="mt-2 text-xs font-medium text-ember">
-                      6 calculators live, more coming
-                    </p>
-                  )}
-                  {!dept.live && (
-                    <a
-                      href={dept.href}
-                      className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      Learn more
-                      <ArrowRight className="h-3 w-3" />
-                    </a>
-                  )}
+                  <a
+                    href={dept.href}
+                    className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Learn more
+                    <ArrowRight className="h-3 w-3" />
+                  </a>
                 </CardContent>
               </Card>
             );
           })}
-        </div>
-      </section>
-
-      {/* ─── Popular Calculators Strip ─── */}
-      <section className="border-t border-border/50 bg-muted/30">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl text-center">
-            Popular Calculators
-          </h2>
-
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Federal */}
-            <Link href="/paycheck/calculator" className="group">
-              <Card className="transition-shadow h-full hover:shadow-md">
-                <CardHeader className="flex flex-row items-start gap-3 pb-2">
-                  <Image
-                    src="https://flagcdn.com/w80/us.png"
-                    alt=""
-                    width={28}
-                    height={19}
-                    className="mt-0.5 shrink-0 rounded-sm border border-border"
-                  />
-                  <CardTitle className="text-sm">Federal Paycheck Calculator</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-xs">Calculate take-home pay with state selector for any US state.</CardDescription>
-                </CardContent>
-              </Card>
-            </Link>
-            {/* State pages */}
-            {STATES.map((state) => (
-              <Link key={state.slug} href={`/paycheck/calculator/${state.slug}`} className="group">
-                <Card className="transition-shadow h-full hover:shadow-md">
-                  <CardHeader className="flex flex-row items-start gap-3 pb-2">
-                    <Image
-                      src={getStateFlagUrl(state.abbreviation, 80)}
-                      alt=""
-                      width={28}
-                      height={19}
-                      className="mt-0.5 shrink-0 rounded-sm border border-border"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <CardTitle className="text-sm">{state.name}</CardTitle>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-ember">{state.abbreviation}</p>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-xs line-clamp-2">
-                      {state.config.meta.description.length > 100
-                        ? state.config.meta.description.slice(0, 100) + "…"
-                        : state.config.meta.description}
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
         </div>
       </section>
     </>

@@ -1,9 +1,6 @@
 import type { MetadataRoute } from "next";
 import { siteConfig } from "@/config/site.config";
-import { getAllStubSlugs } from "@/lib/stubs-registry";
 
-const stubSlugs = getAllStubSlugs();
-const stubPaths = stubSlugs.map((s) => `/paycheck/${s}`);
 const departmentPaths = ["/debt", "/loans", "/auto", "/home-buying", "/insurance"];
 
 export default function robots(): MetadataRoute.Robots {
@@ -11,8 +8,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
-        disallow: [...stubPaths, ...departmentPaths],
+        allow: ["/", "/loans/title-loan-calculator"],
+        disallow: departmentPaths,
       },
     ],
     sitemap: `${siteConfig.url}/sitemap.xml`,

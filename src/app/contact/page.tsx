@@ -61,8 +61,8 @@ export default function ContactPage() {
           </h2>
           <p className="mt-2">
             If you notice an inaccuracy in one of our calculators — a wrong
-            bracket, missing deduction, or outdated rate — please email us with
-            the state, salary amount, filing status, and what you expected
+            rate, missing factor, or outdated data — please email us with
+            the calculator name, the inputs you used, and what you expected
             versus what we showed. We take accuracy seriously and will
             investigate promptly.
           </p>

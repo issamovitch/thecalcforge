@@ -5,13 +5,11 @@
  * Edit this single file to change branding, colors, links across the entire site.
  */
 
-export const TAX_YEAR = 2026;
-
 export const siteConfig = {
   name: "CalcForge",
   tagline: "Precision-crafted financial calculators",
   description:
-    "Free, accurate financial calculators for paycheck taxes, loans, debt, auto, home, and insurance. Calculate your take-home pay instantly.",
+    "Free, accurate financial calculators for loans, debt, auto, home buying, and insurance. Plan your finances with confidence.",
   domain: "thecalcforge.com",
   url: "https://thecalcforge.com" as const,
   ogImage: "/og-default.png",
@@ -45,7 +43,6 @@ export const siteConfig = {
 
   // Affiliate CTA config per page (key = page path)
   affiliateCta: {
-    // "/paycheck/calculator/california": { html: "<div>...</div>" },
   } as Record<string, { html: string }>,
 } as const;
 

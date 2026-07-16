@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { BreadcrumbJsonLd } from "@/components/seo/JsonLd";
@@ -48,7 +47,6 @@ export function StubPageContent({ name, description, path }: StubPageProps) {
       <BreadcrumbJsonLd
         items={[
           { name: "Home", url: siteConfig.url },
-          { name: "Paycheck & Salary", url: `${siteConfig.url}/paycheck` },
           { name, url: `${siteConfig.url}${path}` },
         ]}
       />
@@ -56,7 +54,6 @@ export function StubPageContent({ name, description, path }: StubPageProps) {
       <Breadcrumbs
         items={[
           { label: "Home", href: "/" },
-          { label: "Paycheck & Salary", href: "/paycheck" },
           { label: name },
         ]}
         className="mb-8"
@@ -86,35 +83,6 @@ export function StubPageContent({ name, description, path }: StubPageProps) {
           </a>{" "}
           if you&apos;d like to see it prioritized.
         </p>
-      </div>
-
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Try a live calculator</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <a
-            href="/paycheck/calculator"
-            className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:border-ember/40 hover:bg-muted/50"
-          >
-            <Image
-              src="https://flagcdn.com/w80/us.png"
-              alt=""
-              width={28}
-              height={19}
-              className="shrink-0 rounded-sm border border-border"
-            />
-            <div>
-              <span className="font-medium text-foreground">Federal Paycheck Calculator</span>
-              <p className="mt-1 text-sm text-muted-foreground">Calculate take-home pay for any state</p>
-            </div>
-          </a>
-          <a
-            href="/paycheck/calculator/california"
-            className="rounded-lg border border-border bg-card p-4 transition-colors hover:border-ember/40 hover:bg-muted/50"
-          >
-            <span className="font-medium text-foreground">California Paycheck Calculator</span>
-            <p className="mt-1 text-sm text-muted-foreground">Progressive brackets, SDI, and more</p>
-          </a>
-        </div>
       </div>
     </div>
   );

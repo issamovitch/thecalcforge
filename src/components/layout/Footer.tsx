@@ -1,17 +1,26 @@
 import Image from "next/image";
 import Link from "next/link";
 import { siteConfig } from "@/config/site.config";
-import { DEPARTMENTS } from "@/lib/departments";
-import { STATES } from "@/lib/states-registry";
-import { PAYCHECK_STUBS } from "@/lib/stubs-registry";
+
+const departmentLinks = [
+  { label: "Loans", href: "/loans" },
+  { label: "Debt", href: "/debt" },
+  { label: "Auto", href: "/auto" },
+  { label: "Home Buying", href: "/home-buying" },
+  { label: "Insurance", href: "/insurance" },
+];
+
+const loanCalculatorLinks = [
+  { label: "Title Loan Calculator", href: "/loans/title-loan-calculator" },
+];
 
 export function Footer() {
   return (
     <footer className="mt-auto bg-slate-800 text-slate-300">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-4 lg:gap-12">
+        <div className="grid grid-cols-2 gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-12">
           {/* Column 1: Brand */}
-          <div className="col-span-2 sm:col-span-3 lg:col-span-1">
+          <div className="col-span-2 sm:col-span-2 lg:col-span-1">
             <Link
               href="/"
               className="inline-flex items-center gap-2.5 transition-opacity hover:opacity-80"
@@ -23,41 +32,38 @@ export function Footer() {
             </Link>
             <p className="mt-2 text-sm font-medium text-slate-400">{siteConfig.tagline}</p>
             <p className="mt-2 text-sm leading-relaxed text-slate-400">
-              Free, accurate financial calculators for paycheck taxes, loans,
-              debt, auto, home, and insurance.
+              Free, accurate financial calculators for loans, debt, auto, home,
+              and insurance.
             </p>
           </div>
 
-          {/* Column 2: Paycheck (live) */}
+          {/* Column 2: Departments */}
           <div>
             <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-200">
-              Paycheck
+              Calculators
             </h3>
             <ul className="mt-4 space-y-2.5">
-              <li>
-                <Link href="/paycheck/calculator" className="text-sm text-slate-400 transition-colors hover:text-white">
-                  Federal Calculator
-                </Link>
-              </li>
-              {STATES.map((s) => (
-                <li key={s.slug}>
-                  <Link href={`/paycheck/calculator/${s.slug}`} className="text-sm text-slate-400 transition-colors hover:text-white">
-                    {s.name}
+              {departmentLinks.map((dept) => (
+                <li key={dept.href}>
+                  <Link href={dept.href} className="text-sm text-slate-400 transition-colors hover:text-white">
+                    {dept.label}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Column 3: Coming Soon departments */}
+          {/* Column 3: Loan Tools */}
           <div>
             <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-200">
-              Coming Soon
+              Loan Tools
             </h3>
             <ul className="mt-4 space-y-2.5">
-              {DEPARTMENTS.filter((d) => !d.live).map((dept) => (
-                <li key={dept.slug} className="text-sm text-slate-500">
-                  {dept.name}
+              {loanCalculatorLinks.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className="text-sm text-slate-400 transition-colors hover:text-white">
+                    {link.label}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -90,7 +96,7 @@ export function Footer() {
         <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
           <p className="text-center text-xs leading-relaxed text-slate-500">
             &copy; 2026 CalcForge. All rights reserved. | Calculations are
-            estimates for informational purposes only. Consult a tax
+            estimates for informational purposes only. Consult a financial
             professional for advice.
           </p>
         </div>

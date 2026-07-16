@@ -64,11 +64,10 @@ export default function PrivacyPolicyPage() {
           </h2>
           <p className="mt-3">
             <strong className="text-foreground">We do not collect personal
-            financial data.</strong> All paycheck, tax, and financial
+            financial data.</strong> All financial
             calculations are performed entirely in your web browser using
-            JavaScript. Your salary, deductions, filing status, and other inputs
-            are never transmitted to our servers or stored anywhere outside your
-            device.
+            JavaScript. Your inputs are never transmitted to our servers or stored
+            anywhere outside your device.
           </p>
           <p className="mt-3">
             We may collect standard web analytics data such as page views,

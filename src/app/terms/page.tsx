@@ -56,7 +56,7 @@ export default function TermsPage() {
           </h2>
           <p className="mt-3">
             CalcForge provides free, web-based financial calculators including
-            paycheck tax calculators, loan calculators, debt payoff tools, and
+            loan calculators, debt payoff tools, auto calculators, and
             related utilities. The Service is provided &quot;as is&quot; and is
             intended for informational and educational purposes only.
           </p>
@@ -73,7 +73,7 @@ export default function TermsPage() {
           <ul className="mt-2 list-disc pl-6 space-y-1">
             <li>Use automated scripts or bots to scrape or mass-query the Service.</li>
             <li>Attempt to reverse-engineer, decompile, or modify the calculator source code.</li>
-            <li>Misrepresent the source of calculations or present them as professional tax advice.</li>
+            <li>Misrepresent the source of calculations or present them as professional financial advice.</li>
             <li>Use the Service in any way that violates applicable law or regulation.</li>
           </ul>
         </section>
@@ -83,13 +83,12 @@ export default function TermsPage() {
             4. Accuracy Disclaimer
           </h2>
           <p className="mt-3">
-            While we strive for accuracy using published tax brackets and
-            official rates, CalcForge calculators provide estimates only. Tax
-            laws change frequently, and individual circumstances (multiple jobs,
-            self-employment income, deductions, credits) can significantly affect
-            actual withholding and tax liability. You should not rely on
-            CalcForge as your sole source of tax planning information. Consult a
-            qualified tax professional for advice specific to your situation.
+            While we strive for accuracy using published rates and
+            official data, CalcForge calculators provide estimates only. Individual
+            circumstances can significantly affect actual results. You should not
+            rely on CalcForge as your sole source of financial planning information.
+            Consult a qualified financial professional for advice specific to your
+            situation.
           </p>
         </section>
 

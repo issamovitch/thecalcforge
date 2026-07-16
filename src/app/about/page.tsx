@@ -43,22 +43,19 @@ export default function AboutPage() {
 
         <p>
           Every calculator on CalcForge is built from the ground up using
-          official tax brackets, FICA rates, and state-specific rules. We don&apos;t
-          approximate or round away the details that matter. When you calculate
-          your California take-home pay, our engine walks through every
-          progressive bracket, factors in SDI deductions and the mental health
-          services tax, and shows you exactly where each dollar goes. When you
-          check Texas, we show you why your take-home is higher — and what
-          trade-offs come with no state income tax.
+          reliable data sources and industry-standard formulas. We don&apos;t
+          approximate or round away the details that matter. Whether you&apos;re
+          planning a mortgage, comparing loan options, or mapping out a debt
+          payoff strategy, our tools give you the clarity you need to make
+          informed financial decisions.
         </p>
 
         <p>
           Privacy is part of our foundation, not an afterthought. All
           calculations run entirely in your browser. We never collect, store, or
-          transmit your salary, deductions, or any personal financial
-          information. There are no accounts, no tracking pixels on the
-          calculator forms, and no data leaving your device. Your financial
-          life stays yours.
+          transmit your financial information. There are no accounts, no tracking
+          pixels on the calculator forms, and no data leaving your device. Your
+          financial life stays yours.
         </p>
 
         <p>
@@ -68,7 +65,7 @@ export default function AboutPage() {
           enthusiasts who got tired of the ad-riddled, inaccurate calculators
           that dominate search results. If you find our tools useful, the
           greatest thing you can do is share them with a friend or colleague
-          who&apos;s trying to figure out their next paycheck.
+          who&apos;s trying to make sense of their finances.
         </p>
 
         <p className="text-foreground font-medium">
