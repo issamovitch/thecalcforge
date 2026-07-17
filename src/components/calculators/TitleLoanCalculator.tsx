@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Calculator,
   Copy,
@@ -30,141 +29,93 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
+import {
+  calculateLoan,
+  formatCurrency,
+  formatPercent,
+  type LoanInputs,
+  type AmortizationRow,
+} from "@/lib/loan-math";
 
 /* ─── Types ─── */
 
-interface AmortizationRow {
-  month: number;
-  payment: number;
-  principal: number;
-  interest: number;
-  balance: number;
-}
-
-interface CalcResult {
-  monthlyPayment: number;
-  totalInterest: number;
-  totalCost: number;
-  financeCharge: number;
-  effectiveApr: number;
-  amortization: AmortizationRow[];
-}
-
-interface CalcInputs {
+interface TitleLoanInputs extends LoanInputs {
   vehicleValue: number;
-  loanAmount: number;
-  annualRate: number;
-  termMonths: number;
 }
 
-/* ─── Helpers ─── */
+/* ─── Defaults ─── */
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function formatPercent(value: number): string {
-  return `${value.toFixed(1)}%`;
-}
-
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat("en-US").format(value);
-}
-
-function calculate(inputs: CalcInputs): CalcResult | null {
-  const { loanAmount, annualRate, termMonths } = inputs;
-  if (loanAmount <= 0 || annualRate <= 0 || termMonths <= 0) return null;
-
-  const monthlyRate = annualRate / 100 / 12;
-  const n = termMonths;
-
-  // Standard amortizing loan formula
-  const monthlyPayment =
-    (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, n)) /
-    (Math.pow(1 + monthlyRate, n) - 1);
-
-  const totalCost = monthlyPayment * n;
-  const totalInterest = totalCost - loanAmount;
-  const financeCharge = totalInterest;
-
-  // Amortization schedule
-  const amortization: AmortizationRow[] = [];
-  let balance = loanAmount;
-  for (let i = 1; i <= n; i++) {
-    const interestPayment = balance * monthlyRate;
-    const principalPayment = monthlyPayment - interestPayment;
-    balance = Math.max(0, balance - principalPayment);
-    amortization.push({
-      month: i,
-      payment: monthlyPayment,
-      principal: principalPayment,
-      interest: interestPayment,
-      balance,
-    });
-  }
-
-  return {
-    monthlyPayment,
-    totalInterest,
-    totalCost,
-    financeCharge,
-    effectiveApr: annualRate,
-    amortization,
-  };
-}
-
-const DEFAULT_INPUTS: CalcInputs = {
+export const DEFAULT_INPUTS: TitleLoanInputs = {
   vehicleValue: 10000,
   loanAmount: 5000,
-  annualRate: 120,
+  apr: 120,
   termMonths: 12,
 };
+
+/* Pre-compute default result at module level — available during SSR */
+export const DEFAULT_RESULT = calculateLoan({
+  loanAmount: DEFAULT_INPUTS.loanAmount,
+  apr: DEFAULT_INPUTS.apr,
+  termMonths: DEFAULT_INPUTS.termMonths,
+});
 
 /* ─── Component ─── */
 
 export function TitleLoanCalculator() {
-  const searchParams = useSearchParams();
-  const [copied, setCopied] = useState(false);
-  const [showAmortization, setShowAmortization] = useState(false);
-
-  // Read URL params on mount
-  const [inputs, setInputs] = useState<CalcInputs>(() => {
-    const pVehicle = searchParams.get("vehicle");
-    const pLoan = searchParams.get("amount");
-    const pRate = searchParams.get("rate");
-    const pTerm = searchParams.get("term");
+  // Read URL params in initializer — SSR gets DEFAULT_INPUTS, client reads query string.
+  // This avoids useSearchParams (which forces a Suspense boundary) and avoids
+  // calling setState in an useEffect (which the React compiler forbids).
+  const [inputs, setInputs] = useState<TitleLoanInputs>(() => {
+    if (typeof window === "undefined") return DEFAULT_INPUTS;
+    const params = new URLSearchParams(window.location.search);
+    const v = params.get("vehicle");
+    const a = params.get("amount");
+    const r = params.get("rate");
+    const t = params.get("term");
+    if (!v && !a && !r && !t) return DEFAULT_INPUTS;
     return {
-      vehicleValue: pVehicle ? parseFloat(pVehicle) : DEFAULT_INPUTS.vehicleValue,
-      loanAmount: pLoan ? parseFloat(pLoan) : DEFAULT_INPUTS.loanAmount,
-      annualRate: pRate ? parseFloat(pRate) : DEFAULT_INPUTS.annualRate,
-      termMonths: pTerm ? parseInt(pTerm, 10) : DEFAULT_INPUTS.termMonths,
+      vehicleValue: v ? parseFloat(v) : DEFAULT_INPUTS.vehicleValue,
+      loanAmount: a ? parseFloat(a) : DEFAULT_INPUTS.loanAmount,
+      apr: r ? parseFloat(r) : DEFAULT_INPUTS.apr,
+      termMonths: t ? parseInt(t, 10) : DEFAULT_INPUTS.termMonths,
     };
   });
+  const [copied, setCopied] = useState(false);
+  // Amortization starts expanded so it appears in static HTML for crawlers
+  const [showAmortization, setShowAmortization] = useState(true);
 
-  const result = useMemo(() => calculate(inputs), [inputs]);
+  const result = useMemo(
+    () =>
+      calculateLoan({
+        loanAmount: inputs.loanAmount,
+        apr: inputs.apr,
+        termMonths: inputs.termMonths,
+      }),
+    [inputs]
+  );
 
-  // Update URL params for sharing
+  // Sync URL query string when inputs change (skip initial render to avoid
+  // overwriting a clean URL with default params on first load).
+  const isInitialMount = useRef(true);
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     if (typeof window === "undefined") return;
     const params = new URLSearchParams();
     params.set("vehicle", inputs.vehicleValue.toString());
     params.set("amount", inputs.loanAmount.toString());
-    params.set("rate", inputs.annualRate.toString());
+    params.set("rate", inputs.apr.toString());
     params.set("term", inputs.termMonths.toString());
     const newUrl = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState(null, "", newUrl);
   }, [inputs]);
 
   const handleInputChange = useCallback(
-    (field: keyof CalcInputs, value: string) => {
+    (field: keyof TitleLoanInputs, value: string) => {
       const num = parseFloat(value);
       if (!isNaN(num)) {
         setInputs((prev) => ({ ...prev, [field]: num }));
@@ -327,7 +278,7 @@ export function TitleLoanCalculator() {
                       </Tooltip>
                     </div>
                     <span className="text-sm font-semibold text-foreground">
-                      {formatPercent(inputs.annualRate)}
+                      {formatPercent(inputs.apr)}
                     </span>
                   </div>
                   <Slider
@@ -335,9 +286,9 @@ export function TitleLoanCalculator() {
                     min={1}
                     max={400}
                     step={0.5}
-                    value={[inputs.annualRate]}
+                    value={[inputs.apr]}
                     onValueChange={([v]) =>
-                      setInputs((p) => ({ ...p, annualRate: v }))
+                      setInputs((p) => ({ ...p, apr: v }))
                     }
                     aria-label="Annual interest rate"
                     className="w-full"
@@ -351,9 +302,9 @@ export function TitleLoanCalculator() {
                     min={1}
                     max={400}
                     step={0.5}
-                    value={inputs.annualRate}
+                    value={inputs.apr}
                     onChange={(e) =>
-                      handleInputChange("annualRate", e.target.value)
+                      handleInputChange("apr", e.target.value)
                     }
                     className="mt-1"
                     aria-label="Annual interest rate input"
@@ -403,7 +354,7 @@ export function TitleLoanCalculator() {
 
               {/* ─── Results ─── */}
               <div className="space-y-4">
-                {result ? (
+                {result.schedule.length > 0 ? (
                   <>
                     {/* Monthly Payment Highlight */}
                     <div className="rounded-lg bg-ember/10 border border-ember/20 p-5 text-center">
@@ -430,12 +381,12 @@ export function TitleLoanCalculator() {
                       <ResultCard
                         label="Total Cost"
                         value={formatCurrency(result.totalCost)}
-                        subtext={`Principal + interest`}
+                        subtext="Principal + interest"
                       />
                       <ResultCard
                         label="Finance Charge"
-                        value={formatCurrency(result.financeCharge)}
-                        subtext={`Cost to borrow`}
+                        value={formatCurrency(result.totalInterest)}
+                        subtext="Cost to borrow"
                       />
                       <ResultCard
                         label="Loan-to-Value"
@@ -496,8 +447,8 @@ export function TitleLoanCalculator() {
           </CardContent>
         </Card>
 
-        {/* ─── Amortization Table ─── */}
-        {result && (
+        {/* ─── Amortization Table (expanded by default for SSR/crawlers) ─── */}
+        {result.schedule.length > 0 && (
           <Card className="print-break-inside no-print">
             <CardHeader className="pb-3">
               <button
@@ -530,7 +481,7 @@ export function TitleLoanCalculator() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {result.amortization.map((row) => (
+                      {result.schedule.map((row) => (
                         <TableRow key={row.month}>
                           <TableCell className="font-medium">
                             {row.month}
@@ -570,8 +521,6 @@ export function TitleLoanCalculator() {
             )}
           </Card>
         )}
-
-        {/* Hidden formula for SEO (rendered in page, not here) */}
       </div>
     </TooltipProvider>
   );

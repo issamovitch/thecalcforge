@@ -19,14 +19,6 @@ export const metadata: Metadata = {
     template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,
-  keywords: [
-    "financial calculator",
-    "loan calculator",
-    "mortgage calculator",
-    "debt calculator",
-    "auto calculator",
-    "insurance calculator",
-  ],
   authors: [{ name: siteConfig.name }],
   icons: {
     icon: "/logo.png",

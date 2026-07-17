@@ -1,48 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  images: {
+    unoptimized: true,
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
-  images: {
-    unoptimized: true,
-  },
-  async redirects() {
-    return [
-      {
-        source: "/paycheck-calculator",
-        destination: "/paycheck/calculator",
-        permanent: true,
-      },
-      {
-        source: "/paycheck-calculator/california",
-        destination: "/paycheck/calculator/california",
-        permanent: true,
-      },
-      {
-        source: "/paycheck-calculator/new-york",
-        destination: "/paycheck/calculator/new-york",
-        permanent: true,
-      },
-      {
-        source: "/paycheck-calculator/pennsylvania",
-        destination: "/paycheck/calculator/pennsylvania",
-        permanent: true,
-      },
-      {
-        source: "/paycheck-calculator/texas",
-        destination: "/paycheck/calculator/texas",
-        permanent: true,
-      },
-      {
-        source: "/paycheck-calculator/florida",
-        destination: "/paycheck/calculator/florida",
-        permanent: true,
-      },
-    ];
-  },
+  allowedDevOrigins: ["*.space-z.ai"],
+  // output: "export", // Enable for static build only; causes issues with next dev
 };
 
 export default nextConfig;

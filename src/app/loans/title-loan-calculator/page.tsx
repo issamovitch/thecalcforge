@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { siteConfig } from "@/config/site.config";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import {
@@ -9,8 +8,34 @@ import {
 } from "@/components/seo/JsonLd";
 import { CanonicalUrl } from "@/components/seo/CanonicalUrl";
 import { TitleLoanCalculator } from "@/components/calculators/TitleLoanCalculator";
+import {
+  calculateLoan,
+  calculateEarlyPayoff,
+  formatCurrency,
+} from "@/lib/loan-math";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+
+/* ─── Build-time computed examples (single source of truth) ─── */
+
+const EX = {
+  formula: calculateLoan({ loanAmount: 5000, apr: 120, termMonths: 12 }),
+  cost3k: calculateLoan({ loanAmount: 3000, apr: 200, termMonths: 12 }),
+  florida: calculateLoan({ loanAmount: 2000, apr: 300, termMonths: 12 }),
+  texas: calculateLoan({ loanAmount: 3000, apr: 300, termMonths: 12 }),
+  payoff: calculateEarlyPayoff(
+    { loanAmount: 5000, apr: 120, termMonths: 12 },
+    200,
+    7,
+  ),
+  paymentAmounts: [1000, 2500, 5000, 10000],
+  payments: [
+    calculateLoan({ loanAmount: 1000, apr: 120, termMonths: 12 }),
+    calculateLoan({ loanAmount: 2500, apr: 120, termMonths: 12 }),
+    calculateLoan({ loanAmount: 5000, apr: 120, termMonths: 12 }),
+    calculateLoan({ loanAmount: 10000, apr: 120, termMonths: 24 }),
+  ],
+};
 
 /* ─── SEO Metadata ─── */
 
@@ -23,16 +48,6 @@ export const metadata: Metadata = {
   title: pageTitle,
   description: pageDescription,
   alternates: { canonical: pageUrl },
-  keywords: [
-    "title loan calculator",
-    "title loan payment calculator",
-    "title loan interest calculator",
-    "car title loan calculator",
-    "title loan amortization",
-    "how much does a title loan cost",
-    "title loan estimator",
-    "auto title loan calculator",
-  ],
   openGraph: {
     title: pageTitle,
     description: pageDescription,
@@ -88,16 +103,13 @@ const faqs = [
 export default function TitleLoanCalculatorPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
-      {/* JSON-LD */}
+      {/* JSON-LD (server-rendered, no JS required) */}
       <CanonicalUrl path="/loans/title-loan-calculator" />
       <BreadcrumbJsonLd
         items={[
           { name: "Home", url: siteConfig.url },
           { name: "Loan Calculators", url: `${siteConfig.url}/loans` },
-          {
-            name: "Title Loan Calculator",
-            url: pageUrl,
-          },
+          { name: "Title Loan Calculator", url: pageUrl },
         ]}
       />
       <FaqJsonLd faqs={faqs} />
@@ -121,27 +133,20 @@ export default function TitleLoanCalculatorPage() {
       <h1 className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-[2.5rem]">
         Title Loan Calculator
       </h1>
+
+      {/* Intro paragraph — targets featured snippet */}
       <p className="mt-3 text-lg text-muted-foreground leading-relaxed max-w-3xl">
-        Estimate your title loan monthly payments, total interest, and finance
-        charges before you sign. Enter your vehicle value, desired loan amount,
-        and interest rate to see a complete amortization schedule.
+        A title loan calculator is a free online tool that estimates your
+        monthly payment, total interest, and total repayment cost based on your
+        vehicle&apos;s value, the loan amount, the interest rate, and the
+        repayment term. It tells you exactly how much borrowing against your car
+        title will cost before you sign, so you can compare lenders and avoid
+        overpaying.
       </p>
 
-      {/* Calculator (client component, wrapped in Suspense for useSearchParams) */}
+      {/* Calculator (client component — SSR with default values, no Suspense) */}
       <div className="mt-8">
-        <Suspense
-          fallback={
-            <Card>
-              <CardContent className="flex items-center justify-center py-16">
-                <p className="text-sm text-muted-foreground">
-                  Loading calculator&hellip;
-                </p>
-              </CardContent>
-            </Card>
-          }
-        >
-          <TitleLoanCalculator />
-        </Suspense>
+        <TitleLoanCalculator />
       </div>
 
       {/* ─── Content Sections (H2 long-tail keywords) ─── */}
@@ -186,9 +191,9 @@ export default function TitleLoanCalculatorPage() {
           For example, a $5,000 title loan at 120% APR for 12 months would have
           a monthly rate of 10%. Applying the formula: M = $5,000 &times;
           [0.10 &times; (1.10)<sup>12</sup>] / [(1.10)<sup>12</sup> &minus; 1]
-          &asymp; <strong>$662.31 per month</strong>. The total interest paid
-          would be approximately $2,947.73, bringing the total cost to
-          $7,947.73.
+          &asymp; <strong>{formatCurrency(EX.formula.monthlyPayment)} per month</strong>. The total interest paid
+          would be approximately {formatCurrency(EX.formula.totalInterest)}, bringing the total cost to{" "}
+          {formatCurrency(EX.formula.totalCost)}.
         </p>
       </section>
 
@@ -229,8 +234,8 @@ export default function TitleLoanCalculatorPage() {
         </p>
         <p>
           For instance, borrowing $3,000 at 200% APR for 12 months would result
-          in total interest charges of approximately $3,855, making the total
-          repayment around $6,855. That means you pay more in interest than the
+          in total interest charges of approximately {formatCurrency(EX.cost3k.totalInterest)}, making the total
+          repayment around {formatCurrency(EX.cost3k.totalCost)}. That means you pay more in interest than the
           amount you originally borrowed. Always use a title loan calculator to
           compare the total cost before committing.
         </p>
@@ -250,27 +255,171 @@ export default function TitleLoanCalculatorPage() {
           Title Loan vs Payday Loan: Key Differences
         </h2>
         <p>
-          While both title loans and{" "}
-          <a
-            href="/loans/payday-loan-calculator"
-            className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
-          >
-            payday loans
-          </a>{" "}
-          offer fast access to cash without a credit check, they differ
-          significantly in structure. Title loans are secured by your vehicle
-          and typically offer larger amounts ($100 to $50,000) with longer
-          repayment terms (up to 48 months). Payday loans are unsecured, usually
-          limited to $500, and must be repaid on your next payday (two to four
-          weeks).
+          While both title loans and payday loans offer fast access to cash
+          without a credit check, they differ significantly in structure. Title
+          loans are secured by your vehicle and typically offer larger amounts
+          ($100 to $50,000) with longer repayment terms (up to 48 months).
+          Payday loans are unsecured, usually limited to $500, and must be
+          repaid on your next payday (two to four weeks).
         </p>
         <p>
           The main risk with a title loan is vehicle repossession if you
           default. With a payday loan, the risk is a cycle of debt caused by
           rollovers and extremely high fees. Both are expensive forms of credit
-          and should be considered only after exhausting all other options. Use
-          each respective calculator to estimate costs and compare which option
-          is less expensive for your situation.
+          and should be considered only after exhausting all other options.
+        </p>
+      </section>
+
+      <Separator className="my-10" />
+
+      {/* H2: Title Loan Calculator Florida */}
+      <section className="space-y-4">
+        <h2 className="text-2xl font-bold tracking-tight">
+          Title Loan Calculator Florida
+        </h2>
+        <p>
+          Florida regulates title loans under Chapter 537 of the Florida
+          Statutes (the Florida Title Loan Act). Licensed title lenders in
+          Florida can charge a monthly interest rate of up to 25% on loans
+          under $2,000, up to 20% on loans from $2,000 to $3,000, and up to
+          15% on amounts over $3,000. These rates translate to an effective
+          APR of 180% to 300%.
+        </p>
+        <p>
+          The maximum loan amount in Florida is typically capped at the lesser
+          of your vehicle&apos;s fair market value or $30,000. Initial loan
+          terms are 30 days, and borrowers can extend the loan by paying the
+          interest due — known as &ldquo;rolling over&rdquo; — up to ten
+          times. Each rollover adds another full month of interest without
+          reducing principal.
+        </p>
+        <p>
+          <strong>Worked example:</strong> A $2,000 title loan in Florida at
+          the maximum 25% monthly rate (300% APR) for 12 months would cost
+          approximately {formatCurrency(EX.florida.monthlyPayment)} per month, with total interest of roughly{" "}
+          {formatCurrency(EX.florida.totalInterest)} and a total repayment of {formatCurrency(EX.florida.totalCost)}. Use the calculator above with 300%
+          APR and a $2,000 loan amount to see the exact amortization.
+        </p>
+      </section>
+
+      <Separator className="my-10" />
+
+      {/* H2: Title Loan Calculator Texas */}
+      <section className="space-y-4">
+        <h2 className="text-2xl font-bold tracking-tight">
+          Title Loan Calculator Texas
+        </h2>
+        <p>
+          Texas is one of the few states without a statewide interest rate cap
+          on title loans, and it has the highest number of title loan storefronts
+          in the country. Rather than making direct loans, most Texas title
+          lenders operate as Credit Access Businesses (CABs) or Credit Services
+          Organizations (CSOs). In this model, a third-party lender provides the
+          actual loan funds at a legal interest rate (typically 10% APR), while
+          the CAB charges a separate &ldquo;fee&rdquo; that can reach 25% or
+          more per month.
+        </p>
+        <p>
+          This fee structure results in effective APRs commonly exceeding 300%,
+          and in some cases approaching 500%. The City of Austin, Dallas, San
+          Antonio, and Houston have each enacted local ordinances that limit
+          title loan amounts and require certain disclosures, but these
+          protections do not apply statewide.
+        </p>
+        <p>
+          <strong>Worked example:</strong> A $3,000 title loan in Texas with an
+          effective 300% APR over 12 months would produce a monthly payment of
+          roughly {formatCurrency(EX.texas.monthlyPayment)}. Total interest would reach approximately{" "}
+          {formatCurrency(EX.texas.totalInterest)}, making the total repayment around {formatCurrency(EX.texas.totalCost)} — nearly four times the original
+          loan. Enter 300% APR and $3,000 in the calculator above to see the
+          full breakdown.
+        </p>
+      </section>
+
+      <Separator className="my-10" />
+
+      {/* H2: Car Title Loan Calculator with Payments */}
+      <section className="space-y-4">
+        <h2 className="text-2xl font-bold tracking-tight">
+          Car Title Loan Calculator with Payments
+        </h2>
+        <p>
+          A car title loan uses your vehicle as collateral, and the monthly
+          payment schedule depends entirely on the loan size, interest rate, and
+          term. Because title loans amortize, each payment includes both
+          interest and principal — but the ratio shifts over time. In month
+          one, the vast majority of your payment covers interest. By the final
+          months, nearly the entire payment goes toward principal.
+        </p>
+        <p>
+          Here is what monthly payments typically look like at common loan sizes
+          (assuming a 120% APR):
+        </p>
+        <Card className="bg-muted/30">
+          <CardContent className="p-5">
+            <ul className="space-y-2 text-sm">
+              <li className="flex justify-between">
+                <span className="font-medium">$1,000 loan, 12 months</span>
+                <span className="font-semibold text-ember">{formatCurrency(EX.payments[0].monthlyPayment)}/mo</span>
+              </li>
+              <li className="flex justify-between">
+                <span className="font-medium">$2,500 loan, 12 months</span>
+                <span className="font-semibold text-ember">{formatCurrency(EX.payments[1].monthlyPayment)}/mo</span>
+              </li>
+              <li className="flex justify-between">
+                <span className="font-medium">$5,000 loan, 12 months</span>
+                <span className="font-semibold text-ember">{formatCurrency(EX.payments[2].monthlyPayment)}/mo</span>
+              </li>
+              <li className="flex justify-between">
+                <span className="font-medium">$10,000 loan, 24 months</span>
+                <span className="font-semibold text-ember">{formatCurrency(EX.payments[3].monthlyPayment)}/mo</span>
+              </li>
+            </ul>
+          </CardContent>
+        </Card>
+        <p>
+          At 120% APR, the total interest on these loans ranges from{" "}
+          {`${Math.round(EX.payments[0].totalInterest / EX.paymentAmounts[0] * 100)}%`}
+          {" "}to{" "}
+          {`${Math.round(EX.payments[3].totalInterest / EX.paymentAmounts[3] * 100)}%`}
+          {" "}of the original borrowed amount. Shortening the term lowers
+          total interest but raises the monthly payment, while extending the
+          term does the opposite. Use the calculator to experiment with
+          different combinations and find a payment you can afford.
+        </p>
+      </section>
+
+      <Separator className="my-10" />
+
+      {/* H2: Title Loan Payoff Calculator */}
+      <section className="space-y-4">
+        <h2 className="text-2xl font-bold tracking-tight">
+          Title Loan Payoff Calculator
+        </h2>
+        <p>
+          Paying off a title loan early is one of the most effective ways to
+          reduce its total cost. Because title loan interest is calculated on
+          the remaining balance each month, every extra dollar you pay toward
+          principal immediately stops future interest from accruing on that
+          dollar. Most states require lenders to prorate interest, meaning you
+          only pay interest for the days the loan is outstanding.
+        </p>
+        <p>
+          <strong>How early payoff works:</strong> Suppose you have a $5,000
+          title loan at 120% APR for 12 months with a {formatCurrency(EX.payoff.baseResult.monthlyPayment)} monthly payment.
+          After month six, your remaining balance is approximately {formatCurrency(EX.payoff.baseResult.schedule[5].balance)}. If
+          you then add an extra $200 per month to your regular payment for the
+          remaining six months, the additional $1,200 in principal payments
+          would shorten your loan by roughly {EX.payoff.monthsSaved} month{EX.payoff.monthsSaved !== 1 ? "s" : ""} and save{" "}
+          approximately {formatCurrency(EX.payoff.interestSaved)} in interest — cutting your total cost from {formatCurrency(EX.payoff.baseResult.totalCost)}{" "}
+          to around {formatCurrency(EX.payoff.result.totalCost)}.
+        </p>
+        <p>
+          To calculate your own early payoff savings, look at the amortization
+          table in the calculator above. Find your current month and remaining
+          balance, then compare the remaining interest on your current schedule
+          versus a shorter term. Even a single extra payment of $100–$200 can
+          make a meaningful dent in total interest charges.
         </p>
       </section>
 
@@ -328,36 +477,18 @@ export default function TitleLoanCalculatorPage() {
 
       <Separator className="my-12" />
 
-      {/* ─── Related Calculators ─── */}
+      {/* ─── Related Calculators (only links to existing pages) ─── */}
       <section className="space-y-4">
         <h2 className="text-2xl font-bold tracking-tight">Related Calculators</h2>
         <p className="text-muted-foreground">
-          Explore other loan calculators to compare options and find the right
-          fit for your financial situation.
-        </p>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <RelatedCalcLink
-            href="/loans/payday-loan-calculator"
-            label="Payday Loan Calculator"
-          />
-          <RelatedCalcLink
-            href="/loans/personal-loan-calculator"
-            label="Personal Loan Calculator"
-          />
-          <RelatedCalcLink
-            href="/loans/auto-loan-calculator"
-            label="Auto Loan Calculator"
-          />
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Browse all calculators in our{" "}
+          More loan calculators are on the way. Browse our{" "}
           <a
             href="/loans"
             className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
           >
             Loan Calculators
           </a>{" "}
-          hub.
+          hub for additional tools as they become available.
         </p>
       </section>
     </div>
@@ -378,34 +509,5 @@ function ChevronIcon() {
     >
       <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
     </svg>
-  );
-}
-
-function RelatedCalcLink({ href, label }: { href: string; label: string }) {
-  return (
-    <a
-      href={href}
-      className="group flex items-center gap-3 rounded-lg border bg-card p-4 transition-colors hover:border-ember/40 hover:bg-ember/5"
-    >
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-ember/10 text-ember">
-        <svg
-          className="size-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-          aria-hidden="true"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M14.25 9.75L16.5 12l-2.25 2.25m-4.5 0L7.5 12l2.25-2.25M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z"
-          />
-        </svg>
-      </div>
-      <span className="text-sm font-medium group-hover:text-ember transition-colors">
-        {label}
-      </span>
-    </a>
   );
 }
