@@ -177,34 +177,36 @@ export function TitleLoanCalculator() {
                       {formatCurrency(inputs.vehicleValue)}
                     </span>
                   </div>
-                  <Slider
-                    id="vehicle-value"
-                    min={1000}
-                    max={100000}
-                    step={500}
-                    value={[inputs.vehicleValue]}
-                    onValueChange={([v]) =>
-                      setInputs((p) => ({ ...p, vehicleValue: v }))
-                    }
-                    aria-label="Vehicle value"
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>$1,000</span>
-                    <span>$100,000</span>
+                  <div className="no-print">
+                    <Slider
+                      id="vehicle-value"
+                      min={1000}
+                      max={100000}
+                      step={500}
+                      value={[inputs.vehicleValue]}
+                      onValueChange={([v]) =>
+                        setInputs((p) => ({ ...p, vehicleValue: v }))
+                      }
+                      aria-label="Vehicle value"
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>$1,000</span>
+                      <span>$100,000</span>
+                    </div>
+                    <Input
+                      type="number"
+                      min={1000}
+                      max={100000}
+                      step={100}
+                      value={inputs.vehicleValue}
+                      onChange={(e) =>
+                        handleInputChange("vehicleValue", e.target.value)
+                      }
+                      className="mt-1"
+                      aria-label="Vehicle value input"
+                    />
                   </div>
-                  <Input
-                    type="number"
-                    min={1000}
-                    max={100000}
-                    step={100}
-                    value={inputs.vehicleValue}
-                    onChange={(e) =>
-                      handleInputChange("vehicleValue", e.target.value)
-                    }
-                    className="mt-1"
-                    aria-label="Vehicle value input"
-                  />
                 </div>
 
                 {/* Loan Amount */}
@@ -216,7 +218,7 @@ export function TitleLoanCalculator() {
                       </Label>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Info className="size-3.5 text-muted-foreground cursor-help" />
+                          <Info className="size-3.5 text-muted-foreground cursor-help no-print" />
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-[220px] text-xs">
                           Title lenders typically offer 25&ndash;50% of your
@@ -229,34 +231,36 @@ export function TitleLoanCalculator() {
                       {formatCurrency(inputs.loanAmount)}
                     </span>
                   </div>
-                  <Slider
-                    id="loan-amount"
-                    min={100}
-                    max={inputs.vehicleValue}
-                    step={100}
-                    value={[inputs.loanAmount]}
-                    onValueChange={([v]) =>
-                      setInputs((p) => ({ ...p, loanAmount: v }))
-                    }
-                    aria-label="Loan amount"
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>$100</span>
-                    <span>{formatCurrency(inputs.vehicleValue)}</span>
+                  <div className="no-print">
+                    <Slider
+                      id="loan-amount"
+                      min={100}
+                      max={inputs.vehicleValue}
+                      step={100}
+                      value={[inputs.loanAmount]}
+                      onValueChange={([v]) =>
+                        setInputs((p) => ({ ...p, loanAmount: v }))
+                      }
+                      aria-label="Loan amount"
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>$100</span>
+                      <span>{formatCurrency(inputs.vehicleValue)}</span>
+                    </div>
+                    <Input
+                      type="number"
+                      min={100}
+                      max={inputs.vehicleValue}
+                      step={100}
+                      value={inputs.loanAmount}
+                      onChange={(e) =>
+                        handleInputChange("loanAmount", e.target.value)
+                      }
+                      className="mt-1"
+                      aria-label="Loan amount input"
+                    />
                   </div>
-                  <Input
-                    type="number"
-                    min={100}
-                    max={inputs.vehicleValue}
-                    step={100}
-                    value={inputs.loanAmount}
-                    onChange={(e) =>
-                      handleInputChange("loanAmount", e.target.value)
-                    }
-                    className="mt-1"
-                    aria-label="Loan amount input"
-                  />
                 </div>
 
                 {/* Interest Rate */}
@@ -268,7 +272,7 @@ export function TitleLoanCalculator() {
                       </Label>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Info className="size-3.5 text-muted-foreground cursor-help" />
+                          <Info className="size-3.5 text-muted-foreground cursor-help no-print" />
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-[260px] text-xs">
                           Title loan APRs are typically 100&ndash;300%. A 120%
@@ -281,34 +285,36 @@ export function TitleLoanCalculator() {
                       {formatPercent(inputs.apr)}
                     </span>
                   </div>
-                  <Slider
-                    id="annual-rate"
-                    min={1}
-                    max={400}
-                    step={0.5}
-                    value={[inputs.apr]}
-                    onValueChange={([v]) =>
-                      setInputs((p) => ({ ...p, apr: v }))
-                    }
-                    aria-label="Annual interest rate"
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>1%</span>
-                    <span>400%</span>
+                  <div className="no-print">
+                    <Slider
+                      id="annual-rate"
+                      min={1}
+                      max={400}
+                      step={0.5}
+                      value={[inputs.apr]}
+                      onValueChange={([v]) =>
+                        setInputs((p) => ({ ...p, apr: v }))
+                      }
+                      aria-label="Annual interest rate"
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>1%</span>
+                      <span>400%</span>
+                    </div>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={400}
+                      step={0.5}
+                      value={inputs.apr}
+                      onChange={(e) =>
+                        handleInputChange("apr", e.target.value)
+                      }
+                      className="mt-1"
+                      aria-label="Annual interest rate input"
+                    />
                   </div>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={400}
-                    step={0.5}
-                    value={inputs.apr}
-                    onChange={(e) =>
-                      handleInputChange("apr", e.target.value)
-                    }
-                    className="mt-1"
-                    aria-label="Annual interest rate input"
-                  />
                 </div>
 
                 {/* Loan Term */}
@@ -321,34 +327,36 @@ export function TitleLoanCalculator() {
                       {inputs.termMonths} mo
                     </span>
                   </div>
-                  <Slider
-                    id="term-months"
-                    min={1}
-                    max={48}
-                    step={1}
-                    value={[inputs.termMonths]}
-                    onValueChange={([v]) =>
-                      setInputs((p) => ({ ...p, termMonths: v }))
-                    }
-                    aria-label="Loan term in months"
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>1 mo</span>
-                    <span>48 mo</span>
+                  <div className="no-print">
+                    <Slider
+                      id="term-months"
+                      min={1}
+                      max={48}
+                      step={1}
+                      value={[inputs.termMonths]}
+                      onValueChange={([v]) =>
+                        setInputs((p) => ({ ...p, termMonths: v }))
+                      }
+                      aria-label="Loan term in months"
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>1 mo</span>
+                      <span>48 mo</span>
+                    </div>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={48}
+                      step={1}
+                      value={inputs.termMonths}
+                      onChange={(e) =>
+                        handleInputChange("termMonths", e.target.value)
+                      }
+                      className="mt-1"
+                      aria-label="Loan term in months input"
+                    />
                   </div>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={48}
-                    step={1}
-                    value={inputs.termMonths}
-                    onChange={(e) =>
-                      handleInputChange("termMonths", e.target.value)
-                    }
-                    className="mt-1"
-                    aria-label="Loan term in months input"
-                  />
                 </div>
               </div>
 
@@ -447,14 +455,14 @@ export function TitleLoanCalculator() {
           </CardContent>
         </Card>
 
-        {/* ─── Amortization Table (expanded by default for SSR/crawlers) ─── */}
+        {/* ─── Amortization Table ─── */}
         {result.schedule.length > 0 && (
-          <Card className="print-break-inside no-print">
+          <Card className="print-break-inside">
             <CardHeader className="pb-3">
               <button
                 type="button"
                 onClick={() => setShowAmortization(!showAmortization)}
-                className="flex w-full items-center justify-between text-left"
+                className="no-print flex w-full items-center justify-between text-left"
                 aria-expanded={showAmortization}
               >
                 <CardTitle className="text-lg">
@@ -466,61 +474,66 @@ export function TitleLoanCalculator() {
                   <ChevronDown className="size-5 text-muted-foreground" />
                 )}
               </button>
+              {/* Print-only title (button is hidden in print) */}
+              <CardTitle className="hidden print:block text-lg">
+                Amortization Schedule
+              </CardTitle>
             </CardHeader>
-            {showAmortization && (
-              <CardContent>
-                <div className="max-h-96 overflow-y-auto custom-scrollbar rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-16">Month</TableHead>
-                        <TableHead className="text-right">Payment</TableHead>
-                        <TableHead className="text-right">Principal</TableHead>
-                        <TableHead className="text-right">Interest</TableHead>
-                        <TableHead className="text-right">Balance</TableHead>
+            <CardContent className={showAmortization ? "" : "hidden print:block"}>
+              <div className="amortization-scroll max-h-96 overflow-y-auto custom-scrollbar rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-16">Month</TableHead>
+                      <TableHead className="text-right">Payment</TableHead>
+                      <TableHead className="text-right">Principal</TableHead>
+                      <TableHead className="text-right">Interest</TableHead>
+                      <TableHead className="text-right">Balance</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {result.schedule.map((row) => (
+                      <TableRow key={row.month}>
+                        <TableCell className="font-medium">
+                          {row.month}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(row.payment)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(row.principal)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(row.interest)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(row.balance)}
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {result.schedule.map((row) => (
-                        <TableRow key={row.month}>
-                          <TableCell className="font-medium">
-                            {row.month}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatCurrency(row.payment)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatCurrency(row.principal)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatCurrency(row.interest)}
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatCurrency(row.balance)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-                <div className="mt-3 flex justify-end gap-6 text-sm font-medium">
-                  <span>
-                    Total Paid:{" "}
-                    <span className="text-ember">
-                      {formatCurrency(result.totalCost)}
-                    </span>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="mt-3 flex justify-end gap-6 text-sm font-medium">
+                <span>
+                  Total Paid:{" "}
+                  <span className="text-ember">
+                    {formatCurrency(result.totalCost)}
                   </span>
-                  <span>
-                    Total Interest:{" "}
-                    <span className="text-destructive">
-                      {formatCurrency(result.totalInterest)}
-                    </span>
+                </span>
+                <span>
+                  Total Interest:{" "}
+                  <span className="text-destructive">
+                    {formatCurrency(result.totalInterest)}
                   </span>
-                </div>
-              </CardContent>
-            )}
+                </span>
+              </div>
+            </CardContent>
           </Card>
         )}
+
+        {/* ─── Print-only footer: URL + date ─── */}
+        <PrintFooter />
       </div>
     </TooltipProvider>
   );
@@ -544,4 +557,26 @@ function ResultCard({
       <p className="text-[11px] text-muted-foreground">{subtext}</p>
     </div>
   );
+}
+
+function PrintFooter() {
+  return (
+    <div className="hidden print:block print:mt-6 print:pt-3 print:border-t print:border-gray-300 print:text-[8pt] print:text-gray-500 print:flex print:justify-between">
+      <span>CalcForge — thecalcforge.com</span>
+      <PrintDateAndUrl />
+    </div>
+  );
+}
+
+function PrintDateAndUrl() {
+  const text = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    const d = new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    return `${window.location.host}${window.location.pathname} · Printed ${d}`;
+  }, []);
+  return <span>{text}</span>;
 }

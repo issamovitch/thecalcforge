@@ -11,7 +11,9 @@ import { TitleLoanCalculator } from "@/components/calculators/TitleLoanCalculato
 import {
   calculateLoan,
   calculateEarlyPayoff,
+  calculateFloridaTitleLoan,
   formatCurrency,
+  formatPercent,
 } from "@/lib/loan-math";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -21,8 +23,11 @@ import { Separator } from "@/components/ui/separator";
 const EX = {
   formula: calculateLoan({ loanAmount: 5000, apr: 120, termMonths: 12 }),
   cost3k: calculateLoan({ loanAmount: 3000, apr: 200, termMonths: 12 }),
-  florida: calculateLoan({ loanAmount: 2000, apr: 300, termMonths: 12 }),
-  texas: calculateLoan({ loanAmount: 3000, apr: 300, termMonths: 12 }),
+  /* Florida: single-payment, 30-day, computed from Fla. Stat. § 537.011 tiers */
+  florida2k: calculateFloridaTitleLoan(2000),
+  florida5k: calculateFloridaTitleLoan(5000),
+  /* Texas: amortizing, 180-day max term, per OCCC data */
+  texas: calculateLoan({ loanAmount: 1500, apr: 300, termMonths: 6 }),
   payoff: calculateEarlyPayoff(
     { loanAmount: 5000, apr: 120, termMonths: 12 },
     200,
@@ -126,7 +131,7 @@ export default function TitleLoanCalculatorPage() {
           { label: "Loan Calculators", href: "/loans" },
           { label: "Title Loan Calculator" },
         ]}
-        className="mb-8"
+        className="mb-8 print:hidden"
       />
 
       {/* H1 */}
@@ -135,7 +140,7 @@ export default function TitleLoanCalculatorPage() {
       </h1>
 
       {/* Intro paragraph — targets featured snippet */}
-      <p className="mt-3 text-lg text-muted-foreground leading-relaxed max-w-3xl">
+      <p className="mt-3 text-lg text-muted-foreground leading-relaxed max-w-3xl print:hidden">
         A title loan calculator is a free online tool that estimates your
         monthly payment, total interest, and total repayment cost based on your
         vehicle&apos;s value, the loan amount, the interest rate, and the
@@ -149,7 +154,9 @@ export default function TitleLoanCalculatorPage() {
         <TitleLoanCalculator />
       </div>
 
-      {/* ─── Content Sections (H2 long-tail keywords) ─── */}
+      {/* ─── Content Sections (H2 long-tail keywords) — hidden from print ─── */}
+
+      <div className="print:hidden">
 
       <Separator className="my-12" />
 
@@ -278,27 +285,110 @@ export default function TitleLoanCalculatorPage() {
           Title Loan Calculator Florida
         </h2>
         <p>
-          Florida regulates title loans under Chapter 537 of the Florida
-          Statutes (the Florida Title Loan Act). Licensed title lenders in
-          Florida can charge a monthly interest rate of up to 25% on loans
-          under $2,000, up to 20% on loans from $2,000 to $3,000, and up to
-          15% on amounts over $3,000. These rates translate to an effective
-          APR of 180% to 300%.
+          Florida regulates title loans under the Florida Title Loan Act,{" "}
+          <a
+            href="https://www.flsenate.gov/Laws/Statutes/2024/537.011"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+          >
+            Fla. Stat. §&nbsp;537.011
+          </a>
+          , administered by the{" "}
+          <a
+            href="https://www.flofr.gov/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+          >
+            Florida Office of Financial Regulation (OFR)
+          </a>
+          . Florida caps interest on title loans using a marginal-tier system
+          — three per-annum rates that apply to different portions of the
+          principal simultaneously:
+        </p>
+        <Card className="bg-muted/30">
+          <CardContent className="p-5">
+            <p className="text-sm font-semibold mb-3">
+              Statutory Maximum Interest Rates (per Fla. Stat. §&nbsp;537.011)
+            </p>
+            <ul className="space-y-1.5 text-sm text-muted-foreground">
+              <li>
+                <strong>30% per annum</strong> on the first $2,000
+              </li>
+              <li>
+                <strong>24% per annum</strong> on the portion from $2,000 to
+                $3,000
+              </li>
+              <li>
+                <strong>18% per annum</strong> on the portion above $3,000
+              </li>
+            </ul>
+            <p className="mt-3 text-xs text-muted-foreground">
+              These are marginal tiers, not brackets selected by loan size. A
+              $5,000 loan triggers all three rates simultaneously, producing a
+              blended annual rate lower than 30%.
+            </p>
+          </CardContent>
+        </Card>
+        <p>
+          Florida title loans mature 30&nbsp;days from execution. Borrowers may
+          extend the loan in additional 30-day periods by mutual consent, but
+          the lender may not capitalize unpaid interest into an extension. Any
+          interest charged in excess of the statutory cap violates{" "}
+          <a
+            href="https://www.flsenate.gov/Laws/Statutes/2024/687"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+          >
+            Fla. Stat. ch.&nbsp;687
+          </a>{" "}
+          (Florida&apos;s usury statute); if the lender acted to circumvent
+          the cap, the agreement is void.
         </p>
         <p>
-          The maximum loan amount in Florida is typically capped at the lesser
-          of your vehicle&apos;s fair market value or $30,000. Initial loan
-          terms are 30 days, and borrowers can extend the loan by paying the
-          interest due — known as &ldquo;rolling over&rdquo; — up to ten
-          times. Each rollover adds another full month of interest without
-          reducing principal.
+          Florida caps title loan rates far below states like Texas. For
+          context, the calculator&apos;s default of 120% APR would be illegal
+          in Florida — the statutory maximum blended rate on any loan size is
+          30% per annum.
         </p>
         <p>
-          <strong>Worked example:</strong> A $2,000 title loan in Florida at
-          the maximum 25% monthly rate (300% APR) for 12 months would cost
-          approximately {formatCurrency(EX.florida.monthlyPayment)} per month, with total interest of roughly{" "}
-          {formatCurrency(EX.florida.totalInterest)} and a total repayment of {formatCurrency(EX.florida.totalCost)}. Use the calculator above with 300%
-          APR and a $2,000 loan amount to see the exact amortization.
+          <strong>Important:</strong> Florida title loans are single-payment
+          instruments. The borrower pays the full principal plus interest in one
+          lump sum at the end of each 30-day period. The amortizing calculator
+          above models monthly installment loans, which is a different product
+          than what Florida law permits.
+        </p>
+        <p>
+          <strong>Worked example (computed from statute):</strong> A $2,000
+          Florida title loan for 30&nbsp;days falls entirely in the first tier
+          (30% per annum = 2.5% per month). Interest ={" "}
+          {formatCurrency(EX.florida2k.monthlyInterest)}, total to reclaim the
+          title = {formatCurrency(EX.florida2k.totalRepayment)}.
+        </p>
+        <p>
+          <strong>Blended-tier example (computed from statute):</strong> A
+          $5,000 Florida title loan for 30&nbsp;days crosses all three tiers:{" "}
+          {formatCurrency(EX.florida5k.tiers[0].interest)} on the first $2,000
+          (30% p.a.), {formatCurrency(EX.florida5k.tiers[1].interest)} on the
+          next $1,000 (24% p.a.), and {formatCurrency(EX.florida5k.tiers[2].interest)}{" "}
+          on the remaining $2,000 (18% p.a.). Total interest ={" "}
+          {formatCurrency(EX.florida5k.monthlyInterest)}, blended effective
+          rate = {formatPercent(EX.florida5k.blendedAnnualRate)}, total to
+          reclaim = {formatCurrency(EX.florida5k.totalRepayment)}.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Sources: Fla. Stat. §&nbsp;537.011 (2024),{" "}
+          <a
+            href="https://www.flofr.gov/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-ember hover:text-ember-hover underline underline-offset-4"
+          >
+            flofr.gov
+          </a>
+          . Last verified: July&nbsp;2025.
         </p>
       </section>
 
@@ -310,29 +400,106 @@ export default function TitleLoanCalculatorPage() {
           Title Loan Calculator Texas
         </h2>
         <p>
-          Texas is one of the few states without a statewide interest rate cap
-          on title loans, and it has the highest number of title loan storefronts
-          in the country. Rather than making direct loans, most Texas title
-          lenders operate as Credit Access Businesses (CABs) or Credit Services
-          Organizations (CSOs). In this model, a third-party lender provides the
-          actual loan funds at a legal interest rate (typically 10% APR), while
-          the CAB charges a separate &ldquo;fee&rdquo; that can reach 25% or
-          more per month.
+          Texas regulates title loans through the{" "}
+          <a
+            href="https://www.occc.texas.gov/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+          >
+            Office of Consumer Credit Commissioner (OCCC)
+          </a>
+          . Most Texas title lenders operate as Credit Access Businesses (CABs)
+          or Credit Services Organizations (CSOs). In this model, a third-party
+          lender provides the actual loan funds at 10% APR or less, while the CAB
+          charges a separate fee that is{" "}
+          <strong>not capped by state law</strong>.
         </p>
         <p>
-          This fee structure results in effective APRs commonly exceeding 300%,
-          and in some cases approaching 500%. The City of Austin, Dallas, San
-          Antonio, and Houston have each enacted local ordinances that limit
-          title loan amounts and require certain disclosures, but these
-          protections do not apply statewide.
+          According to the OCCC&apos;s{" "}
+          <a
+            href="https://www.occc.texas.gov/publications/reports"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+          >
+            2025 Report on Availability, Quality and Pricing of Certain
+            Financial Services and Consumer Loan Products
+          </a>{" "}
+          (published December&nbsp;1, 2025, covering 2024 data), effective APRs
+          on Texas title loans routinely exceed 400%. Typical loan amounts range
+          from $400 to $1,200, and there is no statutory maximum loan amount.
+          CAB agreement terms are limited to 180&nbsp;days or less.
+        </p>
+        <Card className="bg-muted/30">
+          <CardContent className="p-5">
+            <p className="text-sm font-semibold mb-2">
+              Key Texas Title Loan Facts (OCCC 2025 Report)
+            </p>
+            <ul className="space-y-1.5 text-sm text-muted-foreground">
+              <li>
+                Third-party lender interest: 10% APR or less
+              </li>
+              <li>
+                CAB fees: uncapped by state law
+              </li>
+              <li>
+                Effective APR: routinely exceeds 400%
+              </li>
+              <li>
+                Typical loan amounts: $400 to $1,200; no statutory maximum
+              </li>
+              <li>
+                Maximum term: 180 days (6 months)
+              </li>
+              <li>
+                Late charge: 5% of payment amount or $7.50, whichever is
+                greater, after 10 days
+              </li>
+              <li>
+                Repossessions: approximately 9,700 per quarter, roughly 4.2% of
+                active title loans
+              </li>
+            </ul>
+          </CardContent>
+        </Card>
+        <p>
+          The OCCC&apos;s own benchmark illustrates the cost: a $1,500 title
+          loan carries an effective APR of 262% to 366%, with 11 monthly
+          payments of $327 plus a final payment of $1,827. The finance charge
+          totals $3,921, and the total repayment is $5,421 — nearly 3.6 times
+          the amount borrowed.
         </p>
         <p>
-          <strong>Worked example:</strong> A $3,000 title loan in Texas with an
-          effective 300% APR over 12 months would produce a monthly payment of
-          roughly {formatCurrency(EX.texas.monthlyPayment)}. Total interest would reach approximately{" "}
-          {formatCurrency(EX.texas.totalInterest)}, making the total repayment around {formatCurrency(EX.texas.totalCost)} — nearly four times the original
-          loan. Enter 300% APR and $3,000 in the calculator above to see the
-          full breakdown.
+          <strong>Worked example (computed by engine):</strong> A $1,500 title
+          loan in Texas at 300% APR over the maximum 180-day (6-month) term
+          produces a monthly payment of {formatCurrency(EX.texas.monthlyPayment)}.
+          Total interest reaches {formatCurrency(EX.texas.totalInterest)},
+          making the total repayment {formatCurrency(EX.texas.totalCost)} —
+          roughly double the original loan. Enter 300% APR and $1,500 in the
+          calculator above with a 6-month term to see the full amortization.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Source:{" "}
+          <a
+            href="https://www.occc.texas.gov/publications/reports"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-ember hover:text-ember-hover underline underline-offset-4"
+          >
+            Texas OCCC, 2025 Report on Availability, Quality and Pricing of
+            Certain Financial Services and Consumer Loan Products
+          </a>{" "}
+          (Dec.&nbsp;1, 2025, covering 2024 data),{" "}
+          <a
+            href="https://www.occc.texas.gov/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-ember hover:text-ember-hover underline underline-offset-4"
+          >
+            occc.texas.gov
+          </a>
+          . Last verified: July&nbsp;2025.
         </p>
       </section>
 
@@ -491,6 +658,7 @@ export default function TitleLoanCalculatorPage() {
           hub for additional tools as they become available.
         </p>
       </section>
+      </div>
     </div>
   );
 }

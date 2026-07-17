@@ -204,6 +204,65 @@ export function calculateEarlyPayoff(
   };
 }
 
+// ── Florida title-loan interest (Fla. Stat. 537.011, marginal tiers) ─────────
+
+export interface FloridaTitleLoanResult {
+  /** Monthly interest charge for one 30-day period */
+  monthlyInterest: number;
+  /** Blended effective annual rate, as a percentage */
+  blendedAnnualRate: number;
+  /** Total amount due to reclaim title after one 30-day period */
+  totalRepayment: number;
+  /** Per-tier interest breakdown for transparency */
+  tiers: { cap: number; rate: number; portion: number; interest: number }[];
+}
+
+/**
+ * Computes the statutory maximum interest on a Florida title loan
+ * using the marginal-tier system in Fla. Stat. § 537.011.
+ *
+ * Tiers (per annum, applied as simple interest per month):
+ *   - 30 % p.a. on the first $2,000
+ *   - 24 % p.a. on the portion $2,000 – $3,000
+ *   - 18 % p.a. on the portion above $3,000
+ *
+ * Florida title loans are single-payment instruments with a 30-day
+ * maturity; the result reflects one period, not an amortized schedule.
+ */
+export function calculateFloridaTitleLoan(
+  loanAmount: number,
+): FloridaTitleLoanResult {
+  let monthlyInterest = 0;
+  const bracketStarts = [0, 2000, 3000];
+  const rates = [30, 24, 18];
+  const tiers: FloridaTitleLoanResult["tiers"] = [];
+
+  for (let i = 0; i < 3; i++) {
+    const start = bracketStarts[i];
+    const end =
+      i === 2 ? loanAmount : Math.min(loanAmount, bracketStarts[i + 1]);
+    const portion = Math.max(0, end - start);
+    const interest = portion * (rates[i] / 100 / 12);
+    monthlyInterest += interest;
+    tiers.push({
+      cap: i === 2 ? Infinity : bracketStarts[i + 1],
+      rate: rates[i],
+      portion: r2(portion),
+      interest: r2(interest),
+    });
+  }
+
+  const blendedAnnualRate =
+    loanAmount > 0 ? (monthlyInterest * 12 / loanAmount) * 100 : 0;
+
+  return {
+    monthlyInterest: r2(monthlyInterest),
+    blendedAnnualRate: r2(blendedAnnualRate),
+    totalRepayment: r2(loanAmount + monthlyInterest),
+    tiers,
+  };
+}
+
 // ── Formatters ───────────────────────────────────────────────────────────────
 
 export function formatCurrency(value: number): string {

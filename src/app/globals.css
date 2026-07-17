@@ -168,21 +168,109 @@ html {
   outline-offset: 2px;
 }
 
-/* Print styles */
+/* ─── Print Stylesheet (shared across all calculator pages) ─── */
+
 @media print {
-  header,
-  footer,
-  .no-print {
+  /* Page setup */
+  @page {
+    margin: 0.6in;
+  }
+
+  /* Force light mode — no dark backgrounds burning ink */
+  *, *::before, *::after {
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 10pt !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Site chrome: hide nav, header menu, site footer */
+  header, footer, nav {
     display: none !important;
   }
-  main {
-    padding: 0 !important;
+
+  /* Utility class: hide from print entirely */
+  .no-print, .print\:hidden {
+    display: none !important;
   }
+
+  /* Force elements hidden on screen to appear in print */
+  .print\:block {
+    display: block !important;
+  }
+  .print\:flex {
+    display: flex !important;
+  }
+  .print\:table {
+    display: table !important;
+  }
+
+  /* Collapse mechanism: always show content in print */
+  details {
+    display: block !important;
+  }
+  details > summary {
+    display: none !important;
+  }
+
+  /* Calculator inputs: hide sliders, range labels, number inputs */
+  input[type="range"],
+  input[type="number"],
+  .slider-root {
+    display: none !important;
+  }
+
+  /* Card styling for print */
   .print-break-inside {
     break-inside: avoid;
   }
-  body {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+
+  /* Amortization table: remove scroll clipping, show all rows */
+  .custom-scrollbar,
+  .amortization-scroll {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* Table print rules */
+  table {
+    font-size: 9pt !important;
+    border-collapse: collapse !important;
+  }
+  thead {
+    display: table-header-group !important;
+  }
+  tr {
+    break-inside: avoid !important;
+  }
+  th, td {
+    border: 1px solid #ccc !important;
+    padding: 3pt 6pt !important;
+    background: #fff !important;
+  }
+  th {
+    font-weight: 700 !important;
+    background: #f5f5f5 !important;
+  }
+
+  /* Cards: no shadows, light borders */
+  [class*="rounded"] {
+    box-shadow: none !important;
+  }
+
+  /* Remove link colors — they're useless on paper */
+  a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+
+  /* Disable smooth scroll for print */
+  html {
+    scroll-behavior: auto !important;
   }
 }

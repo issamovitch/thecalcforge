@@ -120,3 +120,90 @@ Stage Summary:
 - Zero hardcoded currency values in prose — all computed via calculateLoan() at build time
 - JSON-LD verified: BreadcrumbList, FAQPage, WebApplication all present in SSR HTML
 - External preview 502 is a platform/gateway issue requiring infrastructure-level fix
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Fix fabricated legal data in Florida and Texas sections (YMYL page)
+
+Work Log:
+- Added `calculateFloridaTitleLoan()` to `src/lib/loan-math.ts` — computes single-payment interest using Fla. Stat. § 537.011 marginal-tier system (30% p.a. on first $2,000, 24% p.a. on $2,000–$3,000, 18% p.a. above $3,000). Returns per-tier breakdown, blended APR, and total repayment.
+- Verified function output: $2,000 → $50.00 interest, $2,050.00 total, 30% blended. $5,000 → $50+$20+$30 = $100.00 interest, 24% blended, $5,100.00 total. Both match user-provided examples exactly.
+- Rewrote Florida section (was lines 276-303, now ~110 lines):
+  - All rate claims now cite Fla. Stat. § 537.011 with outbound link to flsenate.gov
+  - Administering agency (Florida OFR) linked to flofr.gov
+  - Rates correctly stated as per-annum marginal tiers (was falsely stated as monthly rates 25%/20%/15%)
+  - Maturity/extension rules: 30 days, extendable by mutual consent, no interest capitalization
+  - Usury reference: Fla. Stat. ch. 687, agreement void if lender circumvented cap
+  - Framing note: calculator default 120% APR would be illegal in Florida (max 30% p.a.)
+  - Single-payment model note: Florida title loans are lump-sum, not amortized
+  - Two worked examples computed from engine (not hardcoded)
+  - "Last verified: July 2025" with source citations
+  - DELETED all fabricated claims: $30,000 max, ten rollovers, 180%-300% APR
+- Rewrote Texas section (was lines 307-337, now ~105 lines):
+  - All data sourced from Texas OCCC 2025 Report (Dec 1, 2025, covering 2024 data)
+  - OCCC and occc.texas.gov linked as primary source
+  - CAB model: 10% third-party interest confirmed, CAB fees uncapped
+  - Key facts card: 400%+ APR, $400-$1,200 typical, 180-day max term, 5%/$7.50 late charge, 9,700/quarter repossessions (4.2%)
+  - OCCC benchmark included: $1,500 loan, 262-366% APR, 11×$327 + $1,827 final, $3,921 finance charge, $5,421 total
+  - Worked example changed to $1,500 @ 300% APR, 6 months (was $3,000 @ 300%, 12 months — 12-month term is illegal in TX)
+  - All dollar values computed by calculateLoan() engine
+  - "Last verified: July 2025" with source citations
+  - DELETED all unsourced claims: "25% or more per month" CAB fee, "approaching 500%", "highest number of title loan storefronts", Austin/Dallas/San Antonio/Houston ordinance paragraph
+- Lint clean, page returns 200 (202KB), no console errors
+- VLM full-page verification: all 17 required elements present, all 7 prohibited fabrications absent
+
+Stage Summary:
+- Files modified: src/lib/loan-math.ts (added calculateFloridaTitleLoan), src/app/loans/title-loan-calculator/page.tsx (rewrote FL + TX sections)
+- Florida sources: Fla. Stat. § 537.011 (2024), flofr.gov, Fla. Stat. ch. 687
+- Texas sources: Texas OCCC 2025 Report on Availability, Quality and Pricing (Dec 1, 2025), occc.texas.gov
+- YMYL compliance: zero unsourced legal claims, all statutory data from primary sources with visible outbound links
+- Pages carrying state data for annual re-check: /loans/title-loan-calculator (FL, TX)
+
+---
+Task ID: 5
+Agent: Main Agent
+Task: Fix print stylesheet on calculator template — output 1-2 pages with table, not 7 pages of SEO
+
+Work Log:
+- Diagnosed root causes: (1) amortization Card had `no-print` class hiding it entirely, (2) table was conditionally unmounted via `{showAmortization && (...)}` so CSS couldn't reveal it, (3) no comprehensive print CSS existed
+- Rewrote print CSS in `src/app/globals.css` — shared stylesheet for all 24 calculators:
+  - `@page { margin: 0.6in; }`
+  - Force light mode (white bg, black text, 10pt)
+  - Hide `header`, `footer`, `nav`, `.no-print`, `.print:hidden`
+  - Force `details` open and hide `summary` in print
+  - Hide `input[type="range"]`, `input[type="number"]`, `.slider-root`
+  - Table: `thead { display: table-header-group }`, `tr { break-inside: avoid }`, borders, 9pt
+  - `.amortization-scroll`: `max-height: none; overflow: visible`
+  - Cards: no shadows, neutral borders
+  - Links: inherit color, no underline
+- Fixed `TitleLoanCalculator.tsx`:
+  - Removed `no-print` from amortization Card (was the #1 bug)
+  - Changed `{showAmortization && (...)}` to always-rendered `<CardContent className={showAmortization ? "" : "hidden print:block"}>`
+  - Added `amortization-scroll` class to scrollable div
+  - Toggle button gets `no-print` class; added separate `hidden print:block` CardTitle for print
+  - Wrapped each input's Slider + range labels + number Input in `<div className="no-print">` — values print as plain label+text
+  - Info tooltip icons get `no-print`
+  - Added `PrintFooter` + `PrintDateAndUrl` sub-components (hidden on screen, visible in print)
+- Fixed `page.tsx`:
+  - Breadcrumbs: added `print:hidden`
+  - Intro paragraph: added `print:hidden`
+  - Wrapped ALL SEO content (every H2 section, FAQ, Related Calculators) in `<div className="print:hidden">`
+  - H1 and Calculator remain visible in print
+- PDF verification (agent-browser → pdftotext):
+  - Page count: 2 pages (was 7+)
+  - Table expanded on screen → prints all 12 rows ✓
+  - Table collapsed on screen → prints all 12 rows ✓
+  - Inputs print as plain text ($10,000.00, $5,000.00, 120.0%, 12 mo) ✓
+  - Results summary present (monthly payment, total interest, total cost, finance charge, LTV) ✓
+  - Disclaimer present ✓
+  - Footer: "CalcForge — thecalcforge.com" + URL + "Printed July 17, 2026" ✓
+  - Zero SEO content leaks (no How to Calculate, Florida, Texas, FAQ, Related) ✓
+  - Zero button leaks (no Copy Link, Print, Reset) ✓
+  - Zero nav/breadcrumb/footer leaks ✓
+- Lint clean
+
+Stage Summary:
+- Files modified: globals.css (print CSS), TitleLoanCalculator.tsx (DOM structure), page.tsx (print:hidden wrappers)
+- Print output: 2 pages with exactly: title, inputs as text, results, full amortization table, disclaimer, footer
+- Template pattern: all future calculators get identical print behavior from shared globals.css + same component structure
