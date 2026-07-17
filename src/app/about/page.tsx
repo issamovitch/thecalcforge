@@ -3,12 +3,12 @@ import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { siteConfig } from "@/config/site.config";
 
 export const metadata: Metadata = {
-  title: "About CalcForge",
+  title: "About",
   description:
     "Learn about CalcForge's mission: building free, accurate, and private financial calculators for everyone.",
   alternates: { canonical: `${siteConfig.url}/about` },
   openGraph: {
-    title: "About CalcForge",
+    title: "About",
     description: "Learn about CalcForge's mission: building free, accurate, and private financial calculators for everyone.",
     url: `${siteConfig.url}/about`,
     siteName: siteConfig.name,
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary" as const,
-    title: "About CalcForge",
+    title: "About",
   },
 };
 
@@ -38,7 +38,7 @@ export default function AboutPage() {
           CalcForge was built on a simple belief: understanding your money
           shouldn&apos;t require a finance degree, an expensive CPA, or a
           subscription to a budgeting app. Our mission is to give everyone
-          access to clear, accurate financial tools — completely free.
+          access to clear, accurate financial tools, completely free.
         </p>
 
         <p>
@@ -76,7 +76,7 @@ export default function AboutPage() {
           >
             Get in touch
           </a>
-          — we&apos;d love to hear from you.
+          : we&apos;d love to hear from you.
         </p>
       </div>
     </div>

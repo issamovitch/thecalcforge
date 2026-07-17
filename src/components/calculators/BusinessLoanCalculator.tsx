@@ -1656,7 +1656,7 @@ function AmortizationTable({
 function PrintFooter() {
   return (
     <div className="hidden print:block print:mt-6 print:pt-3 print:border-t print:border-gray-300 print:text-[8pt] print:text-gray-500 print:flex print:justify-between">
-      <span>CalcForge &mdash; thecalcforge.com</span>
+      <span>CalcForge - thecalcforge.com</span>
       <PrintDateAndUrl />
     </div>
   );

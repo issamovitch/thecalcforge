@@ -6,11 +6,11 @@ import { CanonicalUrl } from "@/components/seo/CanonicalUrl";
 import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = {
-  title: "Debt Calculators — Coming Soon",
+  title: "Debt Calculators - Coming Soon",
   description: "Debt payoff calculators and strategies are coming soon to CalcForge. Compare snowball vs. avalanche, see your debt-free date, and more.",
   alternates: { canonical: `${siteConfig.url}/debt` },
   openGraph: {
-    title: "Debt Calculators — Coming Soon",
+    title: "Debt Calculators - Coming Soon",
     description: "Debt payoff calculators and strategies are coming soon to CalcForge.",
     url: `${siteConfig.url}/debt`,
     siteName: siteConfig.name,

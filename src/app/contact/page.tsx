@@ -37,7 +37,7 @@ export default function ContactPage() {
         <p>
           We&apos;re a small team and we read every message. Whether
           you&apos;ve found a bug, have a feature request, or just want to say
-          hi — we&apos;d love to hear from you.
+          hi. We&apos;d love to hear from you.
         </p>
 
         <div className="rounded-lg border border-border bg-card p-6">
@@ -60,8 +60,8 @@ export default function ContactPage() {
             Report a Calculation Issue
           </h2>
           <p className="mt-2">
-            If you notice an inaccuracy in one of our calculators — a wrong
-            rate, missing factor, or outdated data — please email us with
+            If you notice an inaccuracy in one of our calculators (for example, a wrong
+            rate, missing factor, or outdated data), please email us with
             the calculator name, the inputs you used, and what you expected
             versus what we showed. We take accuracy seriously and will
             investigate promptly.

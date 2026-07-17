@@ -20,7 +20,7 @@ import { Separator } from "@/components/ui/separator";
 /* ─── Build-time computed examples (single source of truth) ─── */
 
 const EX = {
-  /* Single-payment: $500, $75 fee, 14 days — the canonical worked example */
+  /* Single-payment: $500, $75 fee, 14 days, the canonical worked example */
   single: calculatePaydayLoan({ loanAmount: 500, fee: 75, termDays: 14 }),
   /* Cost table: all at $15 per $100, 14-day term */
   cost100: calculatePaydayLoan({ loanAmount: 100, fee: 15, termDays: 14 }),
@@ -69,12 +69,12 @@ const faqs = [
   {
     question: "How is payday loan APR calculated?",
     answer:
-      "Payday loan APR is computed by annualizing the flat fee over the loan term. The formula is: (fee ÷ loan amount) ÷ days × 365 × 100. A $75 fee on a $500 loan due in 14 days, for example, produces an APR of 391.1%. This high number reflects the fact that a two-week fee is being multiplied by roughly 26 to express it as an annual rate — it does not mean you pay 391% in interest, but it does make the cost comparable to credit cards and personal loans.",
+      "Payday loan APR is computed by annualizing the flat fee over the loan term. The formula is: (fee ÷ loan amount) ÷ days × 365 × 100. A $75 fee on a $500 loan due in 14 days, for example, produces an APR of 391.1%. This high number reflects the fact that a two-week fee is being multiplied by roughly 26 to express it as an annual rate. It does not mean you pay 391% in interest, but it does make the cost comparable to credit cards and personal loans.",
   },
   {
     question: "What happens if I roll over a payday loan?",
     answer:
-      "Rolling over a payday loan means paying only the fee to extend the due date, typically by another 14 days. The original principal is not reduced. Each rollover adds another full fee, so rolling over a $500 loan with a $75 fee four times means paying $375 in fees alone — 75% of the amount you originally borrowed — over 70 days, and you still owe the full $500.",
+      "Rolling over a payday loan means paying only the fee to extend the due date, typically by another 14 days. The original principal is not reduced. Each rollover adds another full fee, so rolling over a $500 loan with a $75 fee four times means paying $375 in fees alone, 75% of the amount you originally borrowed, over 70 days, and you still owe the full $500.",
   },
   {
     question: "How is a payday loan different from an installment loan?",
@@ -89,7 +89,7 @@ const faqs = [
   {
     question: "Can I pay off a payday loan early?",
     answer:
-      "Yes. Because single-payment payday loans charge a flat fee rather than accruing daily interest, there is no prepayment savings — the total due is the same whether you pay on day 1 or day 14. For installment payday loans, early repayment can reduce total interest, since interest accrues on the outstanding balance each month. Check your loan agreement for any prepayment penalties, though these are uncommon in payday lending.",
+      "Yes. Because single-payment payday loans charge a flat fee rather than accruing daily interest, there is no prepayment savings; the total due is the same whether you pay on day 1 or day 14. For installment payday loans, early repayment can reduce total interest, since interest accrues on the outstanding balance each month. Check your loan agreement for any prepayment penalties, though these are uncommon in payday lending.",
   },
 ];
 
@@ -129,7 +129,7 @@ export default function PaydayLoanCalculatorPage() {
         Payday Loan APR Calculator
       </h1>
 
-      {/* Intro — targets featured snippet */}
+      {/* Intro: targets featured snippet */}
       <p className="mt-3 text-lg text-muted-foreground leading-relaxed max-w-3xl print:hidden">
         A payday loan APR calculator converts a flat fee on a short-term loan
         into an annualized percentage rate so you can compare the cost against
@@ -183,7 +183,7 @@ export default function PaydayLoanCalculatorPage() {
             if you paid a $75 fee every two weeks for an entire year, the
             cumulative fees would equal roughly 391% of the $500 principal. The
             APR is a standardized comparison tool, not a prediction of what you
-            will actually pay — unless you roll the loan over repeatedly, which
+            will actually pay, unless you roll the loan over repeatedly, which
             is where the real financial damage occurs.
           </p>
         </section>
@@ -198,7 +198,7 @@ export default function PaydayLoanCalculatorPage() {
           <p>
             A payday loan payoff calculator projects what happens when you
             cannot repay the full amount on the due date and instead roll the
-            loan over — paying only the fee to buy more time. Each rollover
+            loan over, paying only the fee to buy more time. Each rollover
             charges the full fee again on the original principal. The principal
             balance never decreases unless you pay more than the fee.
           </p>
@@ -213,20 +213,20 @@ export default function PaydayLoanCalculatorPage() {
                   <strong>1 rollover</strong> (28 days): cumulative fees{" "}
                   {formatCurrency(EX.single.rollovers[0].totalFees)}, total
                   due {formatCurrency(EX.single.rollovers[0].totalRepayment)}{" "}
-                  — you have paid more in fees than a credit card would charge
+                  : you have paid more in fees than a credit card would charge
                   in interest on the same amount.
                 </li>
                 <li>
                   <strong>2 rollovers</strong> (42 days): cumulative fees{" "}
                   {formatCurrency(EX.single.rollovers[1].totalFees)}, total
                   due {formatCurrency(EX.single.rollovers[1].totalRepayment)}{" "}
-                  — nearly half the loan amount is now fees alone.
+                  , nearly half the loan amount is now fees alone.
                 </li>
                 <li>
                   <strong>4 rollovers</strong> (70 days): cumulative fees{" "}
                   {formatCurrency(EX.single.rollovers[2].totalFees)}, total
                   due {formatCurrency(EX.single.rollovers[2].totalRepayment)}{" "}
-                  — you have paid {formatCurrency(EX.single.rollovers[2].totalFees - EX.single.financeCharge)} in rollover fees
+                  : you have paid {formatCurrency(EX.single.rollovers[2].totalFees - EX.single.financeCharge)} in rollover fees
                   alone, and the original $500 is still outstanding.
                 </li>
               </ul>
@@ -297,8 +297,8 @@ export default function PaydayLoanCalculatorPage() {
           <p>
             Some states permit installment payday loans, which spread repayment
             over several months using an amortizing schedule. Unlike a
-            single-payment payday loan (which has no monthly payment — the full
-            amount is due at once), an installment loan breaks the cost into
+            single-payment payday loan, where the full
+            amount is due at once, an installment loan breaks the cost into
             equal monthly payments. The APR, however, remains extremely high.
           </p>
           <p>
@@ -317,7 +317,7 @@ export default function PaydayLoanCalculatorPage() {
             APRs in Texas range from 365% to 496%. The OCCC&apos;s benchmark:
             a $1,500 payday loan carries 11 monthly payments of $457 plus a
             final payment of $1,957, with a finance charge of $5,486 and total
-            repayment of $6,986 — 4.7 times the amount borrowed.
+            repayment of $6,986, 4.7 times the amount borrowed.
           </p>
           <p>
             The report also documents that Credit Access Business (CAB) fees

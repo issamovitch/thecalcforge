@@ -5,7 +5,7 @@ import { siteConfig } from "@/config/site.config";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "CalcForge privacy policy. Learn how we handle your data — spoiler: we don't collect any.",
+    "CalcForge privacy policy. Learn how we handle your data (spoiler: we don't collect any).",
   alternates: { canonical: `${siteConfig.url}/privacy-policy` },
   openGraph: {
     title: "Privacy Policy",
@@ -73,7 +73,7 @@ export default function PrivacyPolicyPage() {
             We may collect standard web analytics data such as page views,
             referral sources, device type, and general geographic region through
             privacy-respecting analytics tools. This data is aggregated and
-            anonymous — it cannot be used to identify you personally.
+            anonymous; it cannot be used to identify you personally.
           </p>
         </section>
 

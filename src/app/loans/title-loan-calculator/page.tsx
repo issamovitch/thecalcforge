@@ -137,7 +137,7 @@ export default function TitleLoanCalculatorPage() {
         Title Loan Calculator
       </h1>
 
-      {/* Intro paragraph — targets featured snippet */}
+      {/* Intro paragraph: targets featured snippet */}
       <p className="mt-3 text-lg text-muted-foreground leading-relaxed max-w-3xl print:hidden">
         A title loan calculator is a free online tool that estimates your
         monthly payment, total interest, and total repayment cost based on your
@@ -147,12 +147,12 @@ export default function TitleLoanCalculatorPage() {
         overpaying.
       </p>
 
-      {/* Calculator (client component — SSR with default values, no Suspense) */}
+      {/* Calculator (client component, SSR with default values, no Suspense) */}
       <div className="mt-8">
         <TitleLoanCalculator />
       </div>
 
-      {/* ─── Content Sections (H2 long-tail keywords) — hidden from print ─── */}
+      {/* ─── Content Sections (H2 long-tail keywords), hidden from print ─── */}
 
       <div className="print:hidden">
 
@@ -219,7 +219,7 @@ export default function TitleLoanCalculatorPage() {
         <p>
           By reviewing the amortization table, you can see exactly how much of
           each payment reduces your outstanding balance. This helps you plan for
-          early repayment — even a small additional payment toward the principal
+          early repayment: even a small additional payment toward the principal
           each month can save significant money over the life of the loan.
         </p>
       </section>
@@ -234,7 +234,7 @@ export default function TitleLoanCalculatorPage() {
         <p>
           The total cost of a title loan depends on three factors: the amount
           you borrow, the interest rate, and the repayment term. Because title
-          loan APRs are typically very high — often 100% to 300% — the finance
+          loan APRs are typically very high (often 100% to 300%), meaning the finance
           charges can exceed the original loan amount.
         </p>
         <p>
@@ -301,8 +301,8 @@ export default function TitleLoanCalculatorPage() {
           >
             Florida Office of Financial Regulation (OFR)
           </a>
-          . Florida caps interest on title loans using a marginal-tier system
-          — three per-annum rates that apply to different portions of the
+          . Florida caps interest on title loans using a marginal-tier system:
+          three per-annum rates that apply to different portions of the
           principal simultaneously:
         </p>
         <Card className="bg-muted/30">
@@ -348,7 +348,7 @@ export default function TitleLoanCalculatorPage() {
         <p>
           Florida caps title loan rates far below states like Texas. For
           context, the calculator&apos;s default of 120% APR would be illegal
-          in Florida — the statutory maximum blended rate on any loan size is
+          in Florida. The statutory maximum blended rate on any loan size is
           30% per annum.
         </p>
         <p>
@@ -465,7 +465,7 @@ export default function TitleLoanCalculatorPage() {
           The OCCC&apos;s own benchmark illustrates the cost: a $1,500 title
           loan carries an effective APR of 262% to 366%, with 11 monthly
           payments of $327 plus a final payment of $1,827. The finance charge
-          totals $3,921, and the total repayment is $5,421 — nearly 3.6 times
+          totals $3,921, and the total repayment is $5,421, nearly 3.6 times
           the amount borrowed.
         </p>
         <p>
@@ -473,7 +473,7 @@ export default function TitleLoanCalculatorPage() {
           loan in Texas at 300% APR over the maximum 180-day (6-month) term
           produces a monthly payment of {formatCurrency(EX.texas.monthlyPayment)}.
           Total interest reaches {formatCurrency(EX.texas.totalInterest)},
-          making the total repayment {formatCurrency(EX.texas.totalCost)} —
+          making the total repayment {formatCurrency(EX.texas.totalCost)},
           roughly double the original loan. Enter 300% APR and $1,500 in the
           calculator above with a 6-month term to see the full amortization.
         </p>
@@ -512,7 +512,7 @@ export default function TitleLoanCalculatorPage() {
           A car title loan uses your vehicle as collateral, and the monthly
           payment schedule depends entirely on the loan size, interest rate, and
           term. Because title loans amortize, each payment includes both
-          interest and principal — but the ratio shifts over time. In month
+          interest and principal, but the ratio shifts over time. In month
           one, the vast majority of your payment covers interest. By the final
           months, nearly the entire payment goes toward principal.
         </p>
@@ -590,7 +590,7 @@ export default function TitleLoanCalculatorPage() {
         </h2>
         <p>
           Several factors determine how much you can borrow with a title loan.
-          The most important is your vehicle&apos;s appraised value — lenders
+          The most important is your vehicle&apos;s appraised value: lenders
           typically offer 25% to 50% of that value. A car worth $15,000 might
           qualify you for a loan of $3,750 to $7,500, depending on the lender.
         </p>

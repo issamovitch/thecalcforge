@@ -6,11 +6,11 @@ import { CanonicalUrl } from "@/components/seo/CanonicalUrl";
 import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = {
-  title: "Auto Calculators — Coming Soon",
+  title: "Auto Calculators - Coming Soon",
   description: "Auto calculators are coming soon to CalcForge. Factor in car payments, insurance, depreciation, and total cost of ownership.",
   alternates: { canonical: `${siteConfig.url}/auto` },
   openGraph: {
-    title: "Auto Calculators — Coming Soon",
+    title: "Auto Calculators - Coming Soon",
     description: "Auto calculators are coming soon to CalcForge.",
     url: `${siteConfig.url}/auto`,
     siteName: siteConfig.name,

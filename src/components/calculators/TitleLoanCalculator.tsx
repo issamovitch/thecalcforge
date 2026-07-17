@@ -60,7 +60,7 @@ export const DEFAULT_INPUTS: TitleLoanInputs = {
   extraStartMonth: 1,
 };
 
-/* Pre-compute default result at module level — available during SSR */
+/* Pre-compute default result at module level (available during SSR) */
 export const DEFAULT_RESULT = calculateLoan({
   loanAmount: DEFAULT_INPUTS.loanAmount,
   apr: DEFAULT_INPUTS.apr,
@@ -70,7 +70,7 @@ export const DEFAULT_RESULT = calculateLoan({
 /* ─── Component ─── */
 
 export function TitleLoanCalculator() {
-  // Read URL params in initializer — SSR gets DEFAULT_INPUTS, client reads query string.
+  // Read URL params in initializer; SSR gets DEFAULT_INPUTS, client reads query string.
   // This avoids useSearchParams (which forces a Suspense boundary) and avoids
   // calling setState in an useEffect (which the React compiler forbids).
   const [inputs, setInputs] = useState<TitleLoanInputs>(() => {
@@ -735,7 +735,7 @@ function ResultCard({
 function PrintFooter() {
   return (
     <div className="hidden print:block print:mt-6 print:pt-3 print:border-t print:border-gray-300 print:text-[8pt] print:text-gray-500 print:flex print:justify-between">
-      <span>CalcForge — thecalcforge.com</span>
+      <span>CalcForge - thecalcforge.com</span>
       <PrintDateAndUrl />
     </div>
   );

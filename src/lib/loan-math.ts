@@ -511,7 +511,7 @@ export function calculateBalloonLoan(
   }
   const roundedMonthly = r2(monthlyPayment);
 
-  // Build schedule — n rows of regular payments.
+  // Build schedule: n rows of regular payments.
   // Keep internal balance at full precision to avoid cumulative rounding drift.
   const schedule: AmortizationRow[] = [];
   let balance = financedAmount;

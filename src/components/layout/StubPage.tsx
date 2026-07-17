@@ -14,11 +14,11 @@ interface StubPageProps {
 export function generateStubMetadata({ name, description, path }: StubPageProps): Metadata {
   const canonicalUrl = `${siteConfig.url}${path}`;
   return {
-    title: `${name} — Coming Soon`,
+    title: `${name} - Coming Soon`,
     description,
     alternates: { canonical: canonicalUrl },
     openGraph: {
-      title: `${name} — Coming Soon | ${siteConfig.name}`,
+      title: `${name} - Coming Soon | ${siteConfig.name}`,
       description,
       url: canonicalUrl,
       siteName: siteConfig.name,
@@ -28,7 +28,7 @@ export function generateStubMetadata({ name, description, path }: StubPageProps)
     },
     twitter: {
       card: "summary_large_image" as const,
-      title: `${name} — Coming Soon | ${siteConfig.name}`,
+      title: `${name} - Coming Soon | ${siteConfig.name}`,
       description,
       images: ["/og-default.png"],
     },

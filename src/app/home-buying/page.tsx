@@ -6,11 +6,11 @@ import { CanonicalUrl } from "@/components/seo/CanonicalUrl";
 import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = {
-  title: "Home Buying Calculators — Coming Soon",
+  title: "Home Buying Calculators - Coming Soon",
   description: "Home buying calculators are coming soon to CalcForge. Crunch mortgage numbers, property taxes, PMI, and closing costs.",
   alternates: { canonical: `${siteConfig.url}/home-buying` },
   openGraph: {
-    title: "Home Buying Calculators — Coming Soon",
+    title: "Home Buying Calculators - Coming Soon",
     description: "Home buying calculators are coming soon to CalcForge.",
     url: `${siteConfig.url}/home-buying`,
     siteName: siteConfig.name,

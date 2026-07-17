@@ -35,7 +35,7 @@ const EX = {
 /* ─── SEO Metadata ─── */
 
 const pageUrl = `${siteConfig.url}/loans/business-loan-calculator`;
-const pageTitle = "Business Loan Calculator — Free Payment, APR & Amortization | CalcForge";
+const pageTitle = "Business Loan Calculator: Free Payment, APR & Amortization";
 const pageDescription =
   "Free business loan calculator for term loans, equipment financing, and merchant cash advances. Estimate payments, total cost, and effective APR at CalcForge.";
 
@@ -170,7 +170,7 @@ export default function BusinessLoanCalculatorPage() {
           {formatCurrency(500)} per month starting from month 1, you would
           save {EX.termExtra.monthsSaved} month{EX.termExtra.monthsSaved !== 1 ? "s" : ""} and{" "}
           {formatCurrency(EX.termExtra.interestSaved)} in total interest. The
-          total payoff drops to {formatCurrency(EX.termExtra.result.totalCost)}
+          total payoff drops to {formatCurrency(EX.termExtra.result.totalCost)}{" "}
           compared to {formatCurrency(EX.term.totalCost)} without extra
           payments. Use the extra payment fields in the calculator above to
           model your own early payoff scenario.

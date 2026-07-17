@@ -61,7 +61,7 @@ export function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
-          {/* Loans dropdown — populated from calculatorPages */}
+          {/* Loans dropdown (populated from calculatorPages) */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors">

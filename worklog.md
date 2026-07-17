@@ -365,3 +365,28 @@ Stage Summary:
 - BUG 4 verified: daily×7 == weekly (exact match)
 - BUG 5 verified: holdback field removed from all layers
 - VERIFY confirmed: extra payments present on title loan calculator
+
+---
+Task ID: 1
+Agent: main
+Task: BUG 1 - Fix title tag duplication, BUG 2 - Replace em dashes sitewide + lint rule, BUG 3 - Missing space, VERIFY - Title loan extra payments
+
+Work Log:
+- Fixed business loan page title: removed `| CalcForge` suffix and em dash. Now "Business Loan Calculator: Free Payment, APR & Amortization" (template appends `| CalcForge` once).
+- Fixed loans hub page title: removed `| CalcForge` from both title and OG title.
+- Fixed about page: changed "About CalcForge" to "About" in title, OG, and Twitter metadata.
+- Audited all pages: payday loan, title loan, privacy, contact, auto, insurance, debt, home-buying pages. Only business loan, loans hub, and about had brand duplication.
+- Replaced all em dashes (U+2014) across 15 files with context-appropriate alternatives (colon, comma, semicolon, hyphen, period, parentheses).
+- Fixed &mdash; HTML entity in BusinessLoanCalculator print footer.
+- Fixed nested parentheses issue in payday loan page prose (line 300).
+- Added ESLint custom rule `calcforge/no-em-dash` scoped to src/** that catches em dashes in string literals, JSX text, and template literals.
+- Fixed missing space in business loan page extra payments prose by adding explicit `{" "}` JSX expression.
+- Verified title loan calculator has extra payments feature (inputs, state, calculation, UI all present). Hub FAQ claim is correct.
+
+Stage Summary:
+- Title duplication: fixed on 3 pages (business loan, loans hub, about)
+- Em dashes: 30+ replacements across 15 files, 0 remaining
+- Lint rule: `calcforge/no-em-dash` added to eslint.config.mjs
+- Missing space: fixed with explicit `{" "}`
+- VERIFY: Title loan calculator does have extra payments; hub FAQ is accurate
+- `bun run lint` passes clean

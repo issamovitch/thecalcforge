@@ -49,7 +49,7 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Column 3: Loan Tools — driven by calculatorPages config */}
+          {/* Column 3: Loan Tools (driven by calculatorPages config) */}
           <div>
             <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-200">
               Loan Tools

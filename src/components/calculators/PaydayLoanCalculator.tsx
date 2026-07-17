@@ -202,8 +202,7 @@ export default function PaydayLoanCalculator() {
             Payday Loan Calculator
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Estimate the true cost of a payday loan — whether single-payment or
-            installment — including APR, total fees, and rollover costs.
+            Estimate the true cost of a payday loan (single-payment or installment), including APR, total fees, and rollover costs.
           </p>
 
           {/* Mode Toggle */}
@@ -880,7 +879,7 @@ function ResultCard({
 function PrintFooter() {
   return (
     <div className="hidden print:block print:mt-6 print:pt-3 print:border-t print:border-gray-300 print:text-[8pt] print:text-gray-500 print:flex print:justify-between">
-      <span>CalcForge — thecalcforge.com</span>
+      <span>CalcForge - thecalcforge.com</span>
       <PrintDateAndUrl />
     </div>
   );

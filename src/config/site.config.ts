@@ -20,7 +20,7 @@ export const OCCC_BASE_URL = "https://occc.texas.gov";
 /**
  * Every calculator that has been built and is live.
  * Header nav dropdown, footer "Loan Tools", and hub pages
- * all derive from this array — add a new entry here and every
+ * all derive from this array. Add a new entry here and every
  * navigation surface updates automatically.
  */
 export const calculatorPages = [
