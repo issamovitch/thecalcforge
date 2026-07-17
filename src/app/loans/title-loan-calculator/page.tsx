@@ -648,14 +648,21 @@ export default function TitleLoanCalculatorPage() {
       <section className="space-y-4">
         <h2 className="text-2xl font-bold tracking-tight">Related Calculators</h2>
         <p className="text-muted-foreground">
-          More loan calculators are on the way. Browse our{" "}
+          Compare title loan costs against unsecured payday loans with our{" "}
+          <a
+            href="/loans/payday-loan-calculator"
+            className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+          >
+            Payday Loan APR Calculator
+          </a>
+          , or browse all tools on the{" "}
           <a
             href="/loans"
             className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
           >
             Loan Calculators
           </a>{" "}
-          hub for additional tools as they become available.
+          hub.
         </p>
       </section>
       </div>

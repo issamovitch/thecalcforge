@@ -9,6 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const pages: MetadataRoute.Sitemap = [
     { url: base, lastModified: new Date(), changeFrequency: "weekly", priority: 1.0 },
     { url: `${base}/loans/title-loan-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
+    { url: `${base}/loans/payday-loan-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/loans`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/debt`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
     { url: `${base}/auto`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },

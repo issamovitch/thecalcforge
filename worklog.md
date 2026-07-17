@@ -207,3 +207,35 @@ Stage Summary:
 - Files modified: globals.css (print CSS), TitleLoanCalculator.tsx (DOM structure), page.tsx (print:hidden wrappers)
 - Print output: 2 pages with exactly: title, inputs as text, results, full amortization table, disclaimer, footer
 - Template pattern: all future calculators get identical print behavior from shared globals.css + same component structure
+
+---
+Task ID: 6
+Agent: Main Agent
+Task: Build /loans/payday-loan-calculator with single-payment + installment modes
+
+Work Log:
+- Added `calculatePaydayLoan()` to `src/lib/loan-math.ts` — flat-fee single-payment model with APR formula, cost per $100, and rollover projections (1x/2x/4x)
+- Verified math: $500, $75 fee, 14 days → $575.00 due, 391.1% APR, $15.00/$100
+- Built `PaydayLoanCalculator.tsx` via subagent — two-mode component:
+  - Mode 1 (Single Payment): 4 inputs (amount, fee type toggle, fee, days), results (total due, finance charge, APR, cost/$100, rollover table)
+  - Mode 2 (Installment): 3 inputs (amount, APR, term), results (monthly payment, total interest, total cost, amortization table)
+  - URL params for shareable results, print styles, no-print controls
+- Built `/loans/payday-loan-calculator/page.tsx`:
+  - H1: "Payday Loan APR Calculator" (primary keyword)
+  - 4 H2 sections: How to Calculate Payday Loan APR, Payday Loan Payoff Calculator, How Much Does a $500 Payday Loan Cost, Installment Payday Loan Calculator
+  - All prose numbers computed at build time (EX object)
+  - Honesty framing: single-payment has no monthly payment, APR annualizes a 14-day cost, rollovers are where real damage happens
+  - OCCC data cited with occc.texas.gov links and Last verified date
+  - No unsourced rate/cap/ban claims
+  - FAQ: 5 questions, JSON-LD FAQPage
+  - Related Calculators links to Title Loan Calculator
+- Updated title loan page Related Calculators to link back to payday loan calculator
+- Updated sitemap.ts and robots.ts
+- Lint clean, 200 OK (166KB), 2-page print output, zero SEO content in print
+- DOM verification: H1, 4 H2s, mode toggle, 5 FAQs, cross-link, rollover table, amortization table (installment mode), print footer all present
+
+Stage Summary:
+- Files created: src/lib/loan-math.ts (added calculatePaydayLoan), src/components/calculators/PaydayLoanCalculator.tsx, src/app/loans/payday-loan-calculator/page.tsx
+- Files modified: src/app/loans/title-loan-calculator/page.tsx (Related link), sitemap.ts, robots.ts
+- Computed values (all engine-derived): $575 due, 391.1% APR, $15/$100, rollover 4x=$875/70 days, installment $202.75/mo, $716.53 interest
+- Source cited: Texas OCCC 2025 Report (Dec 1, 2025, 2024 data) — occc.texas.gov

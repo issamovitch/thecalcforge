@@ -263,6 +263,79 @@ export function calculateFloridaTitleLoan(
   };
 }
 
+// ── Payday loan (single-payment flat-fee model) ─────────────────────────────
+
+export interface PaydayLoanInputs {
+  loanAmount: number;
+  fee: number; // flat dollar fee (convert from per-$100 in the component)
+  termDays: number;
+}
+
+export interface RolloverCost {
+  /** Number of times the loan is rolled over */
+  times: number;
+  /** Cumulative fees paid (original + each rollover) */
+  totalFees: number;
+  /** Total amount repaid */
+  totalRepayment: number;
+  /** Total days from origination to final due date */
+  totalDays: number;
+}
+
+export interface PaydayLoanResult {
+  /** Total amount due (principal + fee) */
+  totalRepayment: number;
+  /** The finance charge (fee) */
+  financeCharge: number;
+  /** Annualized percentage rate */
+  apr: number;
+  /** Cost per $100 borrowed */
+  costPerHundred: number;
+  /** Projected costs if rolled over 1, 2, and 4 times */
+  rollovers: RolloverCost[];
+}
+
+/**
+ * Computes the cost and APR of a single-payment payday loan.
+ *
+ * APR formula: (fee / amount) / days × 365 × 100
+ * This annualizes a short-term flat fee into a comparable rate.
+ */
+export function calculatePaydayLoan(
+  inputs: PaydayLoanInputs,
+): PaydayLoanResult {
+  const { loanAmount, fee, termDays } = inputs;
+
+  if (loanAmount <= 0 || fee < 0 || termDays <= 0) {
+    return {
+      totalRepayment: 0,
+      financeCharge: 0,
+      apr: 0,
+      costPerHundred: 0,
+      rollovers: [],
+    };
+  }
+
+  const totalRepayment = loanAmount + fee;
+  const apr = (fee / loanAmount / termDays) * 365 * 100;
+  const costPerHundred = (fee / loanAmount) * 100;
+
+  const rollovers: RolloverCost[] = [1, 2, 4].map((n) => ({
+    times: n,
+    totalFees: r2(fee * (n + 1)),
+    totalRepayment: r2(loanAmount + fee * (n + 1)),
+    totalDays: termDays * (n + 1),
+  }));
+
+  return {
+    totalRepayment: r2(totalRepayment),
+    financeCharge: r2(fee),
+    apr: r2(apr),
+    costPerHundred: r2(costPerHundred),
+    rollovers,
+  };
+}
+
 // ── Formatters ───────────────────────────────────────────────────────────────
 
 export function formatCurrency(value: number): string {
