@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { siteConfig } from "@/config/site.config";
+import { siteConfig, VERIFIED_DATE, OCCC_REPORT_URL, OCCC_BASE_URL } from "@/config/site.config";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import {
   BreadcrumbJsonLd,
@@ -305,7 +305,7 @@ export default function PaydayLoanCalculatorPage() {
             According to the Texas Office of Consumer Credit
             Commissioner&apos;s{" "}
             <a
-              href="https://www.occc.texas.gov/publications/reports"
+              href={OCCC_REPORT_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
@@ -339,7 +339,7 @@ export default function PaydayLoanCalculatorPage() {
           <p className="text-xs text-muted-foreground">
             Source:{" "}
             <a
-              href="https://www.occc.texas.gov/publications/reports"
+              href={OCCC_REPORT_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="text-ember hover:text-ember-hover underline underline-offset-4"
@@ -349,14 +349,14 @@ export default function PaydayLoanCalculatorPage() {
             </a>{" "}
             (Dec.&nbsp;1, 2025, covering 2024 data),{" "}
             <a
-              href="https://www.occc.texas.gov/"
+              href={OCCC_BASE_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="text-ember hover:text-ember-hover underline underline-offset-4"
             >
               occc.texas.gov
             </a>
-            . Last verified: July&nbsp;2025.
+            . Last verified: {VERIFIED_DATE}.
           </p>
         </section>
 

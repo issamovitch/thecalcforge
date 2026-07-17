@@ -239,3 +239,43 @@ Stage Summary:
 - Files modified: src/app/loans/title-loan-calculator/page.tsx (Related link), sitemap.ts, robots.ts
 - Computed values (all engine-derived): $575 due, 391.1% APR, $15/$100, rollover 4x=$875/70 days, installment $202.75/mo, $716.53 interest
 - Source cited: Texas OCCC 2025 Report (Dec 1, 2025, 2024 data) — occc.texas.gov
+
+---
+Task ID: 7
+Agent: Main Agent
+Task: Navigation, footer, verified dates, and OCCC URL sitewide fixes
+
+Work Log:
+- Added to `src/config/site.config.ts`:
+  - `VERIFIED_DATE = "July 2026"` — single shared constant for all "Last verified" dates
+  - `OCCC_REPORT_URL` — direct PDF link (no www. prefix)
+  - `OCCC_BASE_URL` — https://occc.texas.gov (no www.)
+  - `calculatorPages` — array of all built calculator pages (single source of truth for nav/footer/loans hub)
+- Updated `src/app/loans/title-loan-calculator/page.tsx`:
+  - Imported VERIFIED_DATE, OCCC_REPORT_URL, OCCC_BASE_URL
+  - Replaced 2× "Last verified: July 2025" → `{VERIFIED_DATE}` (now renders "July 2026")
+  - Replaced all `https://www.occc.texas.gov/publications/reports` → `{OCCC_REPORT_URL}` (direct PDF)
+  - Replaced all `https://www.occc.texas.gov/` → `{OCCC_BASE_URL}` (no www.)
+- Updated `src/app/loans/payday-loan-calculator/page.tsx`:
+  - Same 3 fixes as title loan page
+- Rewrote `src/components/layout/Header.tsx`:
+  - Loans dropdown children now derived from `calculatorPages` + "All Loan Calculators"
+  - Mobile nav likewise dynamic
+  - Payday Loan APR Calculator now appears in both desktop and mobile nav
+- Rewrote `src/app/loans/page.tsx`:
+  - Removed "Coming Soon" badge and placeholder
+  - Cards rendered from `calculatorPages` array with icons and descriptions
+  - Proper metadata (title, description, OG, canonical)
+  - Breadcrumbs and BreadcrumbJsonLd
+- Rewrote `src/components/layout/Footer.tsx`:
+  - "Loan Tools" column now renders from `calculatorPages` (was hardcoded single item)
+  - Both Title Loan Calculator and Payday Loan APR Calculator appear in footer
+
+Stage Summary:
+- Zero occurrences of "www.occc" or "July 2025" remain on any page
+- "Last verified" dates: title loan 2×, payday loan 1×, all show "July 2026"
+- OCCC report links: all point to direct PDF URL
+- Nav dropdown: Title Loan Calculator, Payday Loan APR Calculator, All Loan Calculators
+- Footer Loan Tools: Title Loan Calculator, Payday Loan APR Calculator
+- /loans page: 2 calculator cards, no "Coming Soon"
+- Adding a new calculator page requires only appending to `calculatorPages` in site.config.ts

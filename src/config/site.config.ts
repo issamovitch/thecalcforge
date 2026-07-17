@@ -5,6 +5,38 @@
  * Edit this single file to change branding, colors, links across the entire site.
  */
 
+// ─── Shared legal/source constants ───────────────────────────────────
+/** Update this single value when re-verifying any sourced legal/rate data. */
+export const VERIFIED_DATE = "July 2026";
+
+/** Direct link to the OCCC 2025 Report PDF (Dec 1, 2025, covering 2024 data). */
+export const OCCC_REPORT_URL =
+  "https://occc.texas.gov/wp-content/uploads/2025/12/2025_study_consumer_loan_products.pdf";
+
+/** OCCC homepage (no www. prefix). */
+export const OCCC_BASE_URL = "https://occc.texas.gov";
+
+// ─── Built calculator pages (single source of truth) ─────────────────
+/**
+ * Every calculator that has been built and is live.
+ * Header nav dropdown, footer "Loan Tools", and the /loans hub page
+ * all derive from this array — add a new entry here and every
+ * navigation surface updates automatically.
+ */
+export const calculatorPages = [
+  {
+    label: "Title Loan Calculator",
+    href: "/loans/title-loan-calculator",
+    description: "Estimate title loan payments, total interest, and amortization schedules.",
+  },
+  {
+    label: "Payday Loan APR Calculator",
+    href: "/loans/payday-loan-calculator",
+    description: "Calculate payday loan APR for single-payment and installment payday loans.",
+  },
+] as const;
+
+// ─── Core site config ────────────────────────────────────────────────
 export const siteConfig = {
   name: "CalcForge",
   tagline: "Precision-crafted financial calculators",

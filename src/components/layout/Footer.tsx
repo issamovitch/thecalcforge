@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { siteConfig } from "@/config/site.config";
+import { siteConfig, calculatorPages } from "@/config/site.config";
 
 const departmentLinks = [
   { label: "Loans", href: "/loans" },
@@ -8,10 +8,6 @@ const departmentLinks = [
   { label: "Auto", href: "/auto" },
   { label: "Home Buying", href: "/home-buying" },
   { label: "Insurance", href: "/insurance" },
-];
-
-const loanCalculatorLinks = [
-  { label: "Title Loan Calculator", href: "/loans/title-loan-calculator" },
 ];
 
 export function Footer() {
@@ -53,16 +49,16 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Column 3: Loan Tools */}
+          {/* Column 3: Loan Tools — driven by calculatorPages config */}
           <div>
             <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-200">
               Loan Tools
             </h3>
             <ul className="mt-4 space-y-2.5">
-              {loanCalculatorLinks.map((link) => (
-                <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-slate-400 transition-colors hover:text-white">
-                    {link.label}
+              {calculatorPages.map((calc) => (
+                <li key={calc.href}>
+                  <Link href={calc.href} className="text-sm text-slate-400 transition-colors hover:text-white">
+                    {calc.label}
                   </Link>
                 </li>
               ))}

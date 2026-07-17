@@ -18,16 +18,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { siteConfig, calculatorPages } from "@/config/site.config";
 
-const navLinks = [
-  {
-    label: "Loans",
-    href: "/loans",
-    children: [
-      { label: "Title Loan Calculator", href: "/loans/title-loan-calculator" },
-      { label: "All Loan Calculators", href: "/loans" },
-    ],
-  },
+/** Build the Loans dropdown children dynamically from calculatorPages. */
+function loanNavChildren() {
+  return [
+    ...calculatorPages.map((p) => ({ label: p.label, href: p.href })),
+    { label: "All Loan Calculators", href: "/loans" },
+  ];
+}
+
+const otherNavLinks = [
   { label: "Debt", href: "/debt" },
   { label: "Auto", href: "/auto" },
   { label: "Home Buying", href: "/home-buying" },
@@ -43,6 +44,7 @@ const footerLinks = [
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const loanChildren = loanNavChildren();
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -67,33 +69,33 @@ export function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
-          {navLinks.map((link) =>
-            link.children ? (
-              <DropdownMenu key={link.href}>
-                <DropdownMenuTrigger asChild>
-                  <button className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors">
-                    {link.label}
-                    <ChevronDown className="size-3.5" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56">
-                  {link.children.map((child) => (
-                    <DropdownMenuItem key={child.href} asChild>
-                      <Link href={child.href}>{child.label}</Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <a
-                key={link.href}
-                href={link.href}
-                className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors"
-              >
-                {link.label}
-              </a>
-            )
-          )}
+          {/* Loans dropdown — populated from calculatorPages */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors">
+                Loans
+                <ChevronDown className="size-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              {loanChildren.map((child) => (
+                <DropdownMenuItem key={child.href} asChild>
+                  <Link href={child.href}>{child.label}</Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Static department links */}
+          {otherNavLinks.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors"
+            >
+              {link.label}
+            </a>
+          ))}
           <div className="mx-2 h-5 w-px bg-border" />
           <Button variant="ghost" asChild>
             <Link href="/about" className="text-sm font-medium">
@@ -129,38 +131,44 @@ export function Header() {
               <p className="mt-4 mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Calculators
               </p>
-              {navLinks.map((link) =>
-                link.children ? (
-                  <div key={link.href}>
-                    <Link
-                      href={link.href}
-                      onClick={() => setMobileOpen(false)}
-                      className="rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-                    >
-                      {link.label}
-                    </Link>
-                    {link.children.map((child) => (
-                      <Link
-                        key={child.href}
-                        href={child.href}
-                        onClick={() => setMobileOpen(false)}
-                        className="block rounded-md pl-6 pr-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
-                      >
-                        {child.label}
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileOpen(false)}
-                    className="rounded-md px-3 py-2 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
-                  >
-                    {link.label}
-                  </Link>
-                )
-              )}
+
+              {/* Loans section */}
+              <Link
+                href="/loans"
+                onClick={() => setMobileOpen(false)}
+                className="rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+              >
+                Loans
+              </Link>
+              {calculatorPages.map((p) => (
+                <Link
+                  key={p.href}
+                  href={p.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="block rounded-md pl-6 pr-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  {p.label}
+                </Link>
+              ))}
+              <Link
+                href="/loans"
+                onClick={() => setMobileOpen(false)}
+                className="block rounded-md pl-6 pr-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
+              >
+                All Loan Calculators
+              </Link>
+
+              {/* Other departments */}
+              {otherNavLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-md px-3 py-2 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  {link.label}
+                </Link>
+              ))}
 
               <div className="my-3 h-px bg-border" />
 
