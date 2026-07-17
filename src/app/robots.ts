@@ -10,7 +10,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/loans/title-loan-calculator", "/loans/payday-loan-calculator"],
+        allow: ["/", "/loans/title-loan-calculator", "/loans/payday-loan-calculator", "/loans/business-loan-calculator"],
         disallow: departmentPaths,
       },
     ],

@@ -1,0 +1,628 @@
+  1100→  1100→              className="mt-1"
+  1101→  1101→              aria-label="Annual interest rate input"
+  1102→  1102→            />
+  1103→  1103→          </div>
+  1104→  1104→        </div>
+  1105→  1105→
+  1106→  1106→        {/* Term */}
+  1107→  1107→        <div className="space-y-2">
+  1108→  1108→          <div className="flex items-center justify-between">
+  1109→  1109→            <Label htmlFor="eq-term" className="text-sm font-medium">
+  1110→  1110→              Loan Term (Months)
+  1111→  1111→            </Label>
+  1112→  1112→            <span className="text-sm font-semibold text-foreground">
+  1113→  1113→              {inputs.termMonths} mo
+  1114→  1114→            </span>
+  1115→  1115→          </div>
+  1116→  1116→          <div className="no-print">
+  1117→  1117→            <Slider
+  1118→  1118→              id="eq-term"
+  1119→  1119→              min={1}
+  1120→  1120→              max={180}
+  1121→  1121→              step={1}
+  1122→  1122→              value={[inputs.termMonths]}
+  1123→  1123→              onValueChange={([v]) => onInputChange("termMonths", v.toString())}
+  1124→  1124→              aria-label="Loan term in months"
+  1125→  1125→              className="w-full"
+  1126→  1126→            />
+  1127→  1127→            <div className="flex justify-between text-xs text-muted-foreground">
+  1128→  1128→              <span>1 mo</span>
+  1129→  1129→              <span>180 mo</span>
+  1130→  1130→            </div>
+  1131→  1131→            <Input
+  1132→  1132→              type="number"
+  1133→  1133→              min={1}
+  1134→  1134→              max={180}
+  1135→  1135→              step={1}
+  1136→  1136→              value={inputs.termMonths}
+  1137→  1137→              onChange={(e) => onInputChange("termMonths", e.target.value)}
+  1138→  1138→              className="mt-1"
+  1139→  1139→              aria-label="Loan term in months input"
+  1140→  1140→            />
+  1141→  1141→          </div>
+  1142→  1142→        </div>
+  1143→  1143→      </div>
+  1144→  1144→
+  1145→  1145→      {/* ─── Results ─── */}
+  1146→  1146→      <div className="space-y-4">
+  1147→  1147→        {result.schedule.length > 0 ? (
+  1148→  1148→          <>
+  1149→  1149→            {/* Monthly Payment Highlight */}
+  1150→  1150→            <div className="rounded-lg bg-ember/10 border border-ember/20 p-5 text-center">
+  1151→  1151→              <p className="text-sm font-medium text-muted-foreground mb-1">
+  1152→  1152→                Estimated Monthly Payment
+  1153→  1153→              </p>
+  1154→  1154→              <p className="text-4xl font-bold tracking-tight text-ember">
+  1155→  1155→                {formatCurrency(result.monthlyPayment)}
+  1156→  1156→              </p>
+  1157→  1157→              <p className="text-xs text-muted-foreground mt-1">
+  1158→  1158→                for {inputs.termMonths} month
+  1159→  1159→                {inputs.termMonths !== 1 ? "s" : ""}, plus{" "}
+  1160→  1160→                {formatCurrency(result.balloonAmount)} balloon due
+  1161→  1161→              </p>
+  1162→  1162→            </div>
+  1163→  1163→
+  1164→  1164→            {/* Breakdown Grid */}
+  1165→  1165→            <div className="grid grid-cols-2 gap-3">
+  1166→  1166→              <ResultCard
+  1167→  1167→                label="Financed Amount"
+  1168→  1168→                value={formatCurrency(result.financedAmount)}
+  1169→  1169→                subtext={`${formatCurrency(inputs.price)} - ${formatCurrency(result.downPayment)}`}
+  1170→  1170→              />
+  1171→  1171→              <ResultCard
+  1172→  1172→                label="Down Payment"
+  1173→  1173→                value={formatCurrency(result.downPayment)}
+  1174→  1174→                subtext={`${((result.downPayment / inputs.price) * 100).toFixed(0)}% of price`}
+  1175→  1175→              />
+  1176→  1176→              <ResultCard
+  1177→  1177→                label="Balloon Due"
+  1178→  1178→                value={formatCurrency(result.balloonAmount)}
+  1179→  1179→                subtext="Lump sum at end of term"
+  1180→  1180→              />
+  1181→  1181→              <ResultCard
+  1182→  1182→                label="Total Interest"
+  1183→  1183→                value={formatCurrency(result.totalInterest)}
+  1184→  1184→                subtext={`${formatPercent((result.totalInterest / result.totalCost) * 100)} of total cost`}
+  1185→  1185→              />
+  1186→  1186→              <ResultCard
+  1187→  1187→                label="Total Cost"
+  1188→  1188→                value={formatCurrency(result.totalCost)}
+  1189→  1189→                subtext="Down payment + all payments + balloon"
+  1190→  1190→              />
+  1191→  1191→              <ResultCard
+  1192→  1192→                label="Monthly Payment"
+  1193→  1193→                value={formatCurrency(result.monthlyPayment)}
+  1194→  1194→                subtext="Regular monthly amount"
+  1195→  1195→              />
+  1196→  1196→            </div>
+  1197→  1197→
+  1198→  1198→            {/* Actions */}
+  1199→  1199→            <ActionButtons
+  1200→  1200→              copied={copied}
+  1201→  1201→              onCopyLink={onCopyLink}
+  1202→  1202→              onPrint={onPrint}
+  1203→  1203→              onReset={onReset}
+  1204→  1204→            />
+  1205→  1205→
+  1206→  1206→            {/* Disclaimer */}
+  1207→  1207→            <p className="text-[11px] leading-relaxed text-muted-foreground">
+  1208→  1208→              This is an estimate for informational purposes only. Actual terms
+  1209→  1209→              vary by lender, credit profile, and equipment type. Always review
+  1210→  1210→              your financing agreement carefully before signing.
+  1211→  1211→            </p>
+  1212→  1212→          </>
+  1213→  1213→        ) : (
+  1214→  1214→          <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+  1215→  1215→            Enter valid equipment details to see results.
+  1216→  1216→          </div>
+  1217→  1217→        )}
+  1218→  1218→      </div>
+  1219→  1219→    </div>
+  1220→  1220→  );
+  1221→  1221→}
+  1222→  1222→
+  1223→  1223→/* ═══════════════════════════════════════════════════════════════════════════
+  1224→  1224→   MODE 3: MERCHANT CASH ADVANCE VIEW
+  1225→  1225→   ═══════════════════════════════════════════════════════════════════════════ */
+  1226→  1226→
+  1227→  1227→function MCAView({
+  1228→  1228→  inputs,
+  1229→  1229→  result,
+  1230→  1230→  onInputChange,
+  1231→  1231→  copied,
+  1232→  1232→  onCopyLink,
+  1233→  1233→  onPrint,
+  1234→  1234→  onReset,
+  1235→  1235→}: {
+  1236→  1236→  inputs: MCAInputs;
+  1237→  1237→  result: MCAResult;
+  1238→  1238→  onInputChange: (field: keyof MCAInputs, value: string) => void;
+  1239→  1239→  copied: boolean;
+  1240→  1240→  onCopyLink: () => void;
+  1241→  1241→  onPrint: () => void;
+  1242→  1242→  onReset: () => void;
+  1243→  1243→}) {
+  1244→  1244→  return (
+  1245→  1245→    <div className="grid gap-6 lg:grid-cols-2">
+  1246→  1246→      {/* ─── Inputs ─── */}
+  1247→  1247→      <div className="space-y-5">
+  1248→  1248→        {/* Advance Amount */}
+  1249→  1249→        <div className="space-y-2">
+  1250→  1250→          <div className="flex items-center justify-between">
+  1251→  1251→            <div className="flex items-center gap-1.5">
+  1252→  1252→              <Label htmlFor="mca-advance" className="text-sm font-medium">
+  1253→  1253→                Advance Amount
+  1254→  1254→              </Label>
+  1255→  1255→              <Tooltip>
+  1256→  1256→                <TooltipTrigger asChild>
+  1257→  1257→                  <Info className="size-3.5 text-muted-foreground cursor-help no-print" />
+  1258→  1258→                </TooltipTrigger>
+  1259→  1259→                <TooltipContent side="top" className="max-w-[220px] text-xs">
+  1260→  1260→                  The lump sum you receive upfront. This is based on your
+  1261→  1261→                  average monthly credit card sales.
+  1262→  1262→                </TooltipContent>
+  1263→  1263→              </Tooltip>
+  1264→  1264→            </div>
+  1265→  1265→            <span className="text-sm font-semibold text-foreground">
+  1266→  1266→              {formatCurrency(inputs.advanceAmount)}
+  1267→  1267→            </span>
+  1268→  1268→          </div>
+  1269→  1269→          <div className="no-print">
+  1270→  1270→            <Slider
+  1271→  1271→              id="mca-advance"
+  1272→  1272→              min={1000}
+  1273→  1273→              max={500000}
+  1274→  1274→              step={1000}
+  1275→  1275→              value={[inputs.advanceAmount]}
+  1276→  1276→              onValueChange={([v]) =>
+  1277→  1277→                onInputChange("advanceAmount", v.toString())
+  1278→  1278→              }
+  1279→  1279→              aria-label="Advance amount"
+  1280→  1280→              className="w-full"
+  1281→  1281→            />
+  1282→  1282→            <div className="flex justify-between text-xs text-muted-foreground">
+  1283→  1283→              <span>$1,000</span>
+  1284→  1284→              <span>$500,000</span>
+  1285→  1285→            </div>
+  1286→  1286→            <Input
+  1287→  1287→              type="number"
+  1288→  1288→              min={1000}
+  1289→  1289→              max={500000}
+  1290→  1290→              step={1000}
+  1291→  1291→              value={inputs.advanceAmount}
+  1292→  1292→              onChange={(e) => onInputChange("advanceAmount", e.target.value)}
+  1293→  1293→              className="mt-1"
+  1294→  1294→              aria-label="Advance amount input"
+  1295→  1295→            />
+  1296→  1296→          </div>
+  1297→  1297→        </div>
+  1298→  1298→
+  1299→  1299→        {/* Factor Rate */}
+  1300→  1300→        <div className="space-y-2">
+  1301→  1301→          <div className="flex items-center justify-between">
+  1302→  1302→            <div className="flex items-center gap-1.5">
+  1303→  1303→              <Label htmlFor="mca-factor" className="text-sm font-medium">
+  1304→  1304→                Factor Rate
+  1305→  1305→              </Label>
+  1306→  1306→              <Tooltip>
+  1307→  1307→                <TooltipTrigger asChild>
+  1308→  1308→                  <Info className="size-3.5 text-muted-foreground cursor-help no-print" />
+  1309→  1309→                </TooltipTrigger>
+  1310→  1310→                <TooltipContent side="top" className="max-w-[240px] text-xs">
+  1311→  1311→                  The multiplier applied to your advance to determine total
+  1312→  1312→                  payback. A 1.3 factor rate on a $50,000 advance means you
+  1313→  1313→                  repay $65,000 total. Lower is better.
+  1314→  1314→                </TooltipContent>
+  1315→  1315→              </Tooltip>
+  1316→  1316→            </div>
+  1317→  1317→            <span className="text-sm font-semibold text-foreground">
+  1318→  1318→              {inputs.factorRate.toFixed(2)}x
+  1319→  1319→            </span>
+  1320→  1320→          </div>
+  1321→  1321→          <div className="no-print">
+  1322→  1322→            <Slider
+  1323→  1323→              id="mca-factor"
+  1324→  1324→              min={1.1}
+  1325→  1325→              max={1.5}
+  1326→  1326→              step={0.01}
+  1327→  1327→              value={[inputs.factorRate]}
+  1328→  1328→              onValueChange={([v]) => onInputChange("factorRate", v.toString())}
+  1329→  1329→              aria-label="Factor rate"
+  1330→  1330→              className="w-full"
+  1331→  1331→            />
+  1332→  1332→            <div className="flex justify-between text-xs text-muted-foreground">
+  1333→  1333→              <span>1.10x</span>
+  1334→  1334→              <span>1.50x</span>
+  1335→  1335→            </div>
+  1336→  1336→            <Input
+  1337→  1337→              type="number"
+  1338→  1338→              min={1.1}
+  1339→  1339→              max={1.5}
+  1340→  1340→              step={0.01}
+  1341→  1341→              value={inputs.factorRate}
+  1342→  1342→              onChange={(e) => onInputChange("factorRate", e.target.value)}
+  1343→  1343→              className="mt-1"
+  1344→  1344→              aria-label="Factor rate input"
+  1345→  1345→            />
+  1346→  1346→          </div>
+  1347→  1347→        </div>
+  1348→  1348→
+  1349→  1349→        {/* Repayment Period */}
+  1350→  1350→        <div className="space-y-2">
+  1351→  1351→          <div className="flex items-center justify-between">
+  1352→  1352→            <div className="flex items-center gap-1.5">
+  1353→  1353→              <Label htmlFor="mca-months" className="text-sm font-medium">
+  1354→  1354→                Repayment Period (Months)
+  1355→  1355→              </Label>
+  1356→  1356→              <Tooltip>
+  1357→  1357→                <TooltipTrigger asChild>
+  1358→  1358→                  <Info className="size-3.5 text-muted-foreground cursor-help no-print" />
+  1359→  1359→                </TooltipTrigger>
+  1360→  1360→                <TooltipContent side="top" className="max-w-[260px] text-xs">
+  1361→  1361→                  The estimated time to repay the full amount. Note: with a
+  1362→  1362→                  fixed total payback, a shorter repayment period means higher
+  1363→  1363→                  effective APR because the same fee is collected over fewer
+  1364→  1364→                  days.
+  1365→  1365→                </TooltipContent>
+  1366→  1366→              </Tooltip>
+  1367→  1367→            </div>
+  1368→  1368→            <span className="text-sm font-semibold text-foreground">
+  1369→  1369→              {inputs.repaymentMonths} mo
+  1370→  1370→            </span>
+  1371→  1371→          </div>
+  1372→  1372→          <div className="no-print">
+  1373→  1373→            <Slider
+  1374→  1374→              id="mca-months"
+  1375→  1375→              min={1}
+  1376→  1376→              max={24}
+  1377→  1377→              step={1}
+  1378→  1378→              value={[inputs.repaymentMonths]}
+  1379→  1379→              onValueChange={([v]) =>
+  1380→  1380→                onInputChange("repaymentMonths", v.toString())
+  1381→  1381→              }
+  1382→  1382→              aria-label="Repayment period in months"
+  1383→  1383→              className="w-full"
+  1384→  1384→            />
+  1385→  1385→            <div className="flex justify-between text-xs text-muted-foreground">
+  1386→  1386→              <span>1 mo</span>
+  1387→  1387→              <span>24 mo</span>
+  1388→  1388→            </div>
+  1389→  1389→            <Input
+  1390→  1390→              type="number"
+  1391→  1391→              min={1}
+  1392→  1392→              max={24}
+  1393→  1393→              step={1}
+  1394→  1394→              value={inputs.repaymentMonths}
+  1395→  1395→              onChange={(e) => onInputChange("repaymentMonths", e.target.value)}
+  1396→  1396→              className="mt-1"
+  1397→  1397→              aria-label="Repayment period in months input"
+  1398→  1398→            />
+  1399→  1399→          </div>
+  1400→  1400→        </div>
+  1401→  1401→
+  1402→  1402→        {/* Holdback Percentage */}
+  1403→  1403→        <div className="space-y-2">
+  1404→  1404→          <div className="flex items-center justify-between">
+  1405→  1405→            <div className="flex items-center gap-1.5">
+  1406→  1406→              <Label htmlFor="mca-holdback" className="text-sm font-medium">
+  1407→  1407→                Holdback Percentage
+  1408→  1408→              </Label>
+  1409→  1409→              <Tooltip>
+  1410→  1410→                <TooltipTrigger asChild>
+  1411→  1411→                  <Info className="size-3.5 text-muted-foreground cursor-help no-print" />
+  1412→  1412→                </TooltipTrigger>
+  1413→  1413→                <TooltipContent side="top" className="max-w-[260px] text-xs">
+  1414→  1414→                  The percentage of your daily credit card sales that the
+  1415→  1415→                  funder withholds to repay the advance. Typical holdback rates
+  1416→  1416→                  are 10&ndash;20%.
+  1417→  1417→                </TooltipContent>
+  1418→  1418→              </Tooltip>
+  1419→  1419→            </div>
+  1420→  1420→            <span className="text-sm font-semibold text-foreground">
+  1421→  1421→              {inputs.holdbackPercent}%
+  1422→  1422→            </span>
+  1423→  1423→          </div>
+  1424→  1424→          <div className="no-print">
+  1425→  1425→            <Slider
+  1426→  1426→              id="mca-holdback"
+  1427→  1427→              min={5}
+  1428→  1428→              max={40}
+  1429→  1429→              step={1}
+  1430→  1430→              value={[inputs.holdbackPercent]}
+  1431→  1431→              onValueChange={([v]) =>
+  1432→  1432→                onInputChange("holdbackPercent", v.toString())
+  1433→  1433→              }
+  1434→  1434→              aria-label="Holdback percentage"
+  1435→  1435→              className="w-full"
+  1436→  1436→            />
+  1437→  1437→            <div className="flex justify-between text-xs text-muted-foreground">
+  1438→  1438→              <span>5%</span>
+  1439→  1439→              <span>40%</span>
+  1440→  1440→            </div>
+  1441→  1441→            <Input
+  1442→  1442→              type="number"
+  1443→  1443→              min={5}
+  1444→  1444→              max={40}
+  1445→  1445→              step={1}
+  1446→  1446→              value={inputs.holdbackPercent}
+  1447→  1447→              onChange={(e) => onInputChange("holdbackPercent", e.target.value)}
+  1448→  1448→              className="mt-1"
+  1449→  1449→              aria-label="Holdback percentage input"
+  1450→  1450→            />
+  1451→  1451→          </div>
+  1452→  1452→        </div>
+  1453→  1453→      </div>
+  1454→  1454→
+  1455→  1455→      {/* ─── Results ─── */}
+  1456→  1456→      <div className="space-y-4">
+  1457→  1457→        {result.totalPayback > 0 ? (
+  1458→  1458→          <>
+  1459→  1459→            {/* Total Payback Highlight */}
+  1460→  1460→            <div className="rounded-lg bg-ember/10 border border-ember/20 p-5 text-center">
+  1461→  1461→              <p className="text-sm font-medium text-muted-foreground mb-1">
+  1462→  1462→                Total Payback Amount
+  1463→  1463→              </p>
+  1464→  1464→              <p className="text-4xl font-bold tracking-tight text-ember">
+  1465→  1465→                {formatCurrency(result.totalPayback)}
+  1466→  1466→              </p>
+  1467→  1467→              <p className="text-xs text-muted-foreground mt-1">
+  1468→  1468→                {formatCurrency(result.financeCharge)} in finance charges
+  1469→  1469→              </p>
+  1470→  1470→            </div>
+  1471→  1471→
+  1472→  1472→            {/* Effective APR Warning */}
+  1473→  1473→            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 flex items-start gap-3">
+  1474→  1474→              <AlertTriangle className="size-5 text-destructive mt-0.5 shrink-0" />
+  1475→  1475→              <div>
+  1476→  1476→                <p className="text-sm font-semibold text-destructive">
+  1477→  1477→                  Effective APR: {formatPercent(result.effectiveAPR)}
+  1478→  1478→                </p>
+  1479→  1479→                <p className="text-xs text-muted-foreground mt-1">
+  1480→  1480→                  This is a simple annualized cost estimate, not a true APR.
+  1481→  1481→                  MCAs are receivables purchases, not loans, so they are not
+  1482→  1482→                  required to disclose APR.
+  1483→  1483→                </p>
+  1484→  1484→              </div>
+  1485→  1485→            </div>
+  1486→  1486→
+  1487→  1487→            {/* Breakdown Grid */}
+  1488→  1488→            <div className="grid grid-cols-2 gap-3">
+  1489→  1489→              <ResultCard
+  1490→  1490→                label="Finance Charge"
+  1491→  1491→                value={formatCurrency(result.financeCharge)}
+  1492→  1492→                subtext="Total cost of the advance"
+  1493→  1493→              />
+  1494→  1494→              <ResultCard
+  1495→  1495→                label="Cost per Dollar"
+  1496→  1496→                value={`$${result.costPerDollar.toFixed(2)}`}
+  1497→  1497→                subtext="Cost for each $1.00 advanced"
+  1498→  1498→              />
+  1499→  1499→              <ResultCard
+  1500→  1500→                label="Daily Payment"
+  1501→  1501→                value={formatCurrency(result.dailyPayment)}
+  1502→  1502→                subtext="Approximate daily withholding"
+  1503→  1503→              />
+  1504→  1504→              <ResultCard
+  1505→  1505→                label="Weekly Payment"
+  1506→  1506→                value={formatCurrency(result.weeklyPayment)}
+  1507→  1507→                subtext="Approximate weekly withholding"
+  1508→  1508→              />
+  1509→  1509→              <ResultCard
+  1510→  1510→                label="Monthly Remittance"
+  1511→  1511→                value={formatCurrency(result.monthlyPayment)}
+  1512→  1512→                subtext="Average monthly withholding"
+  1513→  1513→              />
+  1514→  1514→              <ResultCard
+  1515→  1515→                label="Repayment Period"
+  1516→  1516→                value={`${result.repaymentMonths} mo`}
+  1517→  1517→                subtext={`${result.repaymentMonths * 30} estimated days`}
+  1518→  1518→              />
+  1519→  1519→            </div>
+  1520→  1520→
+  1521→  1521→            {/* Actions */}
+  1522→  1522→            <ActionButtons
+  1523→  1523→              copied={copied}
+  1524→  1524→              onCopyLink={onCopyLink}
+  1525→  1525→              onPrint={onPrint}
+  1526→  1526→              onReset={onReset}
+  1527→  1527→            />
+  1528→  1528→
+  1529→  1529→            {/* MCA Disclaimer */}
+  1530→  1530→            <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 space-y-1.5">
+  1531→  1531→              <p className="text-xs font-semibold text-destructive">
+  1532→  1532→                Important Disclaimer
+  1533→  1533→              </p>
+  1534→  1534→              <p className="text-[11px] leading-relaxed text-muted-foreground">
+  1535→  1535→                A merchant cash advance is NOT a loan. It is a purchase of your
+  1536→  1536→                future receivables. MCAs are largely unregulated at both the
+  1537→  1537→                federal and state level, meaning they do not have the same
+  1538→  1538→                consumer protections as traditional loans.
+  1539→  1539→              </p>
+  1540→  1540→              <p className="text-[11px] leading-relaxed text-muted-foreground">
+  1541→  1541→                Because the total payback is fixed, repaying faster means a
+  1542→  1542→                higher effective APR. For example, paying back a $50,000 advance
+  1543→  1543→                at 1.3x over 6 months has a significantly higher annualized cost
+  1544→  1544→                than spreading the same payback over 12 months.
+  1545→  1545→              </p>
+  1546→  1546→              <p className="text-[11px] leading-relaxed text-muted-foreground">
+  1547→  1547→                This calculator is for informational purposes only. Actual terms
+  1548→  1548→                and costs vary by provider. Consult a financial advisor before
+  1549→  1549→                entering into any merchant cash advance agreement.
+  1550→  1550→              </p>
+  1551→  1551→            </div>
+  1552→  1552→          </>
+  1553→  1553→        ) : (
+  1554→  1554→          <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+  1555→  1555→            Enter valid advance details to see results.
+  1556→  1556→          </div>
+  1557→  1557→        )}
+  1558→  1558→      </div>
+  1559→  1559→    </div>
+  1560→  1560→  );
+  1561→  1561→}
+  1562→  1562→
+  1563→  1563→/* ═══════════════════════════════════════════════════════════════════════════
+  1564→  1564→   SHARED COMPONENTS
+  1565→  1565→   ═══════════════════════════════════════════════════════════════════════════ */
+  1566→  1566→
+  1567→  1567→function ActionButtons({
+  1568→  1568→  copied,
+  1569→  1569→  onCopyLink,
+  1570→  1570→  onPrint,
+  1571→  1571→  onReset,
+  1572→  1572→}: {
+  1573→  1573→  copied: boolean;
+  1574→  1574→  onCopyLink: () => void;
+  1575→  1575→  onPrint: () => void;
+  1576→  1576→  onReset: () => void;
+  1577→  1577→}) {
+  1578→  1578→  return (
+  1579→  1579→    <div className="flex flex-wrap gap-2 no-print">
+  1580→  1580→      <Button
+  1581→  1581→        variant="outline"
+  1582→  1582→        size="sm"
+  1583→  1583→        onClick={onCopyLink}
+  1584→  1584→        className="text-xs"
+  1585→  1585→      >
+  1586→  1586→        {copied ? (
+  1587→  1587→          <Check className="mr-1.5 size-3.5" />
+  1588→  1588→        ) : (
+  1589→  1589→          <Copy className="mr-1.5 size-3.5" />
+  1590→  1590→        )}
+  1591→  1591→        {copied ? "Copied" : "Copy Link"}
+  1592→  1592→      </Button>
+  1593→  1593→      <Button variant="outline" size="sm" onClick={onPrint} className="text-xs">
+  1594→  1594→        <Printer className="mr-1.5 size-3.5" />
+  1595→  1595→        Print
+  1596→  1596→      </Button>
+  1597→  1597→      <Button variant="ghost" size="sm" onClick={onReset} className="text-xs">
+  1598→  1598→        <RotateCcw className="mr-1.5 size-3.5" />
+  1599→  1599→        Reset
+  1600→  1600→      </Button>
+  1601→  1601→    </div>
+  1602→  1602→  );
+  1603→  1603→}
+  1604→  1604→
+  1605→  1605→function ResultCard({
+  1606→  1606→  label,
+  1607→  1607→  value,
+  1608→  1608→  subtext,
+  1609→  1609→}: {
+  1610→  1610→  label: string;
+  1611→  1611→  value: string;
+  1612→  1612→  subtext: string;
+  1613→  1613→}) {
+  1614→  1614→  return (
+  1615→  1615→    <div className="rounded-md border bg-card p-3">
+  1616→  1616→      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+  1617→  1617→      <p className="mt-0.5 text-lg font-bold tracking-tight">{value}</p>
+  1618→  1618→      <p className="text-[11px] text-muted-foreground">{subtext}</p>
+  1619→  1619→    </div>
+  1620→  1620→  );
+  1621→  1621→}
+  1622→  1622→
+  1623→  1623→function AmortizationTable({
+  1624→  1624→  schedule,
+  1625→  1625→  totalCost,
+  1626→  1626→  totalInterest,
+  1627→  1627→  showAmortization,
+  1628→  1628→  setShowAmortization,
+  1629→  1629→}: {
+  1630→  1630→  schedule: { month: number; payment: number; principal: number; interest: number; balance: number }[];
+  1631→  1631→  totalCost: number;
+  1632→  1632→  totalInterest: number;
+  1633→  1633→  showAmortization: boolean;
+  1634→  1634→  setShowAmortization: (v: boolean) => void;
+  1635→  1635→}) {
+  1636→  1636→  return (
+  1637→  1637→    <Card className="print-break-inside">
+  1638→  1638→      <CardHeader className="pb-3">
+  1639→  1639→        <button
+  1640→  1640→          type="button"
+  1641→  1641→          onClick={() => setShowAmortization(!showAmortization)}
+  1642→  1642→          className="no-print flex w-full items-center justify-between text-left"
+  1643→  1643→          aria-expanded={showAmortization}
+  1644→  1644→        >
+  1645→  1645→          <CardTitle className="text-lg">Amortization Schedule</CardTitle>
+  1646→  1646→          {showAmortization ? (
+  1647→  1647→            <ChevronUp className="size-5 text-muted-foreground" />
+  1648→  1648→          ) : (
+  1649→  1649→            <ChevronDown className="size-5 text-muted-foreground" />
+  1650→  1650→          )}
+  1651→  1651→        </button>
+  1652→  1652→        {/* Print-only title (button is hidden in print) */}
+  1653→  1653→        <CardTitle className="hidden print:block text-lg">
+  1654→  1654→          Amortization Schedule
+  1655→  1655→        </CardTitle>
+  1656→  1656→      </CardHeader>
+  1657→  1657→      <CardContent className={showAmortization ? "" : "hidden print:block"}>
+  1658→  1658→        <div className="amortization-scroll max-h-96 overflow-y-auto custom-scrollbar rounded-md border">
+  1659→  1659→          <Table>
+  1660→  1660→            <TableHeader>
+  1661→  1661→              <TableRow>
+  1662→  1662→                <TableHead className="w-16">Month</TableHead>
+  1663→  1663→                <TableHead className="text-right">Payment</TableHead>
+  1664→  1664→                <TableHead className="text-right">Principal</TableHead>
+  1665→  1665→                <TableHead className="text-right">Interest</TableHead>
+  1666→  1666→                <TableHead className="text-right">Balance</TableHead>
+  1667→  1667→              </TableRow>
+  1668→  1668→            </TableHeader>
+  1669→  1669→            <TableBody>
+  1670→  1670→              {schedule.map((row) => (
+  1671→  1671→                <TableRow key={row.month}>
+  1672→  1672→                  <TableCell className="font-medium">{row.month}</TableCell>
+  1673→  1673→                  <TableCell className="text-right">
+  1674→  1674→                    {formatCurrency(row.payment)}
+  1675→  1675→                  </TableCell>
+  1676→  1676→                  <TableCell className="text-right">
+  1677→  1677→                    {formatCurrency(row.principal)}
+  1678→  1678→                  </TableCell>
+  1679→  1679→                  <TableCell className="text-right">
+  1680→  1680→                    {formatCurrency(row.interest)}
+  1681→  1681→                  </TableCell>
+  1682→  1682→                  <TableCell className="text-right font-medium">
+  1683→  1683→                    {formatCurrency(row.balance)}
+  1684→  1684→                  </TableCell>
+  1685→  1685→                </TableRow>
+  1686→  1686→              ))}
+  1687→  1687→            </TableBody>
+  1688→  1688→          </Table>
+  1689→  1689→        </div>
+  1690→  1690→        <div className="mt-3 flex justify-end gap-6 text-sm font-medium">
+  1691→  1691→          <span>
+  1692→  1692→            Total Paid:{" "}
+  1693→  1693→            <span className="text-ember">{formatCurrency(totalCost)}</span>
+  1694→  1694→          </span>
+  1695→  1695→          <span>
+  1696→  1696→            Total Interest:{" "}
+  1697→  1697→            <span className="text-destructive">
+  1698→  1698→              {formatCurrency(totalInterest)}
+  1699→  1699→            </span>
+  1700→  1700→          </span>
+  1701→  1701→        </div>
+  1702→  1702→      </CardContent>
+  1703→  1703→    </Card>
+  1704→  1704→  );
+  1705→  1705→}
+  1706→  1706→
+  1707→  1707→function PrintFooter() {
+  1708→  1708→  return (
+  1709→  1709→    <div className="hidden print:block print:mt-6 print:pt-3 print:border-t print:border-gray-300 print:text-[8pt] print:text-gray-500 print:flex print:justify-between">
+  1710→  1710→      <span>CalcForge &mdash; thecalcforge.com</span>
+  1711→  1711→      <PrintDateAndUrl />
+  1712→  1712→    </div>
+  1713→  1713→  );
+  1714→  1714→}
+  1715→  1715→
+  1716→  1716→function PrintDateAndUrl() {
+  1717→  1717→  const text = useMemo(() => {
+  1718→  1718→    if (typeof window === "undefined") return "";
+  1719→  1719→    const d = new Date().toLocaleDateString("en-US", {
+  1720→  1720→      year: "numeric",
+  1721→  1721→      month: "long",
+  1722→  1722→      day: "numeric",
+  1723→  1723→    });
+  1724→  1724→    return `${window.location.host}${window.location.pathname} \u00b7 Printed ${d}`;
+  1725→  1725→  }, []);
+  1726→  1726→  return <span>{text}</span>;
+  1727→  1727→}

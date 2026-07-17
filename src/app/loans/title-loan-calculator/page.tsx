@@ -10,7 +10,7 @@ import { CanonicalUrl } from "@/components/seo/CanonicalUrl";
 import { TitleLoanCalculator } from "@/components/calculators/TitleLoanCalculator";
 import {
   calculateLoan,
-  calculateEarlyPayoff,
+  calculateLoanWithExtra,
   calculateFloridaTitleLoan,
   formatCurrency,
   formatPercent,
@@ -28,10 +28,8 @@ const EX = {
   florida5k: calculateFloridaTitleLoan(5000),
   /* Texas: amortizing, 180-day max term, per OCCC data */
   texas: calculateLoan({ loanAmount: 1500, apr: 300, termMonths: 6 }),
-  payoff: calculateEarlyPayoff(
-    { loanAmount: 5000, apr: 120, termMonths: 12 },
-    200,
-    7,
+  payoff: calculateLoanWithExtra(
+    { loanAmount: 5000, apr: 120, termMonths: 12, extraMonthly: 200, extraStartMonth: 7 },
   ),
   paymentAmounts: [1000, 2500, 5000, 10000],
   payments: [
@@ -572,21 +570,14 @@ export default function TitleLoanCalculatorPage() {
           only pay interest for the days the loan is outstanding.
         </p>
         <p>
-          <strong>How early payoff works:</strong> Suppose you have a $5,000
-          title loan at 120% APR for 12 months with a {formatCurrency(EX.payoff.baseResult.monthlyPayment)} monthly payment.
+          <strong>How early payoff works:</strong> Suppose you have a {formatCurrency(5000)}
+          title loan at {formatPercent(120)} APR for 12 months with a {formatCurrency(EX.payoff.baseResult.monthlyPayment)} monthly payment.
           After month six, your remaining balance is approximately {formatCurrency(EX.payoff.baseResult.schedule[5].balance)}. If
-          you then add an extra $200 per month to your regular payment for the
-          remaining six months, the additional $1,200 in principal payments
-          would shorten your loan by roughly {EX.payoff.monthsSaved} month{EX.payoff.monthsSaved !== 1 ? "s" : ""} and save{" "}
-          approximately {formatCurrency(EX.payoff.interestSaved)} in interest — cutting your total cost from {formatCurrency(EX.payoff.baseResult.totalCost)}{" "}
-          to around {formatCurrency(EX.payoff.result.totalCost)}.
-        </p>
-        <p>
-          To calculate your own early payoff savings, look at the amortization
-          table in the calculator above. Find your current month and remaining
-          balance, then compare the remaining interest on your current schedule
-          versus a shorter term. Even a single extra payment of $100–$200 can
-          make a meaningful dent in total interest charges.
+          you then add an extra {formatCurrency(200)} per month to your regular payment starting in month 7,
+          the additional principal payments
+          would shorten your loan by {EX.payoff.monthsSaved} month{EX.payoff.monthsSaved !== 1 ? "s" : ""} and save{" "}
+          {formatCurrency(EX.payoff.interestSaved)} in interest, cutting your total cost from {formatCurrency(EX.payoff.baseResult.totalCost)}{" "}
+          to {formatCurrency(EX.payoff.result.totalCost)}. The calculator above now includes an extra payment field so you can compute this yourself.
         </p>
       </section>
 

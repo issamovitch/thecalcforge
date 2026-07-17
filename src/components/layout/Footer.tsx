@@ -19,7 +19,7 @@ export function Footer() {
           <div className="col-span-2 sm:col-span-2 lg:col-span-1">
             <Link
               href="/"
-              className="inline-flex items-center gap-2.5 transition-opacity hover:opacity-80"
+              className="cursor-pointer inline-flex items-center gap-2.5 transition-opacity hover:opacity-80"
             >
               <Image src="/logo.png" alt="CalcForge" width={28} height={28} className="size-7" />
               <span className="text-lg font-bold text-white">
@@ -41,7 +41,7 @@ export function Footer() {
             <ul className="mt-4 space-y-2.5">
               {departmentLinks.map((dept) => (
                 <li key={dept.href}>
-                  <Link href={dept.href} className="text-sm text-slate-400 transition-colors hover:text-white">
+                  <Link href={dept.href} className="cursor-pointer text-sm text-slate-400 transition-colors hover:text-white">
                     {dept.label}
                   </Link>
                 </li>
@@ -57,7 +57,7 @@ export function Footer() {
             <ul className="mt-4 space-y-2.5">
               {calculatorPages.map((calc) => (
                 <li key={calc.href}>
-                  <Link href={calc.href} className="text-sm text-slate-400 transition-colors hover:text-white">
+                  <Link href={calc.href} className="cursor-pointer text-sm text-slate-400 transition-colors hover:text-white">
                     {calc.label}
                   </Link>
                 </li>
@@ -72,13 +72,13 @@ export function Footer() {
             </h3>
             <ul className="mt-4 space-y-2.5">
               <li>
-                <Link href="/about" className="text-sm text-slate-400 transition-colors hover:text-white">
+                <Link href="/about" className="cursor-pointer text-sm text-slate-400 transition-colors hover:text-white">
                   About
                 </Link>
               </li>
               {siteConfig.nav.legal.map((page) => (
                 <li key={page.href}>
-                  <Link href={page.href} className="text-sm text-slate-400 transition-colors hover:text-white">
+                  <Link href={page.href} className="cursor-pointer text-sm text-slate-400 transition-colors hover:text-white">
                     {page.label}
                   </Link>
                 </li>

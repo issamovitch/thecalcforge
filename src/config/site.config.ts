@@ -48,6 +48,18 @@ export const calculatorPages = [
     primaryKeyword: "payday loan APR calculator",
     category: "loans",
   },
+  {
+    label: "Business Loan Calculator",
+    href: "/loans/business-loan-calculator",
+    description:
+      "Calculate payments for term loans, equipment financing, and merchant cash advances.",
+    longDescription:
+      "Estimate monthly payments, total cost, and effective APR for business term loans, equipment loans with balloon payments, and merchant cash advances. This tool supports three loan types so you can compare financing structures using the correct math for each product.",
+    typesCopy:
+      "supports term loans, equipment financing with balloon payments, and merchant cash advance cost analysis",
+    primaryKeyword: "business loan calculator",
+    category: "loans",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────

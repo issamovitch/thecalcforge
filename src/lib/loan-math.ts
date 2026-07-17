@@ -336,6 +336,322 @@ export function calculatePaydayLoan(
   };
 }
 
+// ── Loan with extra payments (unified, replaces calculateEarlyPayoff for UI) ──
+
+export interface LoanWithExtraInputs extends LoanInputs {
+  extraMonthly?: number;
+  extraStartMonth?: number;
+}
+
+export interface LoanWithExtraResult {
+  /** Base schedule without extra payments */
+  baseResult: LoanResult;
+  /** Schedule with extra payments applied */
+  result: LoanResult;
+  /** Number of months shortened */
+  monthsSaved: number;
+  /** Interest saved compared to base */
+  interestSaved: number;
+  /** Month the loan is fully paid off */
+  actualPayoffMonth: number;
+}
+
+/**
+ * Computes an amortizing loan schedule with optional extra monthly payments
+ * starting from a given month. Every calculator that supports early payoff
+ * should use this single function.
+ */
+export function calculateLoanWithExtra(
+  inputs: LoanWithExtraInputs,
+): LoanWithExtraResult {
+  const { loanAmount, apr, termMonths, extraMonthly = 0, extraStartMonth = 1 } =
+    inputs;
+
+  const baseResult = calculateLoan({ loanAmount, apr, termMonths });
+
+  if (
+    extraMonthly <= 0 ||
+    loanAmount <= 0 ||
+    apr < 0 ||
+    termMonths <= 0
+  ) {
+    return {
+      baseResult,
+      result: baseResult,
+      monthsSaved: 0,
+      interestSaved: 0,
+      actualPayoffMonth: baseResult.schedule.length,
+    };
+  }
+
+  const monthlyRate = apr / 100 / 12;
+  const basePayment = baseResult.monthlyPayment;
+
+  const schedule: AmortizationRow[] = [];
+  let balance = loanAmount;
+
+  for (let month = 1; month <= termMonths; month++) {
+    const interest = balance * monthlyRate;
+    const extra = month >= extraStartMonth ? extraMonthly : 0;
+    const totalPayment = basePayment + extra;
+    const principal = totalPayment - interest;
+
+    if (principal >= balance || month === termMonths) {
+      const lastPrincipal = balance;
+      const lastPayment = lastPrincipal + interest;
+      schedule.push({
+        month,
+        payment: r2(lastPayment),
+        principal: r2(lastPrincipal),
+        interest: r2(interest),
+        balance: 0,
+      });
+      break;
+    }
+
+    balance -= principal;
+
+    schedule.push({
+      month,
+      payment: r2(totalPayment),
+      principal: r2(principal),
+      interest: r2(interest),
+      balance: r2(balance),
+    });
+  }
+
+  const totalCost = r2(schedule.reduce((sum, row) => sum + row.payment, 0));
+  const totalInterest = r2(totalCost - loanAmount);
+  const actualPayoffMonth = schedule.length;
+  const monthsSaved = baseResult.schedule.length - actualPayoffMonth;
+  const interestSaved = r2(baseResult.totalInterest - totalInterest);
+
+  const result: LoanResult = {
+    monthlyPayment: basePayment,
+    totalInterest,
+    totalCost,
+    schedule,
+  };
+
+  return { baseResult, result, monthsSaved, interestSaved, actualPayoffMonth };
+}
+
+// ── Equipment / balloon loan ────────────────────────────────────────────────
+
+export interface BalloonLoanInputs {
+  loanAmount: number;
+  downPayment: number;
+  balloonAmount: number;
+  apr: number;
+  termMonths: number;
+}
+
+export interface BalloonLoanResult {
+  /** Amount actually financed after down payment */
+  financedAmount: number;
+  downPayment: number;
+  balloonAmount: number;
+  monthlyPayment: number;
+  totalInterest: number;
+  /** Down payment + all monthly payments + balloon */
+  totalCost: number;
+  schedule: AmortizationRow[];
+}
+
+/**
+ * Computes an equipment/balloon loan.
+ *
+ * Convention: n regular monthly payments, then the balloon is paid as a
+ * separate lump sum after the final payment.
+ *
+ * Formula:
+ *   M = [P - B / (1 + r)^n] * r / (1 - (1 + r)^-n)
+ *
+ * P = financed amount, B = balloon, r = APR/12, n = months.
+ * The balloon is discounted to present value before subtracting from P.
+ * After n payments of M, the remaining balance equals B (within rounding).
+ *
+ * If balloonAmount >= PV(financedAmount), the payment is zero and the
+ * full amount is due at maturity.
+ */
+export function calculateBalloonLoan(
+  inputs: BalloonLoanInputs,
+): BalloonLoanResult {
+  const { loanAmount, downPayment, balloonAmount, apr, termMonths } = inputs;
+
+  const financedAmount = r2(loanAmount - downPayment);
+
+  if (financedAmount <= 0 || apr < 0 || termMonths <= 0) {
+    return {
+      financedAmount: Math.max(0, financedAmount),
+      downPayment: r2(downPayment),
+      balloonAmount: r2(balloonAmount),
+      monthlyPayment: 0,
+      totalInterest: 0,
+      totalCost: r2(downPayment),
+      schedule: [],
+    };
+  }
+
+  const monthlyRate = apr / 100 / 12;
+
+  // Discount balloon to present value
+  const pvBalloon = balloonAmount / Math.pow(1 + monthlyRate, termMonths);
+  const amortizingPrincipal = Math.max(0, financedAmount - pvBalloon);
+
+  // Monthly payment on the PV-adjusted amortizing portion
+  let monthlyPayment: number;
+  if (monthlyRate === 0) {
+    monthlyPayment = amortizingPrincipal > 0 ? amortizingPrincipal / termMonths : 0;
+  } else if (amortizingPrincipal <= 0) {
+    monthlyPayment = 0;
+  } else {
+    const factor = Math.pow(1 + monthlyRate, termMonths);
+    monthlyPayment = (amortizingPrincipal * monthlyRate * factor) / (factor - 1);
+  }
+  const roundedMonthly = r2(monthlyPayment);
+
+  // Build schedule — n rows of regular payments.
+  // Keep internal balance at full precision to avoid cumulative rounding drift.
+  const schedule: AmortizationRow[] = [];
+  let balance = financedAmount;
+
+  for (let month = 1; month <= termMonths; month++) {
+    const interest = balance * monthlyRate;
+    const principal = roundedMonthly - interest;
+
+    if (principal >= balance) {
+      // Paid off before term (unusual with balloon, but handle it)
+      schedule.push({
+        month,
+        payment: r2(balance + interest),
+        principal: r2(balance),
+        interest: r2(interest),
+        balance: 0,
+      });
+      break;
+    }
+
+    balance -= principal;
+
+    schedule.push({
+      month,
+      payment: r2(roundedMonthly),
+      principal: r2(principal),
+      interest: r2(interest),
+      balance: r2(balance),
+    });
+  }
+
+  // Reconciliation: the full-precision balance after n payments must
+  // equal the balloon (within $1.00 from payment-rounding drift).
+  const balloonDiff = Math.abs(balance - balloonAmount);
+  if (balloonDiff > 1.00) {
+    console.error(
+      `[calculateBalloonLoan] Reconciliation failure: final balance (${balance.toFixed(2)}) != balloon (${balloonAmount}), diff=${balloonDiff.toFixed(2)}`
+    );
+  }
+
+  // Total cost = down payment + (n × monthly payment) + balloon
+  const regularPaymentsTotal = r2(schedule.reduce((sum, row) => sum + row.payment, 0));
+  const totalCost = r2(downPayment + regularPaymentsTotal + balloonAmount);
+  const totalInterest = r2(totalCost - loanAmount);
+
+  return {
+    financedAmount,
+    downPayment: r2(downPayment),
+    balloonAmount: r2(balloonAmount),
+    monthlyPayment: roundedMonthly,
+    totalInterest,
+    totalCost,
+    schedule,
+  };
+}
+
+// ── Merchant cash advance ──────────────────────────────────────────────────
+
+export interface MCAInputs {
+  advanceAmount: number;
+  factorRate: number; // e.g. 1.4
+  repaymentMonths: number;
+}
+
+export interface MCAResult {
+  advanceAmount: number;
+  totalPayback: number;
+  financeCharge: number;
+  /**
+   * Simple annualized cost. NOT a true APR since MCAs are not loans.
+   * Formula: (cost / advance) × (12 / months) × 100
+   * Faster repayment = higher effective APR (opposite of a normal loan).
+   */
+  effectiveAPR: number;
+  dailyPayment: number;
+  weeklyPayment: number;
+  /** Average monthly remittance (total payback / months) */
+  monthlyPayment: number;
+  repaymentMonths: number;
+  /** Cost per dollar advanced */
+  costPerDollar: number;
+}
+
+/**
+ * Computes the cost structure of a merchant cash advance.
+ *
+ * An MCA is a receivables purchase, not a loan. The total payback
+ * is fixed (advance × factor rate), but the effective cost rises
+ * the faster you repay because the same total fee is compressed
+ * into fewer days.
+ *
+ * Day-count convention: 365/12 ≈ 30.4167 days per month for both
+ * daily and weekly calculations. Weekly = daily × 7 exactly.
+ */
+export function calculateMCA(inputs: MCAInputs): MCAResult {
+  const { advanceAmount, factorRate, repaymentMonths } = inputs;
+
+  if (advanceAmount <= 0 || factorRate <= 1 || repaymentMonths <= 0) {
+    return {
+      advanceAmount,
+      totalPayback: 0,
+      financeCharge: 0,
+      effectiveAPR: 0,
+      dailyPayment: 0,
+      weeklyPayment: 0,
+      monthlyPayment: 0,
+      repaymentMonths,
+      costPerDollar: 0,
+    };
+  }
+
+  const totalPayback = r2(advanceAmount * factorRate);
+  const financeCharge = r2(totalPayback - advanceAmount);
+  const costPerDollar = r2(financeCharge / advanceAmount);
+
+  // Simple annualized cost (the standard MCA disclosure approximation)
+  const effectiveAPR = r2(
+    (financeCharge / advanceAmount) * (12 / repaymentMonths) * 100,
+  );
+
+  // Consistent day-count: 365/12 days per month
+  const daysPerMonth = 365 / 12;
+  const repaymentDays = repaymentMonths * daysPerMonth;
+  const dailyPayment = r2(totalPayback / repaymentDays);
+  const weeklyPayment = r2(dailyPayment * 7);
+  const monthlyPayment = r2(totalPayback / repaymentMonths);
+
+  return {
+    advanceAmount,
+    totalPayback,
+    financeCharge,
+    effectiveAPR,
+    dailyPayment,
+    weeklyPayment,
+    monthlyPayment,
+    repaymentMonths,
+    costPerDollar,
+  };
+}
+
 // ── Formatters ───────────────────────────────────────────────────────────────
 
 export function formatCurrency(value: number): string {

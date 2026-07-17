@@ -1,0 +1,900 @@
+     1→"use client";
+     2→
+     3→import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+     4→import {
+     5→  Calculator,
+     6→  Copy,
+     7→  Check,
+     8→  Printer,
+     9→  RotateCcw,
+    10→  ChevronDown,
+    11→  ChevronUp,
+    12→} from "lucide-react";
+    13→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+    14→import { Input } from "@/components/ui/input";
+    15→import { Label } from "@/components/ui/label";
+    16→import { Button } from "@/components/ui/button";
+    17→import {
+    18→  Table,
+    19→  TableBody,
+    20→  TableCell,
+    21→  TableHead,
+    22→  TableHeader,
+    23→  TableRow,
+    24→} from "@/components/ui/table";
+    25→import { Slider } from "@/components/ui/slider";
+    26→import { toast } from "sonner";
+    27→import {
+    28→  calculatePaydayLoan,
+    29→  calculateLoan,
+    30→  formatCurrency,
+    31→  formatPercent,
+    32→  type PaydayLoanInputs,
+    33→  type LoanInputs,
+    34→} from "@/lib/loan-math";
+    35→
+    36→/* ─── Types ─── */
+    37→
+    38→type Mode = "single" | "installment";
+    39→type FeeType = "flat" | "per100";
+    40→
+    41→interface SingleInputs {
+    42→  amount: number;
+    43→  feeValue: number; // raw slider value (either flat fee or per-$100 rate)
+    44→  feeType: FeeType;
+    45→  days: number;
+    46→}
+    47→
+    48→interface InstallmentInputs {
+    49→  amount: number;
+    50→  apr: number;
+    51→  termMonths: number;
+    52→}
+    53→
+    54→/* ─── Defaults ─── */
+    55→
+    56→const DEFAULT_SINGLE: SingleInputs = {
+    57→  amount: 500,
+    58→  feeValue: 15,
+    59→  feeType: "per100",
+    60→  days: 14,
+    61→};
+    62→
+    63→const DEFAULT_INSTALLMENT: InstallmentInputs = {
+    64→  amount: 500,
+    65→  apr: 400,
+    66→  termMonths: 6,
+    67→};
+    68→
+    69→/* ─── Component ─── */
+    70→
+    71→export default function PaydayLoanCalculator() {
+    72→  const [mode, setMode] = useState<Mode>(() => {
+    73→    if (typeof window === "undefined") return "single";
+    74→    const params = new URLSearchParams(window.location.search);
+    75→    return params.get("mode") === "installment" ? "installment" : "single";
+    76→  });
+    77→
+    78→  const [singleInputs, setSingleInputs] = useState<SingleInputs>(() => {
+    79→    if (typeof window === "undefined") return DEFAULT_SINGLE;
+    80→    const params = new URLSearchParams(window.location.search);
+    81→    const a = params.get("amount");
+    82→    const f = params.get("fee");
+    83→    const ft = params.get("feeType");
+    84→    const d = params.get("days");
+    85→    if (!a && !f && !ft && !d) return DEFAULT_SINGLE;
+    86→    return {
+    87→      amount: a ? parseFloat(a) : DEFAULT_SINGLE.amount,
+    88→      feeValue: f ? parseFloat(f) : DEFAULT_SINGLE.feeValue,
+    89→      feeType: ft === "flat" ? "flat" : "per100",
+    90→      days: d ? parseInt(d, 10) : DEFAULT_SINGLE.days,
+    91→    };
+    92→  });
+    93→
+    94→  const [installmentInputs, setInstallmentInputs] =
+    95→    useState<InstallmentInputs>(() => {
+    96→      if (typeof window === "undefined") return DEFAULT_INSTALLMENT;
+    97→      const params = new URLSearchParams(window.location.search);
+    98→      const a = params.get("amount");
+    99→      const r = params.get("rate");
+   100→      const t = params.get("term");
+   101→      if (!a && !r && !t) return DEFAULT_INSTALLMENT;
+   102→      return {
+   103→        amount: a ? parseFloat(a) : DEFAULT_INSTALLMENT.amount,
+   104→        apr: r ? parseFloat(r) : DEFAULT_INSTALLMENT.apr,
+   105→        termMonths: t ? parseInt(t, 10) : DEFAULT_INSTALLMENT.termMonths,
+   106→      };
+   107→    });
+   108→
+   109→  const [copied, setCopied] = useState(false);
+   110→  const [showAmortization, setShowAmortization] = useState(true);
+   111→
+   112→  /* ─── Derived fee for single-payment mode ─── */
+   113→  const actualFee = useMemo(() => {
+   114→    if (singleInputs.feeType === "per100") {
+   115→      return (singleInputs.amount / 100) * singleInputs.feeValue;
+   116→    }
+   117→    return singleInputs.feeValue;
+   118→  }, [singleInputs.amount, singleInputs.feeValue, singleInputs.feeType]);
+   119→
+   120→  /* ─── Calculated results ─── */
+   121→  const singleResult = useMemo(
+   122→    () =>
+   123→      calculatePaydayLoan({
+   124→        loanAmount: singleInputs.amount,
+   125→        fee: actualFee,
+   126→        termDays: singleInputs.days,
+   127→      }),
+   128→    [singleInputs.amount, actualFee, singleInputs.days]
+   129→  );
+   130→
+   131→  const installmentResult = useMemo(
+   132→    () =>
+   133→      calculateLoan({
+   134→        loanAmount: installmentInputs.amount,
+   135→        apr: installmentInputs.apr,
+   136→        termMonths: installmentInputs.termMonths,
+   137→      }),
+   138→    [installmentInputs.amount, installmentInputs.apr, installmentInputs.termMonths]
+   139→  );
+   140→
+   141→  /* ─── URL sync ─── */
+   142→  const isInitialMount = useRef(true);
+   143→  useEffect(() => {
+   144→    if (isInitialMount.current) {
+   145→      isInitialMount.current = false;
+   146→      return;
+   147→    }
+   148→    if (typeof window === "undefined") return;
+   149→    const params = new URLSearchParams();
+   150→    if (mode === "single") {
+   151→      params.set("mode", "single");
+   152→      params.set("amount", singleInputs.amount.toString());
+   153→      params.set("fee", singleInputs.feeValue.toString());
+   154→      params.set("feeType", singleInputs.feeType);
+   155→      params.set("days", singleInputs.days.toString());
+   156→    } else {
+   157→      params.set("mode", "installment");
+   158→      params.set("amount", installmentInputs.amount.toString());
+   159→      params.set("rate", installmentInputs.apr.toString());
+   160→      params.set("term", installmentInputs.termMonths.toString());
+   161→    }
+   162→    const newUrl = `${window.location.pathname}?${params.toString()}`;
+   163→    window.history.replaceState(null, "", newUrl);
+   164→  }, [mode, singleInputs, installmentInputs]);
+   165→
+   166→  /* ─── Handlers ─── */
+   167→  const handleReset = useCallback(() => {
+   168→    setSingleInputs(DEFAULT_SINGLE);
+   169→    setInstallmentInputs(DEFAULT_INSTALLMENT);
+   170→    toast.success("Calculator reset to defaults");
+   171→  }, []);
+   172→
+   173→  const handleCopyLink = useCallback(async () => {
+   174→    try {
+   175→      await navigator.clipboard.writeText(window.location.href);
+   176→      setCopied(true);
+   177→      toast.success("Link copied to clipboard");
+   178→      setTimeout(() => setCopied(false), 2000);
+   179→    } catch {
+   180→      toast.error("Failed to copy link");
+   181→    }
+   182→  }, []);
+   183→
+   184→  const handlePrint = useCallback(() => {
+   185→    window.print();
+   186→  }, []);
+   187→
+   188→  /* ─── Fee config helpers ─── */
+   189→  const feeMin = singleInputs.feeType === "flat" ? 5 : 5;
+   190→  const feeMax = singleInputs.feeType === "flat" ? 200 : 35;
+   191→  const feeStep = singleInputs.feeType === "flat" ? 5 : 0.5;
+   192→  const feeLabel =
+   193→    singleInputs.feeType === "flat" ? "Fee" : "Fee per $100";
+   194→
+   195→  return (
+   196→    <div className="space-y-6">
+   197→      {/* ─── Calculator Card ─── */}
+   198→      <Card className="print-break-inside">
+   199→        <CardHeader className="pb-4">
+   200→          <CardTitle className="flex items-center gap-2 text-xl">
+   201→            <Calculator className="size-5 text-ember" />
+   202→            Payday Loan Calculator
+   203→          </CardTitle>
+   204→          <p className="text-sm text-muted-foreground">
+   205→            Estimate the true cost of a payday loan — whether single-payment or
+   206→            installment — including APR, total fees, and rollover costs.
+   207→          </p>
+   208→
+   209→          {/* Mode Toggle */}
+   210→          <div className="flex gap-2 pt-2 no-print">
+   211→            <Button
+   212→              variant="outline"
+   213→              size="sm"
+   214→              onClick={() => setMode("single")}
+   215→              className={
+   216→                mode === "single"
+   217→                  ? "bg-ember/10 text-ember border-ember/30"
+   218→                  : ""
+   219→              }
+   220→            >
+   221→              Single Payment
+   222→            </Button>
+   223→            <Button
+   224→              variant="outline"
+   225→              size="sm"
+   226→              onClick={() => setMode("installment")}
+   227→              className={
+   228→                mode === "installment"
+   229→                  ? "bg-ember/10 text-ember border-ember/30"
+   230→                  : ""
+   231→              }
+   232→            >
+   233→              Installment
+   234→            </Button>
+   235→          </div>
+   236→
+   237→          {/* Print-only mode label */}
+   238→          <p className="hidden print:block text-sm font-medium">
+   239→            Mode: {mode === "single" ? "Single Payment" : "Installment"}
+   240→          </p>
+   241→        </CardHeader>
+   242→
+   243→        <CardContent>
+   244→          {mode === "single" ? (
+   245→            /* ═══════ SINGLE PAYMENT MODE ═══════ */
+   246→            <div className="grid gap-6 lg:grid-cols-2">
+   247→              {/* ─── Inputs ─── */}
+   248→              <div className="space-y-5">
+   249→                {/* Loan Amount */}
+   250→                <div className="space-y-2">
+   251→                  <div className="flex items-center justify-between">
+   252→                    <Label className="text-sm font-medium">Loan Amount</Label>
+   253→                    <span className="text-sm font-semibold text-foreground">
+   254→                      {formatCurrency(singleInputs.amount)}
+   255→                    </span>
+   256→                  </div>
+   257→                  <div className="no-print">
+   258→                    <Slider
+   259→                      min={50}
+   260→                      max={1500}
+   261→                      step={25}
+   262→                      value={[singleInputs.amount]}
+   263→                      onValueChange={([v]) =>
+   264→                        setSingleInputs((p) => ({ ...p, amount: v }))
+   265→                      }
+   266→                      aria-label="Loan amount"
+   267→                      className="w-full"
+   268→                    />
+   269→                    <div className="flex justify-between text-xs text-muted-foreground">
+   270→                      <span>$50</span>
+   271→                      <span>$1,500</span>
+   272→                    </div>
+   273→                    <Input
+   274→                      type="number"
+   275→                      min={50}
+   276→                      max={1500}
+   277→                      step={25}
+   278→                      value={singleInputs.amount}
+   279→                      onChange={(e) => {
+   280→                        const n = parseFloat(e.target.value);
+   281→                        if (!isNaN(n))
+   282→                          setSingleInputs((p) => ({ ...p, amount: n }));
+   283→                      }}
+   284→                      className="mt-1"
+   285→                      aria-label="Loan amount input"
+   286→                    />
+   287→                  </div>
+   288→                </div>
+   289→
+   290→                {/* Fee Type Toggle */}
+   291→                <div className="space-y-2">
+   292→                  <Label className="text-sm font-medium">Fee Type</Label>
+   293→                  <div className="flex gap-2 no-print">
+   294→                    <Button
+   295→                      variant="outline"
+   296→                      size="sm"
+   297→                      onClick={() =>
+   298→                        setSingleInputs((p) => ({
+   299→                          ...p,
+   300→                          feeType: "flat",
+   301→                          feeValue: 75,
+   302→                        }))
+   303→                      }
+   304→                      className={
+   305→                        singleInputs.feeType === "flat"
+   306→                          ? "bg-ember/10 text-ember border-ember/30"
+   307→                          : ""
+   308→                      }
+   309→                    >
+   310→                      $ fee
+   311→                    </Button>
+   312→                    <Button
+   313→                      variant="outline"
+   314→                      size="sm"
+   315→                      onClick={() =>
+   316→                        setSingleInputs((p) => ({
+   317→                          ...p,
+   318→                          feeType: "per100",
+   319→                          feeValue: 15,
+   320→                        }))
+   321→                      }
+   322→                      className={
+   323→                        singleInputs.feeType === "per100"
+   324→                          ? "bg-ember/10 text-ember border-ember/30"
+   325→                          : ""
+   326→                      }
+   327→                    >
+   328→                      $ per $100
+   329→                    </Button>
+   330→                  </div>
+   331→                </div>
+   332→
+   333→                {/* Fee */}
+   334→                <div className="space-y-2">
+   335→                  <div className="flex items-center justify-between">
+   336→                    <Label className="text-sm font-medium">{feeLabel}</Label>
+   337→                    <span className="text-sm font-semibold text-foreground">
+   338→                      {singleInputs.feeType === "flat"
+   339→                        ? formatCurrency(singleInputs.feeValue)
+   340→                        : `$${singleInputs.feeValue.toFixed(2)}`}
+   341→                    </span>
+   342→                  </div>
+   343→                  <div className="no-print">
+   344→                    <Slider
+   345→                      min={feeMin}
+   346→                      max={feeMax}
+   347→                      step={feeStep}
+   348→                      value={[singleInputs.feeValue]}
+   349→                      onValueChange={([v]) =>
+   350→                        setSingleInputs((p) => ({ ...p, feeValue: v }))
+   351→                      }
+   352→                      aria-label={feeLabel}
+   353→                      className="w-full"
+   354→                    />
+   355→                    <div className="flex justify-between text-xs text-muted-foreground">
+   356→                      <span>
+   357→                        {singleInputs.feeType === "flat"
+   358→                          ? "$5"
+   359→                          : "$5.00"}
+   360→                      </span>
+   361→                      <span>
+   362→                        {singleInputs.feeType === "flat"
+   363→                          ? "$200"
+   364→                          : "$35.00"}
+   365→                      </span>
+   366→                    </div>
+   367→                    <Input
+   368→                      type="number"
+   369→                      min={feeMin}
+   370→                      max={feeMax}
+   371→                      step={feeStep}
+   372→                      value={singleInputs.feeValue}
+   373→                      onChange={(e) => {
+   374→                        const n = parseFloat(e.target.value);
+   375→                        if (!isNaN(n))
+   376→                          setSingleInputs((p) => ({ ...p, feeValue: n }));
+   377→                      }}
+   378→                      className="mt-1"
+   379→                      aria-label={`${feeLabel} input`}
+   380→                    />
+   381→                  </div>
+   382→                </div>
+   383→
+   384→                {/* Loan Term */}
+   385→                <div className="space-y-2">
+   386→                  <div className="flex items-center justify-between">
+   387→                    <Label className="text-sm font-medium">Loan Term</Label>
+   388→                    <span className="text-sm font-semibold text-foreground">
+   389→                      {singleInputs.days} days
+   390→                    </span>
+   391→                  </div>
+   392→                  <div className="no-print">
+   393→                    <Slider
+   394→                      min={7}
+   395→                      max={31}
+   396→                      step={1}
+   397→                      value={[singleInputs.days]}
+   398→                      onValueChange={([v]) =>
+   399→                        setSingleInputs((p) => ({ ...p, days: v }))
+   400→                      }
+   401→                      aria-label="Loan term in days"
+   402→                      className="w-full"
+   403→                    />
+   404→                    <div className="flex justify-between text-xs text-muted-foreground">
+   405→                      <span>7 days</span>
+   406→                      <span>31 days</span>
+   407→                    </div>
+   408→                    <Input
+   409→                      type="number"
+   410→                      min={7}
+   411→                      max={31}
+   412→                      step={1}
+   413→                      value={singleInputs.days}
+   414→                      onChange={(e) => {
+   415→                        const n = parseInt(e.target.value, 10);
+   416→                        if (!isNaN(n))
+   417→                          setSingleInputs((p) => ({ ...p, days: n }));
+   418→                      }}
+   419→                      className="mt-1"
+   420→                      aria-label="Loan term in days input"
+   421→                    />
+   422→                  </div>
+   423→                </div>
+   424→              </div>
+   425→
+   426→              {/* ─── Results ─── */}
+   427→              <div className="space-y-4">
+   428→                {singleInputs.amount > 0 && actualFee > 0 ? (
+   429→                  <>
+   430→                    {/* Total Due Highlight */}
+   431→                    <div className="rounded-lg bg-ember/10 border border-ember/20 p-5 text-center">
+   432→                      <p className="text-sm font-medium text-muted-foreground mb-1">
+   433→                        Total Due
+   434→                      </p>
+   435→                      <p className="text-4xl font-bold tracking-tight text-ember">
+   436→                        {formatCurrency(singleResult.totalRepayment)}
+   437→                      </p>
+   438→                      <p className="text-xs text-muted-foreground mt-1">
+   439→                        in {singleInputs.days} days
+   440→                      </p>
+   441→                    </div>
+   442→
+   443→                    {/* Breakdown Grid */}
+   444→                    <div className="grid grid-cols-3 gap-3">
+   445→                      <ResultCard
+   446→                        label="Finance Charge"
+   447→                        value={formatCurrency(singleResult.financeCharge)}
+   448→                        subtext="Cost to borrow"
+   449→                      />
+   450→                      <ResultCard
+   451→                        label="APR"
+   452→                        value={formatPercent(singleResult.apr)}
+   453→                        subtext="Annualized rate"
+   454→                      />
+   455→                      <ResultCard
+   456→                        label="Cost per $100"
+   457→                        value={`$${singleResult.costPerHundred.toFixed(2)}`}
+   458→                        subtext="Effective rate"
+   459→                      />
+   460→                    </div>
+   461→
+   462→                    {/* Rollover Table */}
+   463→                    <Card>
+   464→                      <CardHeader className="pb-2 pt-4 px-4">
+   465→                        <CardTitle className="text-sm font-semibold">
+   466→                          Rollover Cost Projection
+   467→                        </CardTitle>
+   468→                      </CardHeader>
+   469→                      <CardContent className="px-4 pb-4">
+   470→                        <Table>
+   471→                          <TableHeader>
+   472→                            <TableRow>
+   473→                              <TableHead>Rolled Over</TableHead>
+   474→                              <TableHead className="text-right">
+   475→                                Total Fees
+   476→                              </TableHead>
+   477→                              <TableHead className="text-right">
+   478→                                Total Due
+   479→                              </TableHead>
+   480→                              <TableHead className="text-right">Days</TableHead>
+   481→                            </TableRow>
+   482→                          </TableHeader>
+   483→                          <TableBody>
+   484→                            {singleResult.rollovers.map((r) => (
+   485→                              <TableRow key={r.times}>
+   486→                                <TableCell className="font-medium">
+   487→                                  {r.times} time
+   488→                                  {r.times !== 1 ? "s" : ""}
+   489→                                </TableCell>
+   490→                                <TableCell className="text-right">
+   491→                                  {formatCurrency(r.totalFees)}
+   492→                                </TableCell>
+   493→                                <TableCell className="text-right">
+   494→                                  {formatCurrency(r.totalRepayment)}
+   495→                                </TableCell>
+   496→                                <TableCell className="text-right">
+   497→                                  {r.totalDays}
+   498→                                </TableCell>
+   499→                              </TableRow>
+   500→                            ))}
+   501→                          </TableBody>
+   502→                        </Table>
+   503→                      </CardContent>
+   504→                    </Card>
+   505→
+   506→                    {/* Actions */}
+   507→                    <div className="flex flex-wrap gap-2 no-print">
+   508→                      <Button
+   509→                        variant="outline"
+   510→                        size="sm"
+   511→                        onClick={handleCopyLink}
+   512→                        className="text-xs"
+   513→                      >
+   514→                        {copied ? (
+   515→                          <Check className="mr-1.5 size-3.5" />
+   516→                        ) : (
+   517→                          <Copy className="mr-1.5 size-3.5" />
+   518→                        )}
+   519→                        {copied ? "Copied" : "Copy Link"}
+   520→                      </Button>
+   521→                      <Button
+   522→                        variant="outline"
+   523→                        size="sm"
+   524→                        onClick={handlePrint}
+   525→                        className="text-xs"
+   526→                      >
+   527→                        <Printer className="mr-1.5 size-3.5" />
+   528→                        Print
+   529→                      </Button>
+   530→                      <Button
+   531→                        variant="ghost"
+   532→                        size="sm"
+   533→                        onClick={handleReset}
+   534→                        className="text-xs"
+   535→                      >
+   536→                        <RotateCcw className="mr-1.5 size-3.5" />
+   537→                        Reset
+   538→                      </Button>
+   539→                    </div>
+   540→
+   541→                    {/* Disclaimer */}
+   542→                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+   543→                      This is an estimate for informational purposes only.
+   544→                      Actual fees vary by lender and state. Many states restrict
+   545→                      or prohibit payday loan rollovers. Always review your loan
+   546→                      agreement carefully before signing.
+   547→                    </p>
+   548→                  </>
+   549→                ) : (
+   550→                  <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+   551→                    Enter valid loan details to see results.
+   552→                  </div>
+   553→                )}
+   554→              </div>
+   555→            </div>
+   556→          ) : (
+   557→            /* ═══════ INSTALLMENT MODE ═══════ */
+   558→            <div className="grid gap-6 lg:grid-cols-2">
+   559→              {/* ─── Inputs ─── */}
+   560→              <div className="space-y-5">
+   561→                {/* Loan Amount */}
+   562→                <div className="space-y-2">
+   563→                  <div className="flex items-center justify-between">
+   564→                    <Label className="text-sm font-medium">Loan Amount</Label>
+   565→                    <span className="text-sm font-semibold text-foreground">
+   566→                      {formatCurrency(installmentInputs.amount)}
+   567→                    </span>
+   568→                  </div>
+   569→                  <div className="no-print">
+   570→                    <Slider
+   571→                      min={50}
+   572→                      max={2000}
+   573→                      step={25}
+   574→                      value={[installmentInputs.amount]}
+   575→                      onValueChange={([v]) =>
+   576→                        setInstallmentInputs((p) => ({ ...p, amount: v }))
+   577→                      }
+   578→                      aria-label="Loan amount"
+   579→                      className="w-full"
+   580→                    />
+   581→                    <div className="flex justify-between text-xs text-muted-foreground">
+   582→                      <span>$50</span>
+   583→                      <span>$2,000</span>
+   584→                    </div>
+   585→                    <Input
+   586→                      type="number"
+   587→                      min={50}
+   588→                      max={2000}
+   589→                      step={25}
+   590→                      value={installmentInputs.amount}
+   591→                      onChange={(e) => {
+   592→                        const n = parseFloat(e.target.value);
+   593→                        if (!isNaN(n))
+   594→                          setInstallmentInputs((p) => ({ ...p, amount: n }));
+   595→                      }}
+   596→                      className="mt-1"
+   597→                      aria-label="Loan amount input"
+   598→                    />
+   599→                  </div>
+   600→                </div>
+   601→
+   602→                {/* APR */}
+   603→                <div className="space-y-2">
+   604→                  <div className="flex items-center justify-between">
+   605→                    <Label className="text-sm font-medium">APR</Label>
+   606→                    <span className="text-sm font-semibold text-foreground">
+   607→                      {formatPercent(installmentInputs.apr)}
+   608→                    </span>
+   609→                  </div>
+   610→                  <div className="no-print">
+   611→                    <Slider
+   612→                      min={50}
+   613→                      max={600}
+   614→                      step={5}
+   615→                      value={[installmentInputs.apr]}
+   616→                      onValueChange={([v]) =>
+   617→                        setInstallmentInputs((p) => ({ ...p, apr: v }))
+   618→                      }
+   619→                      aria-label="Annual percentage rate"
+   620→                      className="w-full"
+   621→                    />
+   622→                    <div className="flex justify-between text-xs text-muted-foreground">
+   623→                      <span>50%</span>
+   624→                      <span>600%</span>
+   625→                    </div>
+   626→                    <Input
+   627→                      type="number"
+   628→                      min={50}
+   629→                      max={600}
+   630→                      step={5}
+   631→                      value={installmentInputs.apr}
+   632→                      onChange={(e) => {
+   633→                        const n = parseFloat(e.target.value);
+   634→                        if (!isNaN(n))
+   635→                          setInstallmentInputs((p) => ({ ...p, apr: n }));
+   636→                      }}
+   637→                      className="mt-1"
+   638→                      aria-label="APR input"
+   639→                    />
+   640→                  </div>
+   641→                </div>
+   642→
+   643→                {/* Term */}
+   644→                <div className="space-y-2">
+   645→                  <div className="flex items-center justify-between">
+   646→                    <Label className="text-sm font-medium">Term</Label>
+   647→                    <span className="text-sm font-semibold text-foreground">
+   648→                      {installmentInputs.termMonths} month
+   649→                      {installmentInputs.termMonths !== 1 ? "s" : ""}
+   650→                    </span>
+   651→                  </div>
+   652→                  <div className="no-print">
+   653→                    <Slider
+   654→                      min={1}
+   655→                      max={12}
+   656→                      step={1}
+   657→                      value={[installmentInputs.termMonths]}
+   658→                      onValueChange={([v]) =>
+   659→                        setInstallmentInputs((p) => ({
+   660→                          ...p,
+   661→                          termMonths: v,
+   662→                        }))
+   663→                      }
+   664→                      aria-label="Loan term in months"
+   665→                      className="w-full"
+   666→                    />
+   667→                    <div className="flex justify-between text-xs text-muted-foreground">
+   668→                      <span>1 mo</span>
+   669→                      <span>12 mo</span>
+   670→                    </div>
+   671→                    <Input
+   672→                      type="number"
+   673→                      min={1}
+   674→                      max={12}
+   675→                      step={1}
+   676→                      value={installmentInputs.termMonths}
+   677→                      onChange={(e) => {
+   678→                        const n = parseInt(e.target.value, 10);
+   679→                        if (!isNaN(n))
+   680→                          setInstallmentInputs((p) => ({
+   681→                            ...p,
+   682→                            termMonths: n,
+   683→                          }));
+   684→                      }}
+   685→                      className="mt-1"
+   686→                      aria-label="Loan term in months input"
+   687→                    />
+   688→                  </div>
+   689→                </div>
+   690→              </div>
+   691→
+   692→              {/* ─── Results ─── */}
+   693→              <div className="space-y-4">
+   694→                {installmentResult.schedule.length > 0 ? (
+   695→                  <>
+   696→                    {/* Monthly Payment Highlight */}
+   697→                    <div className="rounded-lg bg-ember/10 border border-ember/20 p-5 text-center">
+   698→                      <p className="text-sm font-medium text-muted-foreground mb-1">
+   699→                        Monthly Payment
+   700→                      </p>
+   701→                      <p className="text-4xl font-bold tracking-tight text-ember">
+   702→                        {formatCurrency(installmentResult.monthlyPayment)}
+   703→                      </p>
+   704→                      <p className="text-xs text-muted-foreground mt-1">
+   705→                        for {installmentInputs.termMonths} month
+   706→                        {installmentInputs.termMonths !== 1 ? "s" : ""}
+   707→                      </p>
+   708→                    </div>
+   709→
+   710→                    {/* Breakdown Grid */}
+   711→                    <div className="grid grid-cols-2 gap-3">
+   712→                      <ResultCard
+   713→                        label="Total Interest"
+   714→                        value={formatCurrency(installmentResult.totalInterest)}
+   715→                        subtext="Cost to borrow"
+   716→                      />
+   717→                      <ResultCard
+   718→                        label="Total Cost"
+   719→                        value={formatCurrency(installmentResult.totalCost)}
+   720→                        subtext="Principal + interest"
+   721→                      />
+   722→                    </div>
+   723→
+   724→                    {/* Actions */}
+   725→                    <div className="flex flex-wrap gap-2 no-print">
+   726→                      <Button
+   727→                        variant="outline"
+   728→                        size="sm"
+   729→                        onClick={handleCopyLink}
+   730→                        className="text-xs"
+   731→                      >
+   732→                        {copied ? (
+   733→                          <Check className="mr-1.5 size-3.5" />
+   734→                        ) : (
+   735→                          <Copy className="mr-1.5 size-3.5" />
+   736→                        )}
+   737→                        {copied ? "Copied" : "Copy Link"}
+   738→                      </Button>
+   739→                      <Button
+   740→                        variant="outline"
+   741→                        size="sm"
+   742→                        onClick={handlePrint}
+   743→                        className="text-xs"
+   744→                      >
+   745→                        <Printer className="mr-1.5 size-3.5" />
+   746→                        Print
+   747→                      </Button>
+   748→                      <Button
+   749→                        variant="ghost"
+   750→                        size="sm"
+   751→                        onClick={handleReset}
+   752→                        className="text-xs"
+   753→                      >
+   754→                        <RotateCcw className="mr-1.5 size-3.5" />
+   755→                        Reset
+   756→                      </Button>
+   757→                    </div>
+   758→
+   759→                    {/* Disclaimer */}
+   760→                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+   761→                      This is an estimate for informational purposes only.
+   762→                      Actual terms vary by lender, state, and credit profile.
+   763→                      Always review your loan agreement carefully before signing.
+   764→                    </p>
+   765→                  </>
+   766→                ) : (
+   767→                  <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+   768→                    Enter valid loan details to see results.
+   769→                  </div>
+   770→                )}
+   771→              </div>
+   772→            </div>
+   773→          )}
+   774→        </CardContent>
+   775→      </Card>
+   776→
+   777→      {/* ─── Amortization Table (Installment only) ─── */}
+   778→      {mode === "installment" && installmentResult.schedule.length > 0 && (
+   779→        <Card className="print-break-inside">
+   780→          <CardHeader className="pb-3">
+   781→            <button
+   782→              type="button"
+   783→              onClick={() => setShowAmortization(!showAmortization)}
+   784→              className="no-print flex w-full items-center justify-between text-left"
+   785→              aria-expanded={showAmortization}
+   786→            >
+   787→              <CardTitle className="text-lg">
+   788→                Amortization Schedule
+   789→              </CardTitle>
+   790→              {showAmortization ? (
+   791→                <ChevronUp className="size-5 text-muted-foreground" />
+   792→              ) : (
+   793→                <ChevronDown className="size-5 text-muted-foreground" />
+   794→              )}
+   795→            </button>
+   796→            {/* Print-only title (button is hidden in print) */}
+   797→            <CardTitle className="hidden print:block text-lg">
+   798→              Amortization Schedule
+   799→            </CardTitle>
+   800→          </CardHeader>
+   801→          <CardContent className={showAmortization ? "" : "hidden print:block"}>
+   802→            <div className="amortization-scroll max-h-96 overflow-y-auto custom-scrollbar rounded-md border">
+   803→              <Table>
+   804→                <TableHeader>
+   805→                  <TableRow>
+   806→                    <TableHead className="w-16">Month</TableHead>
+   807→                    <TableHead className="text-right">Payment</TableHead>
+   808→                    <TableHead className="text-right">Principal</TableHead>
+   809→                    <TableHead className="text-right">Interest</TableHead>
+   810→                    <TableHead className="text-right">Balance</TableHead>
+   811→                  </TableRow>
+   812→                </TableHeader>
+   813→                <TableBody>
+   814→                  {installmentResult.schedule.map((row) => (
+   815→                    <TableRow key={row.month}>
+   816→                      <TableCell className="font-medium">
+   817→                        {row.month}
+   818→                      </TableCell>
+   819→                      <TableCell className="text-right">
+   820→                        {formatCurrency(row.payment)}
+   821→                      </TableCell>
+   822→                      <TableCell className="text-right">
+   823→                        {formatCurrency(row.principal)}
+   824→                      </TableCell>
+   825→                      <TableCell className="text-right">
+   826→                        {formatCurrency(row.interest)}
+   827→                      </TableCell>
+   828→                      <TableCell className="text-right font-medium">
+   829→                        {formatCurrency(row.balance)}
+   830→                      </TableCell>
+   831→                    </TableRow>
+   832→                  ))}
+   833→                </TableBody>
+   834→              </Table>
+   835→            </div>
+   836→            <div className="mt-3 flex justify-end gap-6 text-sm font-medium">
+   837→              <span>
+   838→                Total Paid:{" "}
+   839→                <span className="text-ember">
+   840→                  {formatCurrency(installmentResult.totalCost)}
+   841→                </span>
+   842→              </span>
+   843→              <span>
+   844→                Total Interest:{" "}
+   845→                <span className="text-destructive">
+   846→                  {formatCurrency(installmentResult.totalInterest)}
+   847→                </span>
+   848→              </span>
+   849→            </div>
+   850→          </CardContent>
+   851→        </Card>
+   852→      )}
+   853→
+   854→      {/* ─── Print-only footer: URL + date ─── */}
+   855→      <PrintFooter />
+   856→    </div>
+   857→  );
+   858→}
+   859→
+   860→/* ─── Sub-components ─── */
+   861→
+   862→function ResultCard({
+   863→  label,
+   864→  value,
+   865→  subtext,
+   866→}: {
+   867→  label: string;
+   868→  value: string;
+   869→  subtext: string;
+   870→}) {
+   871→  return (
+   872→    <div className="rounded-md border bg-card p-3">
+   873→      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+   874→      <p className="mt-0.5 text-lg font-bold tracking-tight">{value}</p>
+   875→      <p className="text-[11px] text-muted-foreground">{subtext}</p>
+   876→    </div>
+   877→  );
+   878→}
+   879→
+   880→function PrintFooter() {
+   881→  return (
+   882→    <div className="hidden print:block print:mt-6 print:pt-3 print:border-t print:border-gray-300 print:text-[8pt] print:text-gray-500 print:flex print:justify-between">
+   883→      <span>CalcForge — thecalcforge.com</span>
+   884→      <PrintDateAndUrl />
+   885→    </div>
+   886→  );
+   887→}
+   888→
+   889→function PrintDateAndUrl() {
+   890→  const text = useMemo(() => {
+   891→    if (typeof window === "undefined") return "";
+   892→    const d = new Date().toLocaleDateString("en-US", {
+   893→      year: "numeric",
+   894→      month: "long",
+   895→      day: "numeric",
+   896→    });
+   897→    return `${window.location.host}${window.location.pathname} · Printed ${d}`;
+   898→  }, []);
+   899→  return <span>{text}</span>;
+   900→}

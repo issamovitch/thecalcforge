@@ -315,3 +315,53 @@ Stage Summary:
 - HubPage is reusable: future hubs (Debt, Auto, Home Buying, Insurance) just pass different props
 - Calculator cards and "Types of" section generate from calculatorPages, auto-filling as new calculators ship
 - Browser verified: all 4 H2s, 5 FAQs, 3 JSON-LD schemas, separator in dropdown, zero cannibalization
+
+---
+Task ID: 9
+Agent: Main Agent
+Task: Add extra payments to shared engine, retrofit title loan, build /loans/business-loan-calculator
+
+Work Log:
+- Added 3 new calculation functions to `src/lib/loan-math.ts`:
+  - `calculateLoanWithExtra()` — amortizing loan with optional extra monthly payment and start month, returns LoanWithExtraResult (baseResult, result, monthsSaved, interestSaved, actualPayoffMonth)
+  - `calculateBalloonLoan()` — equipment/balloon loan with down payment and residual, BalloonLoanResult (financedAmount, monthlyPayment, balloonAmount, totalInterest, totalCost, schedule)
+  - `calculateMCA()` — merchant cash advance with factor rate, returns MCAResult (totalPayback, financeCharge, effectiveAPR, dailyPayment, weeklyPayment, monthlyPayment, costPerDollar)
+- Engine math verified: $5K@120% 12mo +$200/mo from mo7 saves 1 month/$287.73; $50K×1.4=$70K/$20K cost/40% APR@12mo vs 80%@6mo; $50K equip $10K down $15K balloon 9% 60mo = $518.96/mo
+- Retrofitted extra payments onto TitleLoanCalculator.tsx: collapsible extra payment section, Early Payoff Savings card, URL params, print-hidden
+- Updated title loan page payoff prose to use `calculateLoanWithExtra` and engine-computed values, added reference to the new UI
+- Built `src/components/calculators/BusinessLoanCalculator.tsx` with 3 modes: Term Loan (calculateLoanWithExtra), Equipment Loan (calculateBalloonLoan), MCA (calculateMCA)
+- Built `/loans/business-loan-calculator/page.tsx` with: 5 H2 sections, SBA section (no hardcoded rates, links to sba.gov), MCA honesty requirements, 5 FAQ, Related Calculators
+- Added business loan to calculatorPages in site.config.ts
+- Updated sitemap.ts and robots.ts
+
+Stage Summary:
+- Files created: src/components/calculators/BusinessLoanCalculator.tsx, src/app/loans/business-loan-calculator/page.tsx
+- Files modified: src/lib/loan-math.ts, src/components/calculators/TitleLoanCalculator.tsx, src/app/loans/title-loan-calculator/page.tsx, src/config/site.config.ts, src/app/sitemap.ts, src/app/robots.ts
+- Extra payments now available to ALL calculators via calculateLoanWithExtra()
+- Hub page, footer, nav dropdown, and Types section all auto-update with new calculator
+- All computed values engine-derived, zero hardcoded currency, no em dashes
+
+---
+Task ID: 10
+Agent: Main Agent
+Task: Fix 5 bugs in business loan calculator + verify title loan extra payments
+
+Work Log:
+- BUG 1 (Equipment balloon formula): Fixed calculateBalloonLoan() in loan-math.ts. Changed from face-value subtraction (P - B) to present-value discounting: M = [P - B/(1+r)^n] × r / (1-(1+r)^-n). Changed schedule convention: n rows of regular payments, balloon paid as separate lump sum after final payment.
+- BUG 2 (Result tiles contradict schedule): Restructured totalCost = downPayment + (n × monthlyPayment) + balloon. Added reconciliation guard (console.error if final balance differs from balloon by >$1). Schedule's final row balance now ≈ balloon ($27,999.94 vs $28,000).
+- BUG 3 (Prose example wrong): Auto-corrected. $50K/$10K down/$15K balloon/9%/60mo now computes $631.46/mo, $12,887.60 interest, $62,887.60 total (was $518.96, $14,622.73, $64,622.73).
+- BUG 4 (MCA day-count): Changed from mixed convention (30-day months for daily, 4.345 weeks/month for weekly) to consistent 365/12 days/month. Weekly = daily × 7 exactly.
+- BUG 5 (Holdback does nothing): Removed holdbackPercent from MCAInputs interface, calculateMCA function, BusinessLoanCalculator component (type, defaults, state initializer, URL sync, UI section), and page.tsx engine call.
+- Updated AmortizationTable component: added optional balloonNote prop, shown in equipment mode footer.
+- Updated MCA result tile: estimated days now uses 365/12 (was months×30).
+- Updated MCA prose: removed "assuming ~30-day months", added "weekly is exactly 7 times daily".
+- VERIFY: Title loan calculator already has extra payments (extraMonthly, extraStartMonth, showExtraInputs, calculateLoanWithExtra, Early Payoff Savings section). Hub FAQ claim is accurate.
+
+Stage Summary:
+- Files modified: src/lib/loan-math.ts, src/components/calculators/BusinessLoanCalculator.tsx, src/app/loans/business-loan-calculator/page.tsx
+- BUG 1 verified: $169K/$28K/10.3%/35mo → $4,921.42/mo (user: $4,921.00), final bal $27,999.94 (≈$28K)
+- BUG 2 verified: reconciliation guard passes (diff $0.06 for 35mo, $0.08 for 60mo)
+- BUG 3 verified: $50K equip → $631.46/mo, $12,887.60 interest, $62,887.60 total
+- BUG 4 verified: daily×7 == weekly (exact match)
+- BUG 5 verified: holdback field removed from all layers
+- VERIFY confirmed: extra payments present on title loan calculator

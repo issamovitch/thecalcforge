@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronUp,
   Info,
+  PlusCircle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,7 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import {
   calculateLoan,
+  calculateLoanWithExtra,
   formatCurrency,
   formatPercent,
   type LoanInputs,
@@ -43,6 +45,8 @@ import {
 
 interface TitleLoanInputs extends LoanInputs {
   vehicleValue: number;
+  extraMonthly: number;
+  extraStartMonth: number;
 }
 
 /* ─── Defaults ─── */
@@ -52,6 +56,8 @@ export const DEFAULT_INPUTS: TitleLoanInputs = {
   loanAmount: 5000,
   apr: 120,
   termMonths: 12,
+  extraMonthly: 0,
+  extraStartMonth: 1,
 };
 
 /* Pre-compute default result at module level — available during SSR */
@@ -74,17 +80,22 @@ export function TitleLoanCalculator() {
     const a = params.get("amount");
     const r = params.get("rate");
     const t = params.get("term");
-    if (!v && !a && !r && !t) return DEFAULT_INPUTS;
+    const ex = params.get("extra");
+    const es = params.get("extrastart");
+    if (!v && !a && !r && !t && !ex && !es) return DEFAULT_INPUTS;
     return {
       vehicleValue: v ? parseFloat(v) : DEFAULT_INPUTS.vehicleValue,
       loanAmount: a ? parseFloat(a) : DEFAULT_INPUTS.loanAmount,
       apr: r ? parseFloat(r) : DEFAULT_INPUTS.apr,
       termMonths: t ? parseInt(t, 10) : DEFAULT_INPUTS.termMonths,
+      extraMonthly: ex ? parseFloat(ex) : DEFAULT_INPUTS.extraMonthly,
+      extraStartMonth: es ? parseInt(es, 10) : DEFAULT_INPUTS.extraStartMonth,
     };
   });
   const [copied, setCopied] = useState(false);
   // Amortization starts expanded so it appears in static HTML for crawlers
   const [showAmortization, setShowAmortization] = useState(true);
+  const [showExtraInputs, setShowExtraInputs] = useState(false);
 
   const result = useMemo(
     () =>
@@ -93,7 +104,19 @@ export function TitleLoanCalculator() {
         apr: inputs.apr,
         termMonths: inputs.termMonths,
       }),
-    [inputs]
+    [inputs.loanAmount, inputs.apr, inputs.termMonths]
+  );
+
+  const extraResult = useMemo(
+    () =>
+      calculateLoanWithExtra({
+        loanAmount: inputs.loanAmount,
+        apr: inputs.apr,
+        termMonths: inputs.termMonths,
+        extraMonthly: inputs.extraMonthly,
+        extraStartMonth: inputs.extraStartMonth,
+      }),
+    [inputs.loanAmount, inputs.apr, inputs.termMonths, inputs.extraMonthly, inputs.extraStartMonth]
   );
 
   // Sync URL query string when inputs change (skip initial render to avoid
@@ -110,6 +133,8 @@ export function TitleLoanCalculator() {
     params.set("amount", inputs.loanAmount.toString());
     params.set("rate", inputs.apr.toString());
     params.set("term", inputs.termMonths.toString());
+    params.set("extra", inputs.extraMonthly.toString());
+    params.set("extrastart", inputs.extraStartMonth.toString());
     const newUrl = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState(null, "", newUrl);
   }, [inputs]);
@@ -358,6 +383,133 @@ export function TitleLoanCalculator() {
                     />
                   </div>
                 </div>
+
+                {/* ─── Extra Payments (collapsible) ─── */}
+                <div className="no-print">
+                  <button
+                    type="button"
+                    onClick={() => setShowExtraInputs(!showExtraInputs)}
+                    className="flex w-full items-center gap-2 rounded-md border border-dashed border-muted-foreground/30 px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-ember/40 hover:text-ember"
+                  >
+                    <PlusCircle className="size-4" />
+                    <span>Extra Monthly Payments</span>
+                    {showExtraInputs ? (
+                      <ChevronUp className="ml-auto size-4" />
+                    ) : (
+                      <ChevronDown className="ml-auto size-4" />
+                    )}
+                  </button>
+
+                  {showExtraInputs && (
+                    <div className="mt-3 space-y-4 rounded-lg border border-ember/20 bg-ember/5 p-4">
+                      {/* Extra Monthly Payment */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <Label htmlFor="extra-monthly" className="text-sm font-medium">
+                              Extra Monthly Payment
+                            </Label>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="size-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[240px] text-xs">
+                                An additional amount you pay each month on top
+                                of your regular payment. This goes directly
+                                toward reducing your principal balance, helping
+                                you pay off the loan faster and save on interest.
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                          <span className="text-sm font-semibold text-foreground">
+                            {formatCurrency(inputs.extraMonthly)}
+                          </span>
+                        </div>
+                        <Slider
+                          id="extra-monthly"
+                          min={0}
+                          max={2000}
+                          step={50}
+                          value={[inputs.extraMonthly]}
+                          onValueChange={([v]) =>
+                            setInputs((p) => ({ ...p, extraMonthly: v }))
+                          }
+                          aria-label="Extra monthly payment"
+                          className="w-full"
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>$0</span>
+                          <span>$2,000</span>
+                        </div>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={5000}
+                          step={50}
+                          value={inputs.extraMonthly}
+                          onChange={(e) =>
+                            handleInputChange("extraMonthly", e.target.value)
+                          }
+                          className="mt-1"
+                          aria-label="Extra monthly payment input"
+                        />
+                      </div>
+
+                      {/* Start From Month */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <Label htmlFor="extra-start-month" className="text-sm font-medium">
+                              Start From Month
+                            </Label>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="size-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[240px] text-xs">
+                                The month number when you begin making extra
+                                payments. For example, set to 1 to start
+                                immediately, or 3 to begin after the third
+                                regular payment.
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                          <span className="text-sm font-semibold text-foreground">
+                            Month {inputs.extraStartMonth}
+                          </span>
+                        </div>
+                        <Slider
+                          id="extra-start-month"
+                          min={1}
+                          max={inputs.termMonths}
+                          step={1}
+                          value={[inputs.extraStartMonth]}
+                          onValueChange={([v]) =>
+                            setInputs((p) => ({ ...p, extraStartMonth: v }))
+                          }
+                          aria-label="Start extra payments from month"
+                          className="w-full"
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>1</span>
+                          <span>{inputs.termMonths}</span>
+                        </div>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={inputs.termMonths}
+                          step={1}
+                          value={inputs.extraStartMonth}
+                          onChange={(e) =>
+                            handleInputChange("extraStartMonth", e.target.value)
+                          }
+                          className="mt-1"
+                          aria-label="Start extra payments from month input"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* ─── Results ─── */}
@@ -402,6 +554,27 @@ export function TitleLoanCalculator() {
                         subtext={`${formatCurrency(inputs.loanAmount)} / ${formatCurrency(inputs.vehicleValue)}`}
                       />
                     </div>
+
+                    {/* Early Payoff Savings */}
+                    {inputs.extraMonthly > 0 && (
+                      <div className="rounded-lg border border-ember/30 bg-ember/5 p-4 space-y-2">
+                        <p className="text-sm font-semibold text-ember">Early Payoff Savings</p>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Months Saved</p>
+                            <p className="text-base font-bold">{extraResult.monthsSaved}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Interest Saved</p>
+                            <p className="text-base font-bold text-ember">{formatCurrency(extraResult.interestSaved)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">New Total Cost</p>
+                            <p className="text-base font-bold">{formatCurrency(extraResult.result.totalCost)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Actions */}
                     <div className="flex flex-wrap gap-2 no-print">

@@ -64,7 +64,7 @@ export function Header() {
           {/* Loans dropdown — populated from calculatorPages */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors">
+              <button className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors">
                 Loans
                 <ChevronDown className="size-3.5" />
               </button>
@@ -87,7 +87,7 @@ export function Header() {
             <a
               key={link.href}
               href={link.href}
-              className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors"
             >
               {link.label}
             </a>
@@ -132,7 +132,7 @@ export function Header() {
               <Link
                 href="/loans"
                 onClick={() => setMobileOpen(false)}
-                className="rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+                className="cursor-pointer rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
               >
                 Loans
               </Link>
@@ -141,7 +141,7 @@ export function Header() {
                   key={p.href}
                   href={p.href}
                   onClick={() => setMobileOpen(false)}
-                  className="block rounded-md pl-6 pr-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
+                  className="block cursor-pointer rounded-md pl-6 pr-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
                 >
                   {p.label}
                 </Link>
@@ -149,7 +149,7 @@ export function Header() {
               <Link
                 href="/loans"
                 onClick={() => setMobileOpen(false)}
-                className="block rounded-md pl-6 pr-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
+                className="block cursor-pointer rounded-md pl-6 pr-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
               >
                 All Loan Calculators
               </Link>
@@ -160,7 +160,7 @@ export function Header() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
-                  className="rounded-md px-3 py-2 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
+                  className="cursor-pointer rounded-md px-3 py-2 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
                 >
                   {link.label}
                 </Link>
@@ -174,7 +174,7 @@ export function Header() {
               <Link
                 href="/about"
                 onClick={() => setMobileOpen(false)}
-                className="rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+                className="cursor-pointer rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
               >
                 About
               </Link>
@@ -183,7 +183,7 @@ export function Header() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
-                  className="rounded-md px-3 py-2 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
+                  className="cursor-pointer rounded-md px-3 py-2 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
                 >
                   {link.label}
                 </Link>
