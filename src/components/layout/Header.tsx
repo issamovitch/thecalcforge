@@ -16,17 +16,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { siteConfig, calculatorPages } from "@/config/site.config";
-
-/** Build the Loans dropdown children dynamically from calculatorPages. */
-function loanNavChildren() {
-  return [
-    ...calculatorPages.map((p) => ({ label: p.label, href: p.href })),
-    { label: "All Loan Calculators", href: "/loans" },
-  ];
-}
 
 const otherNavLinks = [
   { label: "Debt", href: "/debt" },
@@ -44,7 +37,6 @@ const footerLinks = [
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const loanChildren = loanNavChildren();
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -78,11 +70,15 @@ export function Header() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
-              {loanChildren.map((child) => (
-                <DropdownMenuItem key={child.href} asChild>
-                  <Link href={child.href}>{child.label}</Link>
+              {calculatorPages.map((p) => (
+                <DropdownMenuItem key={p.href} asChild>
+                  <Link href={p.href}>{p.label}</Link>
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/loans">All Loan Calculators</Link>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 

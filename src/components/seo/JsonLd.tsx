@@ -60,6 +60,35 @@ export function FaqJsonLd({ faqs }: FaqJsonLdProps) {
   );
 }
 
+/* ─── CollectionPage JSON-LD ─── */
+
+interface CollectionPageJsonLdProps {
+  name: string;
+  description: string;
+  url: string;
+}
+
+export function CollectionPageJsonLd({
+  name,
+  description,
+  url,
+}: CollectionPageJsonLdProps) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name,
+    description,
+    url,
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    />
+  );
+}
+
 /* ─── Breadcrumb JSON-LD ─── */
 
 interface BreadcrumbJsonLdProps {

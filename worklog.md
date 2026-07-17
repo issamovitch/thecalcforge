@@ -279,3 +279,39 @@ Stage Summary:
 - Footer Loan Tools: Title Loan Calculator, Payday Loan APR Calculator
 - /loans page: 2 calculator cards, no "Coming Soon"
 - Adding a new calculator page requires only appending to `calculatorPages` in site.config.ts
+
+---
+Task ID: 8
+Agent: Main Agent
+Task: Add dropdown separator + SEO the /loans hub page as reusable template
+
+Work Log:
+- Extended `calculatorPages` in site.config.ts with new fields: `longDescription` (2-3 sentence card copy), `typesCopy` (routing copy for Types section), `primaryKeyword` (exact anchor text), `category` (for hub filtering)
+- Added `CollectionPageJsonLd` component to `src/components/seo/JsonLd.tsx`
+- Created `src/components/hub/HubPage.tsx` — reusable hub template accepting:
+  - Breadcrumb label, path, collection description
+  - Intro text, calculator array, H2 section titles and content (as ReactNode for computed values)
+  - FAQ array (renders native `<details>` + FAQPage JSON-LD)
+  - Optional source citation
+  - Generates: calculator card grid, "Types of" list from config, all 3 JSON-LD schemas
+- Rewrote `src/app/loans/page.tsx` using HubPage:
+  - Title: "Loan Calculators – Free Payment, APR & Amortization Tools | CalcForge"
+  - Meta description: 138 chars, primary keyword first
+  - H1: Loan Calculators
+  - Intro: 76 words, primary keyword in first sentence
+  - 2 calculator cards with 2-sentence descriptions
+  - H2 "How to Calculate Loan Payments": amortizing formula, engine-computed example ($5K@10%/36mo = $161.34/mo, $808.07 interest, $5,808.07 total), APR explanation
+  - H2 "Types of Loan Calculators": intro + generated list with primary keyword anchor text
+  - H2 "Understanding Loan Costs": principal vs interest, term tradeoffs, secured vs unsecured, fee-based vs amortizing
+  - 5 FAQ items (accuracy, APR vs rate, term effect, early payoff, amortization schedule)
+  - JSON-LD: CollectionPage + BreadcrumbList + FAQPage
+  - Zero hardcoded currency values (all from calculateLoan engine)
+  - Zero cannibalization content (no Florida, Texas, or child-specific examples)
+- Updated Header.tsx: Added DropdownMenuSeparator between calculator links and "All Loan Calculators" in desktop dropdown
+
+Stage Summary:
+- Files created: src/components/hub/HubPage.tsx
+- Files modified: src/config/site.config.ts, src/components/seo/JsonLd.tsx, src/app/loans/page.tsx, src/components/layout/Header.tsx
+- HubPage is reusable: future hubs (Debt, Auto, Home Buying, Insurance) just pass different props
+- Calculator cards and "Types of" section generate from calculatorPages, auto-filling as new calculators ship
+- Browser verified: all 4 H2s, 5 FAQs, 3 JSON-LD schemas, separator in dropdown, zero cannibalization

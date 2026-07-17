@@ -19,7 +19,7 @@ export const OCCC_BASE_URL = "https://occc.texas.gov";
 // ─── Built calculator pages (single source of truth) ─────────────────
 /**
  * Every calculator that has been built and is live.
- * Header nav dropdown, footer "Loan Tools", and the /loans hub page
+ * Header nav dropdown, footer "Loan Tools", and hub pages
  * all derive from this array — add a new entry here and every
  * navigation surface updates automatically.
  */
@@ -27,12 +27,26 @@ export const calculatorPages = [
   {
     label: "Title Loan Calculator",
     href: "/loans/title-loan-calculator",
-    description: "Estimate title loan payments, total interest, and amortization schedules.",
+    description:
+      "Estimate title loan payments, total interest, and amortization schedules.",
+    longDescription:
+      "Estimate monthly payments, total interest, and full amortization for title loans. This tool is for borrowers comparing lender offers, checking whether an early payoff saves money, or understanding how vehicle value affects loan terms.",
+    typesCopy:
+      "helps you estimate monthly payments and total cost for title loans, compare lender offers, and plan early payoff strategies",
+    primaryKeyword: "title loan calculator",
+    category: "loans",
   },
   {
     label: "Payday Loan APR Calculator",
     href: "/loans/payday-loan-calculator",
-    description: "Calculate payday loan APR for single-payment and installment payday loans.",
+    description:
+      "Calculate payday loan APR for single-payment and installment payday loans.",
+    longDescription:
+      "Calculate the true APR and total repayment for single-payment and installment payday loans. This tool is for anyone evaluating a payday loan offer, comparing rollover costs, or understanding how a flat fee translates to an annualized rate.",
+    typesCopy:
+      "reveals the true APR and total cost of single-payment and installment payday loans, including rollover impact",
+    primaryKeyword: "payday loan APR calculator",
+    category: "loans",
   },
 ] as const;
 
