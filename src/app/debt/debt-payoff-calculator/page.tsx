@@ -349,7 +349,7 @@ export default function DebtPayoffCalculatorPage() {
             {faqs.map((faq, index) => (
               <details
                 key={index}
-                className="group rounded-lg border bg-card"
+                className="group rounded-lg border bg-white dark:bg-card"
               >
                 <summary className="cursor-pointer select-none px-5 py-4 text-sm font-semibold text-foreground hover:text-ember transition-colors list-none flex items-center justify-between">
                   {faq.question}

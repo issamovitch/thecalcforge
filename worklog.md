@@ -731,3 +731,24 @@ Work Log:
 Stage Summary:
 - DTI Calculator fully built and verified via browser
 - Auto-appears in /debt hub and header dropdown via site.config
+---
+Task ID: 1
+Agent: main
+Task: Build Credit Card Payoff Calculator at /debt/credit-card-payoff-calculator
+
+Work Log:
+- Read existing patterns from DebtPayoffCalculator.tsx, DTICalculator.tsx, dti-calculator/page.tsx, site.config.ts, sitemap.ts
+- Built CreditCardPayoffCalculator.tsx (1028 lines) with: multi-card support, two modes (fixed payment / target months), snowball/avalanche, min-only vs active comparison, collapsible schedule, URL params, print support, share buttons
+- Fixed binary search bug (const -> let for lo/hi)
+- Built page.tsx (461 lines) with: full SEO metadata, 3 JSON-LD blocks, breadcrumbs, 5 H2 content sections with worked examples, 5 FAQs, related calculators links
+- Added entry to site.config.ts calculatorPages array (category: "debt")
+- Added to sitemap.ts (priority 0.9)
+- Hub page already had the entry
+- Verified build passes, no em-dashes, DTI-style deletable rows with keep-one-empty
+
+Stage Summary:
+- Created: /src/components/calculators/CreditCardPayoffCalculator.tsx
+- Created: /src/app/debt/credit-card-payoff-calculator/page.tsx
+- Updated: /src/config/site.config.ts (added Credit Card Payoff Calculator entry)
+- Updated: /src/app/sitemap.ts (added /debt/credit-card-payoff-calculator)
+- Build verified clean, browser-rendered header/intro/calculator card confirmed

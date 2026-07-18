@@ -144,6 +144,18 @@ export const calculatorPages = [
     primaryKeyword: "DTI calculator",
     category: "debt",
   },
+  {
+    label: "Credit Card Payoff Calculator",
+    href: "/debt/credit-card-payoff-calculator",
+    description:
+      "See how long to pay off credit cards, total interest, and how extra payments save time and money.",
+    longDescription:
+      "Estimate how long it takes to pay off one or more credit cards and how much interest you will pay. Compare minimum-only payments against fixed or extra monthly payments. Supports snowball and avalanche strategies across multiple cards with a full month-by-month payoff schedule.",
+    typesCopy:
+      "estimates credit card payoff timeline and total interest, compares minimum vs fixed payment strategies, and supports snowball/avalanche across multiple cards",
+    primaryKeyword: "credit card payoff calculator",
+    category: "debt",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────

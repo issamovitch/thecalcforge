@@ -276,10 +276,13 @@ export default function DTICalculator() {
   }, []);
 
   const removeDebt = useCallback((id: string) => {
-    setInputs((prev) => ({
-      ...prev,
-      debts: prev.debts.filter((d) => d.id !== id),
-    }));
+    setInputs((prev) => {
+      const next = prev.debts.filter((d) => d.id !== id);
+      if (next.length === 0) {
+        return { ...prev, debts: [{ id: genId(), name: "", amount: 0, isDefault: false }] };
+      }
+      return { ...prev, debts: next };
+    });
   }, []);
 
   const totalDebts = useMemo(
@@ -330,7 +333,7 @@ export default function DTICalculator() {
               {/* ─── Inputs ─── */}
               <div className="space-y-5">
                 {/* Gross Monthly Income */}
-                <div className="space-y-2">
+                <div className="space-y-2 pl-3 sm:pl-4">
                   <div className="flex items-center gap-1.5">
                     <Label htmlFor="gross-income" className="text-sm font-medium">
                       Gross Monthly Income
@@ -415,8 +418,7 @@ export default function DTICalculator() {
                             aria-label={`Debt ${idx + 1} amount`}
                           />
                         </div>
-                        {!debt.isDefault && (
-                          <Button
+                        <Button
                             variant="ghost"
                             size="sm"
                             className="size-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
@@ -425,7 +427,6 @@ export default function DTICalculator() {
                           >
                             <X className="size-4" />
                           </Button>
-                        )}
                       </div>
                       <span className="hidden print:inline text-sm font-medium">
                         Amount: {fmtCurrency(debt.amount)}
