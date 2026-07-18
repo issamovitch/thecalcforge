@@ -390,3 +390,37 @@ Stage Summary:
 - Missing space: fixed with explicit `{" "}`
 - VERIFY: Title loan calculator does have extra payments; hub FAQ is accurate
 - `bun run lint` passes clean
+
+---
+Task ID: 2
+Agent: main
+Task: Build /loans/boat-rv-motorcycle-loan-calculator page with calculator component
+
+Work Log:
+- Added "Boat, RV & Motorcycle Loan Calculator" entry to site.config.ts calculatorPages
+- Created BoatRVCalculator.tsx client component (916 lines) with:
+  - Vehicle type selector (Boat/RV/Motorcycle) adjusting slider ranges and labels
+  - Purchase price, trade-in value, down payment, sales tax rate, APR, term inputs
+  - Collapsible extra payments section (extra monthly + start month)
+  - Financed amount result tile showing trade-in/down/tax breakdown
+  - Early payoff savings display when extra > 0
+  - Full amortization schedule with toggle
+  - URL param sync, copy link, print, reset
+  - Print footer, SSR-safe defaults
+- Created page.tsx with:
+  - Title: "Boat Loan Calculator: Payments & Amortization" (51 chars, template adds | CalcForge)
+  - 5 H2 sections matching requested keywords
+  - Engine-computed prose examples for all 5 sections
+  - 5 FAQ items
+  - FAQPage + WebApplication + BreadcrumbList JSON-LD
+  - Related calculators linking to 3 siblings + hub
+- Verified: lint passes, dev server compiles, browser renders all elements
+- Verified: Loans dropdown and footer automatically include new page
+- Verified: Vehicle type toggle works, results recalculate
+
+Stage Summary:
+- New page: /loans/boat-rv-motorcycle-loan-calculator
+- Component: src/components/calculators/BoatRVCalculator.tsx
+- Page: src/app/loans/boat-rv-motorcycle-loan-calculator/page.tsx
+- Config: updated site.config.ts calculatorPages array
+- All 5 H2 sections render, no em dashes, no hardcoded currency, engine-computed numbers

@@ -1,0 +1,755 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+     4→     4→import {
+     5→     5→  Calculator,
+     6→     6→  Copy,
+     7→     7→  Check,
+     8→     8→  Printer,
+     9→     9→  RotateCcw,
+    10→    10→  ChevronDown,
+    11→    11→  ChevronUp,
+    12→    12→  Info,
+    13→    13→  PlusCircle,
+    14→    14→} from "lucide-react";
+    15→    15→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+    16→    16→import { Input } from "@/components/ui/input";
+    17→    17→import { Label } from "@/components/ui/label";
+    18→    18→import { Button } from "@/components/ui/button";
+    19→    19→import {
+    20→    20→  Table,
+    21→    21→  TableBody,
+    22→    22→  TableCell,
+    23→    23→  TableHead,
+    24→    24→  TableHeader,
+    25→    25→  TableRow,
+    26→    26→} from "@/components/ui/table";
+    27→    27→import {
+    28→    28→  Tooltip,
+    29→    29→  TooltipContent,
+    30→    30→  TooltipProvider,
+    31→    31→  TooltipTrigger,
+    32→    32→} from "@/components/ui/tooltip";
+    33→    33→import { Slider } from "@/components/ui/slider";
+    34→    34→import { toast } from "sonner";
+    35→    35→import {
+    36→    36→  calculateLoan,
+    37→    37→  calculateLoanWithExtra,
+    38→    38→  formatCurrency,
+    39→    39→  formatPercent,
+    40→    40→  type LoanInputs,
+    41→    41→  type AmortizationRow,
+    42→    42→} from "@/lib/loan-math";
+    43→    43→
+    44→    44→/* ─── Types ─── */
+    45→    45→
+    46→    46→interface TitleLoanInputs extends LoanInputs {
+    47→    47→  vehicleValue: number;
+    48→    48→  extraMonthly: number;
+    49→    49→  extraStartMonth: number;
+    50→    50→}
+    51→    51→
+    52→    52→/* ─── Defaults ─── */
+    53→    53→
+    54→    54→export const DEFAULT_INPUTS: TitleLoanInputs = {
+    55→    55→  vehicleValue: 10000,
+    56→    56→  loanAmount: 5000,
+    57→    57→  apr: 120,
+    58→    58→  termMonths: 12,
+    59→    59→  extraMonthly: 0,
+    60→    60→  extraStartMonth: 1,
+    61→    61→};
+    62→    62→
+    63→    63→/* Pre-compute default result at module level (available during SSR) */
+    64→    64→export const DEFAULT_RESULT = calculateLoan({
+    65→    65→  loanAmount: DEFAULT_INPUTS.loanAmount,
+    66→    66→  apr: DEFAULT_INPUTS.apr,
+    67→    67→  termMonths: DEFAULT_INPUTS.termMonths,
+    68→    68→});
+    69→    69→
+    70→    70→/* ─── Component ─── */
+    71→    71→
+    72→    72→export function TitleLoanCalculator() {
+    73→    73→  // Read URL params in initializer; SSR gets DEFAULT_INPUTS, client reads query string.
+    74→    74→  // This avoids useSearchParams (which forces a Suspense boundary) and avoids
+    75→    75→  // calling setState in an useEffect (which the React compiler forbids).
+    76→    76→  const [inputs, setInputs] = useState<TitleLoanInputs>(() => {
+    77→    77→    if (typeof window === "undefined") return DEFAULT_INPUTS;
+    78→    78→    const params = new URLSearchParams(window.location.search);
+    79→    79→    const v = params.get("vehicle");
+    80→    80→    const a = params.get("amount");
+    81→    81→    const r = params.get("rate");
+    82→    82→    const t = params.get("term");
+    83→    83→    const ex = params.get("extra");
+    84→    84→    const es = params.get("extrastart");
+    85→    85→    if (!v && !a && !r && !t && !ex && !es) return DEFAULT_INPUTS;
+    86→    86→    return {
+    87→    87→      vehicleValue: v ? parseFloat(v) : DEFAULT_INPUTS.vehicleValue,
+    88→    88→      loanAmount: a ? parseFloat(a) : DEFAULT_INPUTS.loanAmount,
+    89→    89→      apr: r ? parseFloat(r) : DEFAULT_INPUTS.apr,
+    90→    90→      termMonths: t ? parseInt(t, 10) : DEFAULT_INPUTS.termMonths,
+    91→    91→      extraMonthly: ex ? parseFloat(ex) : DEFAULT_INPUTS.extraMonthly,
+    92→    92→      extraStartMonth: es ? parseInt(es, 10) : DEFAULT_INPUTS.extraStartMonth,
+    93→    93→    };
+    94→    94→  });
+    95→    95→  const [copied, setCopied] = useState(false);
+    96→    96→  // Amortization starts expanded so it appears in static HTML for crawlers
+    97→    97→  const [showAmortization, setShowAmortization] = useState(true);
+    98→    98→  const [showExtraInputs, setShowExtraInputs] = useState(false);
+    99→    99→
+   100→   100→  const result = useMemo(
+   101→   101→    () =>
+   102→   102→      calculateLoan({
+   103→   103→        loanAmount: inputs.loanAmount,
+   104→   104→        apr: inputs.apr,
+   105→   105→        termMonths: inputs.termMonths,
+   106→   106→      }),
+   107→   107→    [inputs.loanAmount, inputs.apr, inputs.termMonths]
+   108→   108→  );
+   109→   109→
+   110→   110→  const extraResult = useMemo(
+   111→   111→    () =>
+   112→   112→      calculateLoanWithExtra({
+   113→   113→        loanAmount: inputs.loanAmount,
+   114→   114→        apr: inputs.apr,
+   115→   115→        termMonths: inputs.termMonths,
+   116→   116→        extraMonthly: inputs.extraMonthly,
+   117→   117→        extraStartMonth: inputs.extraStartMonth,
+   118→   118→      }),
+   119→   119→    [inputs.loanAmount, inputs.apr, inputs.termMonths, inputs.extraMonthly, inputs.extraStartMonth]
+   120→   120→  );
+   121→   121→
+   122→   122→  // Sync URL query string when inputs change (skip initial render to avoid
+   123→   123→  // overwriting a clean URL with default params on first load).
+   124→   124→  const isInitialMount = useRef(true);
+   125→   125→  useEffect(() => {
+   126→   126→    if (isInitialMount.current) {
+   127→   127→      isInitialMount.current = false;
+   128→   128→      return;
+   129→   129→    }
+   130→   130→    if (typeof window === "undefined") return;
+   131→   131→    const params = new URLSearchParams();
+   132→   132→    params.set("vehicle", inputs.vehicleValue.toString());
+   133→   133→    params.set("amount", inputs.loanAmount.toString());
+   134→   134→    params.set("rate", inputs.apr.toString());
+   135→   135→    params.set("term", inputs.termMonths.toString());
+   136→   136→    params.set("extra", inputs.extraMonthly.toString());
+   137→   137→    params.set("extrastart", inputs.extraStartMonth.toString());
+   138→   138→    const newUrl = `${window.location.pathname}?${params.toString()}`;
+   139→   139→    window.history.replaceState(null, "", newUrl);
+   140→   140→  }, [inputs]);
+   141→   141→
+   142→   142→  const handleInputChange = useCallback(
+   143→   143→    (field: keyof TitleLoanInputs, value: string) => {
+   144→   144→      const num = parseFloat(value);
+   145→   145→      if (!isNaN(num)) {
+   146→   146→        setInputs((prev) => ({ ...prev, [field]: num }));
+   147→   147→      }
+   148→   148→    },
+   149→   149→    []
+   150→   150→  );
+   151→   151→
+   152→   152→  const handleReset = useCallback(() => {
+   153→   153→    setInputs(DEFAULT_INPUTS);
+   154→   154→    toast.success("Calculator reset to defaults");
+   155→   155→  }, []);
+   156→   156→
+   157→   157→  const handleCopyLink = useCallback(async () => {
+   158→   158→    try {
+   159→   159→      await navigator.clipboard.writeText(window.location.href);
+   160→   160→      setCopied(true);
+   161→   161→      toast.success("Link copied to clipboard");
+   162→   162→      setTimeout(() => setCopied(false), 2000);
+   163→   163→    } catch {
+   164→   164→      toast.error("Failed to copy link");
+   165→   165→    }
+   166→   166→  }, []);
+   167→   167→
+   168→   168→  const handlePrint = useCallback(() => {
+   169→   169→    window.print();
+   170→   170→  }, []);
+   171→   171→
+   172→   172→  const ltvPercent =
+   173→   173→    inputs.vehicleValue > 0
+   174→   174→      ? ((inputs.loanAmount / inputs.vehicleValue) * 100).toFixed(0)
+   175→   175→      : "0";
+   176→   176→
+   177→   177→  return (
+   178→   178→    <TooltipProvider delayDuration={300}>
+   179→   179→      <div className="space-y-6">
+   180→   180→        {/* ─── Calculator Card ─── */}
+   181→   181→        <Card className="print-break-inside">
+   182→   182→          <CardHeader className="pb-4">
+   183→   183→            <CardTitle className="flex items-center gap-2 text-xl">
+   184→   184→              <Calculator className="size-5 text-ember" />
+   185→   185→              Title Loan Calculator
+   186→   186→            </CardTitle>
+   187→   187→            <p className="text-sm text-muted-foreground">
+   188→   188→              Enter your loan details to estimate monthly payments, total interest, and view the full amortization schedule.
+   189→   189→            </p>
+   190→   190→          </CardHeader>
+   191→   191→          <CardContent>
+   192→   192→            <div className="grid gap-6 lg:grid-cols-2">
+   193→   193→              {/* ─── Inputs ─── */}
+   194→   194→              <div className="space-y-5">
+   195→   195→                {/* Vehicle Value */}
+   196→   196→                <div className="space-y-2">
+   197→   197→                  <div className="flex items-center justify-between">
+   198→   198→                    <Label htmlFor="vehicle-value" className="text-sm font-medium">
+   199→   199→                      Vehicle Value
+   200→   200→                    </Label>
+   201→   201→                    <span className="text-sm font-semibold text-foreground">
+   202→   202→                      {formatCurrency(inputs.vehicleValue)}
+   203→   203→                    </span>
+   204→   204→                  </div>
+   205→   205→                  <div className="no-print">
+   206→   206→                    <Slider
+   207→   207→                      id="vehicle-value"
+   208→   208→                      min={1000}
+   209→   209→                      max={100000}
+   210→   210→                      step={500}
+   211→   211→                      value={[inputs.vehicleValue]}
+   212→   212→                      onValueChange={([v]) =>
+   213→   213→                        setInputs((p) => ({ ...p, vehicleValue: v }))
+   214→   214→                      }
+   215→   215→                      aria-label="Vehicle value"
+   216→   216→                      className="w-full"
+   217→   217→                    />
+   218→   218→                    <div className="flex justify-between text-xs text-muted-foreground">
+   219→   219→                      <span>$1,000</span>
+   220→   220→                      <span>$100,000</span>
+   221→   221→                    </div>
+   222→   222→                    <Input
+   223→   223→                      type="number"
+   224→   224→                      min={1000}
+   225→   225→                      max={100000}
+   226→   226→                      step={100}
+   227→   227→                      value={inputs.vehicleValue}
+   228→   228→                      onChange={(e) =>
+   229→   229→                        handleInputChange("vehicleValue", e.target.value)
+   230→   230→                      }
+   231→   231→                      className="mt-1"
+   232→   232→                      aria-label="Vehicle value input"
+   233→   233→                    />
+   234→   234→                  </div>
+   235→   235→                </div>
+   236→   236→
+   237→   237→                {/* Loan Amount */}
+   238→   238→                <div className="space-y-2">
+   239→   239→                  <div className="flex items-center justify-between">
+   240→   240→                    <div className="flex items-center gap-1.5">
+   241→   241→                      <Label htmlFor="loan-amount" className="text-sm font-medium">
+   242→   242→                        Loan Amount
+   243→   243→                      </Label>
+   244→   244→                      <Tooltip>
+   245→   245→                        <TooltipTrigger asChild>
+   246→   246→                          <Info className="size-3.5 text-muted-foreground cursor-help no-print" />
+   247→   247→                        </TooltipTrigger>
+   248→   248→                        <TooltipContent side="top" className="max-w-[220px] text-xs">
+   249→   249→                          Title lenders typically offer 25&ndash;50% of your
+   250→   250→                          vehicle&apos;s appraised value. Your current LTV is{" "}
+   251→   251→                          <strong>{ltvPercent}%</strong>.
+   252→   252→                        </TooltipContent>
+   253→   253→                      </Tooltip>
+   254→   254→                    </div>
+   255→   255→                    <span className="text-sm font-semibold text-foreground">
+   256→   256→                      {formatCurrency(inputs.loanAmount)}
+   257→   257→                    </span>
+   258→   258→                  </div>
+   259→   259→                  <div className="no-print">
+   260→   260→                    <Slider
+   261→   261→                      id="loan-amount"
+   262→   262→                      min={100}
+   263→   263→                      max={inputs.vehicleValue}
+   264→   264→                      step={100}
+   265→   265→                      value={[inputs.loanAmount]}
+   266→   266→                      onValueChange={([v]) =>
+   267→   267→                        setInputs((p) => ({ ...p, loanAmount: v }))
+   268→   268→                      }
+   269→   269→                      aria-label="Loan amount"
+   270→   270→                      className="w-full"
+   271→   271→                    />
+   272→   272→                    <div className="flex justify-between text-xs text-muted-foreground">
+   273→   273→                      <span>$100</span>
+   274→   274→                      <span>{formatCurrency(inputs.vehicleValue)}</span>
+   275→   275→                    </div>
+   276→   276→                    <Input
+   277→   277→                      type="number"
+   278→   278→                      min={100}
+   279→   279→                      max={inputs.vehicleValue}
+   280→   280→                      step={100}
+   281→   281→                      value={inputs.loanAmount}
+   282→   282→                      onChange={(e) =>
+   283→   283→                        handleInputChange("loanAmount", e.target.value)
+   284→   284→                      }
+   285→   285→                      className="mt-1"
+   286→   286→                      aria-label="Loan amount input"
+   287→   287→                    />
+   288→   288→                  </div>
+   289→   289→                </div>
+   290→   290→
+   291→   291→                {/* Interest Rate */}
+   292→   292→                <div className="space-y-2">
+   293→   293→                  <div className="flex items-center justify-between">
+   294→   294→                    <div className="flex items-center gap-1.5">
+   295→   295→                      <Label htmlFor="annual-rate" className="text-sm font-medium">
+   296→   296→                        Annual Interest Rate (APR)
+   297→   297→                      </Label>
+   298→   298→                      <Tooltip>
+   299→   299→                        <TooltipTrigger asChild>
+   300→   300→                          <Info className="size-3.5 text-muted-foreground cursor-help no-print" />
+   301→   301→                        </TooltipTrigger>
+   302→   302→                        <TooltipContent side="top" className="max-w-[260px] text-xs">
+   303→   303→                          Title loan APRs are typically 100&ndash;300%. A 120%
+   304→   304→                          APR equals 10% monthly interest. Check your loan
+   305→   305→                          agreement for the exact rate.
+   306→   306→                        </TooltipContent>
+   307→   307→                      </Tooltip>
+   308→   308→                    </div>
+   309→   309→                    <span className="text-sm font-semibold text-foreground">
+   310→   310→                      {formatPercent(inputs.apr)}
+   311→   311→                    </span>
+   312→   312→                  </div>
+   313→   313→                  <div className="no-print">
+   314→   314→                    <Slider
+   315→   315→                      id="annual-rate"
+   316→   316→                      min={1}
+   317→   317→                      max={400}
+   318→   318→                      step={0.5}
+   319→   319→                      value={[inputs.apr]}
+   320→   320→                      onValueChange={([v]) =>
+   321→   321→                        setInputs((p) => ({ ...p, apr: v }))
+   322→   322→                      }
+   323→   323→                      aria-label="Annual interest rate"
+   324→   324→                      className="w-full"
+   325→   325→                    />
+   326→   326→                    <div className="flex justify-between text-xs text-muted-foreground">
+   327→   327→                      <span>1%</span>
+   328→   328→                      <span>400%</span>
+   329→   329→                    </div>
+   330→   330→                    <Input
+   331→   331→                      type="number"
+   332→   332→                      min={1}
+   333→   333→                      max={400}
+   334→   334→                      step={0.5}
+   335→   335→                      value={inputs.apr}
+   336→   336→                      onChange={(e) =>
+   337→   337→                        handleInputChange("apr", e.target.value)
+   338→   338→                      }
+   339→   339→                      className="mt-1"
+   340→   340→                      aria-label="Annual interest rate input"
+   341→   341→                    />
+   342→   342→                  </div>
+   343→   343→                </div>
+   344→   344→
+   345→   345→                {/* Loan Term */}
+   346→   346→                <div className="space-y-2">
+   347→   347→                  <div className="flex items-center justify-between">
+   348→   348→                    <Label htmlFor="term-months" className="text-sm font-medium">
+   349→   349→                      Loan Term (Months)
+   350→   350→                    </Label>
+   351→   351→                    <span className="text-sm font-semibold text-foreground">
+   352→   352→                      {inputs.termMonths} mo
+   353→   353→                    </span>
+   354→   354→                  </div>
+   355→   355→                  <div className="no-print">
+   356→   356→                    <Slider
+   357→   357→                      id="term-months"
+   358→   358→                      min={1}
+   359→   359→                      max={48}
+   360→   360→                      step={1}
+   361→   361→                      value={[inputs.termMonths]}
+   362→   362→                      onValueChange={([v]) =>
+   363→   363→                        setInputs((p) => ({ ...p, termMonths: v }))
+   364→   364→                      }
+   365→   365→                      aria-label="Loan term in months"
+   366→   366→                      className="w-full"
+   367→   367→                    />
+   368→   368→                    <div className="flex justify-between text-xs text-muted-foreground">
+   369→   369→                      <span>1 mo</span>
+   370→   370→                      <span>48 mo</span>
+   371→   371→                    </div>
+   372→   372→                    <Input
+   373→   373→                      type="number"
+   374→   374→                      min={1}
+   375→   375→                      max={48}
+   376→   376→                      step={1}
+   377→   377→                      value={inputs.termMonths}
+   378→   378→                      onChange={(e) =>
+   379→   379→                        handleInputChange("termMonths", e.target.value)
+   380→   380→                      }
+   381→   381→                      className="mt-1"
+   382→   382→                      aria-label="Loan term in months input"
+   383→   383→                    />
+   384→   384→                  </div>
+   385→   385→                </div>
+   386→   386→
+   387→   387→                {/* ─── Extra Payments (collapsible) ─── */}
+   388→   388→                <div className="no-print">
+   389→   389→                  <button
+   390→   390→                    type="button"
+   391→   391→                    onClick={() => setShowExtraInputs(!showExtraInputs)}
+   392→   392→                    className="flex w-full items-center gap-2 rounded-md border border-dashed border-muted-foreground/30 px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-ember/40 hover:text-ember"
+   393→   393→                  >
+   394→   394→                    <PlusCircle className="size-4" />
+   395→   395→                    <span>Extra Monthly Payments</span>
+   396→   396→                    {showExtraInputs ? (
+   397→   397→                      <ChevronUp className="ml-auto size-4" />
+   398→   398→                    ) : (
+   399→   399→                      <ChevronDown className="ml-auto size-4" />
+   400→   400→                    )}
+   401→   401→                  </button>
+   402→   402→
+   403→   403→                  {showExtraInputs && (
+   404→   404→                    <div className="mt-3 space-y-4 rounded-lg border border-ember/20 bg-ember/5 p-4">
+   405→   405→                      {/* Extra Monthly Payment */}
+   406→   406→                      <div className="space-y-2">
+   407→   407→                        <div className="flex items-center justify-between">
+   408→   408→                          <div className="flex items-center gap-1.5">
+   409→   409→                            <Label htmlFor="extra-monthly" className="text-sm font-medium">
+   410→   410→                              Extra Monthly Payment
+   411→   411→                            </Label>
+   412→   412→                            <Tooltip>
+   413→   413→                              <TooltipTrigger asChild>
+   414→   414→                                <Info className="size-3.5 text-muted-foreground cursor-help" />
+   415→   415→                              </TooltipTrigger>
+   416→   416→                              <TooltipContent side="top" className="max-w-[240px] text-xs">
+   417→   417→                                An additional amount you pay each month on top
+   418→   418→                                of your regular payment. This goes directly
+   419→   419→                                toward reducing your principal balance, helping
+   420→   420→                                you pay off the loan faster and save on interest.
+   421→   421→                              </TooltipContent>
+   422→   422→                            </Tooltip>
+   423→   423→                          </div>
+   424→   424→                          <span className="text-sm font-semibold text-foreground">
+   425→   425→                            {formatCurrency(inputs.extraMonthly)}
+   426→   426→                          </span>
+   427→   427→                        </div>
+   428→   428→                        <Slider
+   429→   429→                          id="extra-monthly"
+   430→   430→                          min={0}
+   431→   431→                          max={2000}
+   432→   432→                          step={50}
+   433→   433→                          value={[inputs.extraMonthly]}
+   434→   434→                          onValueChange={([v]) =>
+   435→   435→                            setInputs((p) => ({ ...p, extraMonthly: v }))
+   436→   436→                          }
+   437→   437→                          aria-label="Extra monthly payment"
+   438→   438→                          className="w-full"
+   439→   439→                        />
+   440→   440→                        <div className="flex justify-between text-xs text-muted-foreground">
+   441→   441→                          <span>$0</span>
+   442→   442→                          <span>$2,000</span>
+   443→   443→                        </div>
+   444→   444→                        <Input
+   445→   445→                          type="number"
+   446→   446→                          min={0}
+   447→   447→                          max={5000}
+   448→   448→                          step={50}
+   449→   449→                          value={inputs.extraMonthly}
+   450→   450→                          onChange={(e) =>
+   451→   451→                            handleInputChange("extraMonthly", e.target.value)
+   452→   452→                          }
+   453→   453→                          className="mt-1"
+   454→   454→                          aria-label="Extra monthly payment input"
+   455→   455→                        />
+   456→   456→                      </div>
+   457→   457→
+   458→   458→                      {/* Start From Month */}
+   459→   459→                      <div className="space-y-2">
+   460→   460→                        <div className="flex items-center justify-between">
+   461→   461→                          <div className="flex items-center gap-1.5">
+   462→   462→                            <Label htmlFor="extra-start-month" className="text-sm font-medium">
+   463→   463→                              Start From Month
+   464→   464→                            </Label>
+   465→   465→                            <Tooltip>
+   466→   466→                              <TooltipTrigger asChild>
+   467→   467→                                <Info className="size-3.5 text-muted-foreground cursor-help" />
+   468→   468→                              </TooltipTrigger>
+   469→   469→                              <TooltipContent side="top" className="max-w-[240px] text-xs">
+   470→   470→                                The month number when you begin making extra
+   471→   471→                                payments. For example, set to 1 to start
+   472→   472→                                immediately, or 3 to begin after the third
+   473→   473→                                regular payment.
+   474→   474→                              </TooltipContent>
+   475→   475→                            </Tooltip>
+   476→   476→                          </div>
+   477→   477→                          <span className="text-sm font-semibold text-foreground">
+   478→   478→                            Month {inputs.extraStartMonth}
+   479→   479→                          </span>
+   480→   480→                        </div>
+   481→   481→                        <Slider
+   482→   482→                          id="extra-start-month"
+   483→   483→                          min={1}
+   484→   484→                          max={inputs.termMonths}
+   485→   485→                          step={1}
+   486→   486→                          value={[inputs.extraStartMonth]}
+   487→   487→                          onValueChange={([v]) =>
+   488→   488→                            setInputs((p) => ({ ...p, extraStartMonth: v }))
+   489→   489→                          }
+   490→   490→                          aria-label="Start extra payments from month"
+   491→   491→                          className="w-full"
+   492→   492→                        />
+   493→   493→                        <div className="flex justify-between text-xs text-muted-foreground">
+   494→   494→                          <span>1</span>
+   495→   495→                          <span>{inputs.termMonths}</span>
+   496→   496→                        </div>
+   497→   497→                        <Input
+   498→   498→                          type="number"
+   499→   499→                          min={1}
+   500→   500→                          max={inputs.termMonths}
+   501→   501→                          step={1}
+   502→   502→                          value={inputs.extraStartMonth}
+   503→   503→                          onChange={(e) =>
+   504→   504→                            handleInputChange("extraStartMonth", e.target.value)
+   505→   505→                          }
+   506→   506→                          className="mt-1"
+   507→   507→                          aria-label="Start extra payments from month input"
+   508→   508→                        />
+   509→   509→                      </div>
+   510→   510→                    </div>
+   511→   511→                  )}
+   512→   512→                </div>
+   513→   513→              </div>
+   514→   514→
+   515→   515→              {/* ─── Results ─── */}
+   516→   516→              <div className="space-y-4">
+   517→   517→                {result.schedule.length > 0 ? (
+   518→   518→                  <>
+   519→   519→                    {/* Monthly Payment Highlight */}
+   520→   520→                    <div className="rounded-lg bg-ember/10 border border-ember/20 p-5 text-center">
+   521→   521→                      <p className="text-sm font-medium text-muted-foreground mb-1">
+   522→   522→                        Estimated Monthly Payment
+   523→   523→                      </p>
+   524→   524→                      <p className="text-4xl font-bold tracking-tight text-ember">
+   525→   525→                        {formatCurrency(result.monthlyPayment)}
+   526→   526→                      </p>
+   527→   527→                      <p className="text-xs text-muted-foreground mt-1">
+   528→   528→                        for {inputs.termMonths} month{inputs.termMonths !== 1 ? "s" : ""}
+   529→   529→                      </p>
+   530→   530→                    </div>
+   531→   531→
+   532→   532→                    {/* Breakdown Grid */}
+   533→   533→                    <div className="grid grid-cols-2 gap-3">
+   534→   534→                      <ResultCard
+   535→   535→                        label="Total Interest"
+   536→   536→                        value={formatCurrency(result.totalInterest)}
+   537→   537→                        subtext={`${formatPercent(
+   538→   538→                          (result.totalInterest / result.totalCost) * 100
+   539→   539→                        )} of total cost`}
+   540→   540→                      />
+   541→   541→                      <ResultCard
+   542→   542→                        label="Total Cost"
+   543→   543→                        value={formatCurrency(result.totalCost)}
+   544→   544→                        subtext="Principal + interest"
+   545→   545→                      />
+   546→   546→                      <ResultCard
+   547→   547→                        label="Finance Charge"
+   548→   548→                        value={formatCurrency(result.totalInterest)}
+   549→   549→                        subtext="Cost to borrow"
+   550→   550→                      />
+   551→   551→                      <ResultCard
+   552→   552→                        label="Loan-to-Value"
+   553→   553→                        value={`${ltvPercent}%`}
+   554→   554→                        subtext={`${formatCurrency(inputs.loanAmount)} / ${formatCurrency(inputs.vehicleValue)}`}
+   555→   555→                      />
+   556→   556→                    </div>
+   557→   557→
+   558→   558→                    {/* Early Payoff Savings */}
+   559→   559→                    {inputs.extraMonthly > 0 && (
+   560→   560→                      <div className="rounded-lg border border-ember/30 bg-ember/5 p-4 space-y-2">
+   561→   561→                        <p className="text-sm font-semibold text-ember">Early Payoff Savings</p>
+   562→   562→                        <div className="grid grid-cols-3 gap-3">
+   563→   563→                          <div>
+   564→   564→                            <p className="text-xs text-muted-foreground">Months Saved</p>
+   565→   565→                            <p className="text-base font-bold">{extraResult.monthsSaved}</p>
+   566→   566→                          </div>
+   567→   567→                          <div>
+   568→   568→                            <p className="text-xs text-muted-foreground">Interest Saved</p>
+   569→   569→                            <p className="text-base font-bold text-ember">{formatCurrency(extraResult.interestSaved)}</p>
+   570→   570→                          </div>
+   571→   571→                          <div>
+   572→   572→                            <p className="text-xs text-muted-foreground">New Total Cost</p>
+   573→   573→                            <p className="text-base font-bold">{formatCurrency(extraResult.result.totalCost)}</p>
+   574→   574→                          </div>
+   575→   575→                        </div>
+   576→   576→                      </div>
+   577→   577→                    )}
+   578→   578→
+   579→   579→                    {/* Actions */}
+   580→   580→                    <div className="flex flex-wrap gap-2 no-print">
+   581→   581→                      <Button
+   582→   582→                        variant="outline"
+   583→   583→                        size="sm"
+   584→   584→                        onClick={handleCopyLink}
+   585→   585→                        className="text-xs"
+   586→   586→                      >
+   587→   587→                        {copied ? (
+   588→   588→                          <Check className="mr-1.5 size-3.5" />
+   589→   589→                        ) : (
+   590→   590→                          <Copy className="mr-1.5 size-3.5" />
+   591→   591→                        )}
+   592→   592→                        {copied ? "Copied" : "Copy Link"}
+   593→   593→                      </Button>
+   594→   594→                      <Button
+   595→   595→                        variant="outline"
+   596→   596→                        size="sm"
+   597→   597→                        onClick={handlePrint}
+   598→   598→                        className="text-xs"
+   599→   599→                      >
+   600→   600→                        <Printer className="mr-1.5 size-3.5" />
+   601→   601→                        Print
+   602→   602→                      </Button>
+   603→   603→                      <Button
+   604→   604→                        variant="ghost"
+   605→   605→                        size="sm"
+   606→   606→                        onClick={handleReset}
+   607→   607→                        className="text-xs"
+   608→   608→                      >
+   609→   609→                        <RotateCcw className="mr-1.5 size-3.5" />
+   610→   610→                        Reset
+   611→   611→                      </Button>
+   612→   612→                    </div>
+   613→   613→
+   614→   614→                    {/* Disclaimer */}
+   615→   615→                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+   616→   616→                      This is an estimate for informational purposes only. Actual
+   617→   617→                      terms vary by lender, state, and credit profile. Always
+   618→   618→                      review your loan agreement carefully before signing.
+   619→   619→                    </p>
+   620→   620→                  </>
+   621→   621→                ) : (
+   622→   622→                  <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+   623→   623→                    Enter valid loan details to see results.
+   624→   624→                  </div>
+   625→   625→                )}
+   626→   626→              </div>
+   627→   627→            </div>
+   628→   628→          </CardContent>
+   629→   629→        </Card>
+   630→   630→
+   631→   631→        {/* ─── Amortization Table ─── */}
+   632→   632→        {result.schedule.length > 0 && (
+   633→   633→          <Card className="print-break-inside">
+   634→   634→            <CardHeader className="pb-3">
+   635→   635→              <button
+   636→   636→                type="button"
+   637→   637→                onClick={() => setShowAmortization(!showAmortization)}
+   638→   638→                className="no-print flex w-full items-center justify-between text-left"
+   639→   639→                aria-expanded={showAmortization}
+   640→   640→              >
+   641→   641→                <CardTitle className="text-lg">
+   642→   642→                  Amortization Schedule
+   643→   643→                </CardTitle>
+   644→   644→                {showAmortization ? (
+   645→   645→                  <ChevronUp className="size-5 text-muted-foreground" />
+   646→   646→                ) : (
+   647→   647→                  <ChevronDown className="size-5 text-muted-foreground" />
+   648→   648→                )}
+   649→   649→              </button>
+   650→   650→              {/* Print-only title (button is hidden in print) */}
+   651→   651→              <CardTitle className="hidden print:block text-lg">
+   652→   652→                Amortization Schedule
+   653→   653→              </CardTitle>
+   654→   654→            </CardHeader>
+   655→   655→            <CardContent className={showAmortization ? "" : "hidden print:block"}>
+   656→   656→              <div className="amortization-scroll max-h-96 overflow-y-auto custom-scrollbar rounded-md border">
+   657→   657→                <Table>
+   658→   658→                  <TableHeader>
+   659→   659→                    <TableRow>
+   660→   660→                      <TableHead className="w-16">Month</TableHead>
+   661→   661→                      <TableHead className="text-right">Payment</TableHead>
+   662→   662→                      <TableHead className="text-right">Principal</TableHead>
+   663→   663→                      <TableHead className="text-right">Interest</TableHead>
+   664→   664→                      <TableHead className="text-right">Balance</TableHead>
+   665→   665→                    </TableRow>
+   666→   666→                  </TableHeader>
+   667→   667→                  <TableBody>
+   668→   668→                    {result.schedule.map((row) => (
+   669→   669→                      <TableRow key={row.month}>
+   670→   670→                        <TableCell className="font-medium">
+   671→   671→                          {row.month}
+   672→   672→                        </TableCell>
+   673→   673→                        <TableCell className="text-right">
+   674→   674→                          {formatCurrency(row.payment)}
+   675→   675→                        </TableCell>
+   676→   676→                        <TableCell className="text-right">
+   677→   677→                          {formatCurrency(row.principal)}
+   678→   678→                        </TableCell>
+   679→   679→                        <TableCell className="text-right">
+   680→   680→                          {formatCurrency(row.interest)}
+   681→   681→                        </TableCell>
+   682→   682→                        <TableCell className="text-right font-medium">
+   683→   683→                          {formatCurrency(row.balance)}
+   684→   684→                        </TableCell>
+   685→   685→                      </TableRow>
+   686→   686→                    ))}
+   687→   687→                  </TableBody>
+   688→   688→                </Table>
+   689→   689→              </div>
+   690→   690→              <div className="mt-3 flex justify-end gap-6 text-sm font-medium">
+   691→   691→                <span>
+   692→   692→                  Total Paid:{" "}
+   693→   693→                  <span className="text-ember">
+   694→   694→                    {formatCurrency(result.totalCost)}
+   695→   695→                  </span>
+   696→   696→                </span>
+   697→   697→                <span>
+   698→   698→                  Total Interest:{" "}
+   699→   699→                  <span className="text-destructive">
+   700→   700→                    {formatCurrency(result.totalInterest)}
+   701→   701→                  </span>
+   702→   702→                </span>
+   703→   703→              </div>
+   704→   704→            </CardContent>
+   705→   705→          </Card>
+   706→   706→        )}
+   707→   707→
+   708→   708→        {/* ─── Print-only footer: URL + date ─── */}
+   709→   709→        <PrintFooter />
+   710→   710→      </div>
+   711→   711→    </TooltipProvider>
+   712→   712→  );
+   713→   713→}
+   714→   714→
+   715→   715→/* ─── Sub-components ─── */
+   716→   716→
+   717→   717→function ResultCard({
+   718→   718→  label,
+   719→   719→  value,
+   720→   720→  subtext,
+   721→   721→}: {
+   722→   722→  label: string;
+   723→   723→  value: string;
+   724→   724→  subtext: string;
+   725→   725→}) {
+   726→   726→  return (
+   727→   727→    <div className="rounded-md border bg-card p-3">
+   728→   728→      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+   729→   729→      <p className="mt-0.5 text-lg font-bold tracking-tight">{value}</p>
+   730→   730→      <p className="text-[11px] text-muted-foreground">{subtext}</p>
+   731→   731→    </div>
+   732→   732→  );
+   733→   733→}
+   734→   734→
+   735→   735→function PrintFooter() {
+   736→   736→  return (
+   737→   737→    <div className="hidden print:block print:mt-6 print:pt-3 print:border-t print:border-gray-300 print:text-[8pt] print:text-gray-500 print:flex print:justify-between">
+   738→   738→      <span>CalcForge - thecalcforge.com</span>
+   739→   739→      <PrintDateAndUrl />
+   740→   740→    </div>
+   741→   741→  );
+   742→   742→}
+   743→   743→
+   744→   744→function PrintDateAndUrl() {
+   745→   745→  const text = useMemo(() => {
+   746→   746→    if (typeof window === "undefined") return "";
+   747→   747→    const d = new Date().toLocaleDateString("en-US", {
+   748→   748→      year: "numeric",
+   749→   749→      month: "long",
+   750→   750→      day: "numeric",
+   751→   751→    });
+   752→   752→    return `${window.location.host}${window.location.pathname} · Printed ${d}`;
+   753→   753→  }, []);
+   754→   754→  return <span>{text}</span>;
+   755→   755→}

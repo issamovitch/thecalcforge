@@ -60,6 +60,18 @@ export const calculatorPages = [
     primaryKeyword: "business loan calculator",
     category: "loans",
   },
+  {
+    label: "Boat, RV & Motorcycle Loan Calculator",
+    href: "/loans/boat-rv-motorcycle-loan-calculator",
+    description:
+      "Calculate payments for boat, RV, and motorcycle loans with trade-in, down payment, and sales tax.",
+    longDescription:
+      "Estimate monthly payments and total cost for boat, RV, and motorcycle loans. Enter the purchase price, trade-in value, down payment, and sales tax rate to see the financed amount and full amortization schedule. Includes an early payoff option.",
+    typesCopy:
+      "calculates monthly payments for boat, RV, and motorcycle loans with trade-in, down payment, and sales tax support",
+    primaryKeyword: "boat loan calculator",
+    category: "loans",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────
