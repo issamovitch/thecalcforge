@@ -701,3 +701,33 @@ Work Log:
 Stage Summary:
 - Debt department is now live with its first calculator
 - All navigation surfaces (header, footer) auto-update from site.config
+---
+Task ID: debt-dti
+Agent: main
+Task: Build DTI Calculator for Debt department
+
+Work Log:
+- Created `/home/z/my-project/src/components/calculators/DTICalculator.tsx` (716 lines)
+  - Gross monthly income input + 5 pre-filled debt rows (Rent/Mortgage, Car, Student, Credit Cards, Other)
+  - Add/remove custom debt rows
+  - Front-end DTI (housing only) and back-end DTI (all debts) calculation
+  - 2x2 result cards with color-coded verdicts (Excellent/Good/Acceptable/Caution/High Risk)
+  - Visual DTI meter bar with 5 color zones, threshold markers at 28/36/43/50%, triangle indicator
+  - Lender threshold reference card (FHA, VA, Conventional, QM cap)
+  - "How Much House Can I Afford" mini-output (28% and 36% max housing payment)
+  - URL param encoding (income, housing, auto, student, cards, other, custom rows)
+  - Copy Link / Print / Reset / ShareButtons action row
+  - Print support
+- Created `/home/z/my-project/src/app/debt/dti-calculator/page.tsx` (502 lines)
+  - Full SEO metadata, 3 JSON-LD schemas (Breadcrumb, FAQ, WebApplication)
+  - 6 H2 content sections (~1,000 words, all original)
+  - 5 FAQ items matching long-tail keywords
+  - Related Calculators with internal links
+  - ONE AdSlot (mid-content only, per requirement)
+- Added DTI Calculator to `site.config.ts` (category: "debt")
+- Added to `sitemap.ts` with priority 0.9
+- Zero new lint errors
+
+Stage Summary:
+- DTI Calculator fully built and verified via browser
+- Auto-appears in /debt hub and header dropdown via site.config
