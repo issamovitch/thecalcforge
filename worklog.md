@@ -643,3 +643,61 @@ Stage Summary:
 - AdSlot component is reusable via slot prop ("mid-content" / "footer") with lazy prop
 - VLM verified: button grouping, consistent styling, ad slot heights on mobile (100px) and desktop (250px)
 - Zero new lint errors
+---
+Task ID: 2-a
+Agent: main
+Task: Build DebtPayoffCalculator component
+
+Work Log:
+- Created `/home/z/my-project/src/components/calculators/DebtPayoffCalculator.tsx` (1069 lines)
+- Multiple debt input rows (name, balance, APR, minimum payment) with add/remove
+- Snowball vs Avalanche toggle with visual active state
+- Extra monthly payment field
+- Vanilla JS month-by-month simulation engine with freed minimum cascading
+- Results: debt-free date, total months, total interest, total paid, payoff order
+- Side-by-side snowball vs avalanche comparison table with savings highlight
+- Collapsible month-by-month payoff schedule per debt
+- Edge case warnings when min payment can't cover monthly interest
+- URL parameter encoding (d1name, d1bal, d1apr, d1min, method, extra)
+- Copy Link / Print / Reset / ShareButtons action row
+- Print support (no-print, print:hidden, print-break-inside, PrintFooter)
+
+Stage Summary:
+- Production-ready calculator component with all requested features
+- Zero new lint errors
+---
+Task ID: 2-b
+Agent: main
+Task: Build /debt/debt-payoff-calculator page with SEO, content, JSON-LD
+
+Work Log:
+- Created `/home/z/my-project/src/app/debt/debt-payoff-calculator/page.tsx` (448 lines)
+- Full SEO metadata: title, description, canonical, OG, Twitter, robots
+- 3 JSON-LD schemas: BreadcrumbList, FAQPage, WebApplication
+- Breadcrumbs: Home > Debt Calculators > Debt Payoff Calculator
+- Featured snippet intro paragraph (~100 words)
+- 5 H2 content sections (~1,000 words, all unique)
+- 5 FAQ items matching long-tail keywords
+- Related Calculators section with internal links to debt hub, debt consolidation, and 4 upcoming pages
+- AdSlot mid-content and footer placement
+
+Stage Summary:
+- Page matches title-loan-calculator template exactly
+- Zero new lint errors (no em-dashes)
+---
+Task ID: 3
+Agent: main
+Task: Update debt hub, site.config, sitemap
+
+Work Log:
+- Rewrote `/home/z/my-project/src/app/debt/page.tsx` from Coming Soon stub to full HubPage
+- Lists all 5 debt calculators (1 live + 4 upcoming) with descriptions
+- Full hub content: How to Create a Debt Payoff Plan, Types of Debt Calculators, Understanding Debt Costs
+- 5 FAQ items about snowball/avalanche, DTI, saving vs paying debt
+- Added Debt Payoff Calculator entry to `/home/z/my-project/src/config/site.config.ts` (category: "debt")
+- Added debt-payoff-calculator to `/home/z/my-project/src/app/sitemap.ts` with priority 0.9
+- Updated debt hub sitemap priority from 0.6 to 0.7
+
+Stage Summary:
+- Debt department is now live with its first calculator
+- All navigation surfaces (header, footer) auto-update from site.config

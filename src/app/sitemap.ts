@@ -18,8 +18,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/loans/auto-loan-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/loans/debt-consolidation-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/loans/car-affordability-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
+    // Debt hub + calculators
+    { url: `${base}/debt`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/debt/debt-payoff-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     // Department stubs
-    { url: `${base}/debt`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
     { url: `${base}/auto`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
     { url: `${base}/home-buying`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
     { url: `${base}/insurance`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },

@@ -120,6 +120,18 @@ export const calculatorPages = [
     primaryKeyword: "how much car can I afford calculator",
     category: "loans",
   },
+  {
+    label: "Debt Payoff Calculator",
+    href: "/debt/debt-payoff-calculator",
+    description:
+      "Compare snowball vs avalanche payoff strategies, add extra payments, and see your debt-free date.",
+    longDescription:
+      "Compare snowball vs avalanche payoff strategies for multiple debts. Add extra monthly payments, see your exact debt-free date, and view a full month-by-month payoff schedule with per-debt breakdowns. Includes side-by-side comparison of both methods.",
+    typesCopy:
+      "compares snowball and avalanche payoff strategies across multiple debts, showing interest saved, debt-free date, and a full month-by-month schedule",
+    primaryKeyword: "debt payoff calculator",
+    category: "debt",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────

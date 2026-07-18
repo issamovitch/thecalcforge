@@ -21,8 +21,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { siteConfig, calculatorPages } from "@/config/site.config";
 
+const debtCalculators = calculatorPages.filter((p) => p.category === "debt");
+
 const otherNavLinks = [
-  { label: "Debt", href: "/debt" },
   { label: "Auto", href: "/auto" },
   { label: "Home Buying", href: "/home-buying" },
   { label: "Insurance", href: "/insurance" },
@@ -78,6 +79,27 @@ export function Header() {
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/loans">All Loan Calculators</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Debt dropdown (populated from calculatorPages) */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors">
+                Debt
+                <ChevronDown className="size-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-72">
+              {debtCalculators.map((p) => (
+                <DropdownMenuItem key={p.href} asChild className="whitespace-nowrap">
+                  <Link href={p.href}>{p.label}</Link>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/debt">All Debt Calculators</Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -152,6 +174,32 @@ export function Header() {
                 className="block cursor-pointer rounded-md pl-6 pr-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
               >
                 All Loan Calculators
+              </Link>
+
+              {/* Debt section */}
+              <Link
+                href="/debt"
+                onClick={() => setMobileOpen(false)}
+                className="cursor-pointer rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+              >
+                Debt
+              </Link>
+              {debtCalculators.map((p) => (
+                <Link
+                  key={p.href}
+                  href={p.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="block cursor-pointer rounded-md pl-6 pr-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  {p.label}
+                </Link>
+              ))}
+              <Link
+                href="/debt"
+                onClick={() => setMobileOpen(false)}
+                className="block cursor-pointer rounded-md pl-6 pr-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
+              >
+                All Debt Calculators
               </Link>
 
               {/* Other departments */}

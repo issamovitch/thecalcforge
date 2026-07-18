@@ -1,0 +1,688 @@
+     1→import type { Metadata } from "next";
+     2→import { siteConfig, VERIFIED_DATE, OCCC_REPORT_URL, OCCC_BASE_URL } from "@/config/site.config";
+     3→import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+     4→import {
+     5→  BreadcrumbJsonLd,
+     6→  FaqJsonLd,
+     7→  WebApplicationJsonLd,
+     8→} from "@/components/seo/JsonLd";
+     9→import { TitleLoanCalculator } from "@/components/calculators/TitleLoanCalculator";
+    10→import {
+    11→  calculateLoan,
+    12→  calculateLoanWithExtra,
+    13→  calculateFloridaTitleLoan,
+    14→  formatCurrency,
+    15→  formatPercent,
+    16→} from "@/lib/loan-math";
+    17→import { Card, CardContent } from "@/components/ui/card";
+    18→import { Separator } from "@/components/ui/separator";
+    19→import AdSlot from "@/components/monetization/AdSlot";
+    20→
+    21→/* ─── Build-time computed examples (single source of truth) ─── */
+    22→
+    23→const EX = {
+    24→  formula: calculateLoan({ loanAmount: 5000, apr: 120, termMonths: 12 }),
+    25→  cost3k: calculateLoan({ loanAmount: 3000, apr: 200, termMonths: 12 }),
+    26→  /* Florida: single-payment, 30-day, computed from Fla. Stat. § 537.011 tiers */
+    27→  florida2k: calculateFloridaTitleLoan(2000),
+    28→  florida5k: calculateFloridaTitleLoan(5000),
+    29→  /* Texas: amortizing, 180-day max term, per OCCC data */
+    30→  texas: calculateLoan({ loanAmount: 1500, apr: 300, termMonths: 6 }),
+    31→  payoff: calculateLoanWithExtra(
+    32→    { loanAmount: 5000, apr: 120, termMonths: 12, extraMonthly: 200, extraStartMonth: 7 },
+    33→  ),
+    34→  paymentAmounts: [1000, 2500, 5000, 10000],
+    35→  payments: [
+    36→    calculateLoan({ loanAmount: 1000, apr: 120, termMonths: 12 }),
+    37→    calculateLoan({ loanAmount: 2500, apr: 120, termMonths: 12 }),
+    38→    calculateLoan({ loanAmount: 5000, apr: 120, termMonths: 12 }),
+    39→    calculateLoan({ loanAmount: 10000, apr: 120, termMonths: 24 }),
+    40→  ],
+    41→};
+    42→
+    43→/* ─── SEO Metadata ─── */
+    44→
+    45→const pageUrl = `${siteConfig.url}/loans/title-loan-calculator`;
+    46→const pageTitle = "Title Loan Calculator – Estimate Payments & Interest";
+    47→const pageDescription =
+    48→  "Free title loan calculator to estimate monthly payments, total interest, and amortization. See how much a title loan costs before you borrow.";
+    49→
+    50→export const metadata: Metadata = {
+    51→  title: pageTitle,
+    52→  description: pageDescription,
+    53→  alternates: { canonical: pageUrl },
+    54→  openGraph: {
+    55→    title: pageTitle,
+    56→    description: pageDescription,
+    57→    url: pageUrl,
+    58→    siteName: siteConfig.name,
+    59→    locale: "en_US",
+    60→    type: "website",
+    61→    images: [{ url: siteConfig.ogImage, width: 1200, height: 630, alt: siteConfig.name }],
+    62→  },
+    63→  twitter: {
+    64→    card: "summary_large_image",
+    65→    title: pageTitle,
+    66→    description: pageDescription,
+    67→    images: [siteConfig.ogImage],
+    68→  },
+    69→  robots: {
+    70→    index: true,
+    71→    follow: true,
+    72→    googleBot: { index: true, follow: true, "max-snippet": -1 },
+    73→  },
+    74→};
+    75→
+    76→/* ─── FAQ Data ─── */
+    77→
+    78→const faqs = [
+    79→  {
+    80→    question: "How much can I borrow with a title loan?",
+    81→    answer:
+    82→      "Most title lenders offer 25% to 50% of your vehicle's appraised value. For example, if your car is worth $10,000, you could borrow between $2,500 and $5,000. The exact amount depends on the lender, your state's regulations, your income, and the vehicle's condition and mileage.",
+    83→  },
+    84→  {
+    85→    question: "What is the average interest rate on a title loan?",
+    86→    answer:
+    87→      "Title loan annual percentage rates (APRs) typically range from 100% to 300%, which is significantly higher than traditional personal loans or credit cards. Some states cap the maximum rate, while others do not. Always compare rates from multiple lenders and read the loan agreement carefully.",
+    88→  },
+    89→  {
+    90→    question: "Can I pay off my title loan early?",
+    91→    answer:
+    92→      "Yes, most title loans allow early repayment, and many states require lenders to prorate interest charges. Paying off your loan ahead of schedule can substantially reduce the total interest you pay. Check your specific loan agreement for any prepayment penalties.",
+    93→  },
+    94→  {
+    95→    question: "What happens if I default on a title loan?",
+    96→    answer:
+    97→      "If you fail to make payments, the lender may repossess your vehicle, sell it, and apply the sale proceeds to your outstanding balance. You may also be responsible for any deficiency (the remaining amount owed after the sale). Defaulting can severely damage your credit score. Contact your lender immediately if you anticipate difficulty making payments.",
+    98→  },
+    99→  {
+   100→    question: "How is a title loan different from a personal loan?",
+   101→    answer:
+   102→      "A title loan is secured by your vehicle's title, which allows lenders to offer loans without checking your credit score. Personal loans are typically unsecured and require good credit. Title loans carry much higher interest rates and shorter repayment terms, but are easier to qualify for. Personal loans generally offer lower rates and longer terms.",
+   103→  },
+   104→];
+   105→
+   106→/* ─── Page Component ─── */
+   107→
+   108→export default function TitleLoanCalculatorPage() {
+   109→  return (
+   110→    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
+   111→      {/* JSON-LD (server-rendered, no JS required) */}
+   112→      <BreadcrumbJsonLd
+   113→        items={[
+   114→          { name: "Home", url: siteConfig.url },
+   115→          { name: "Loan Calculators", url: `${siteConfig.url}/loans` },
+   116→          { name: "Title Loan Calculator", url: pageUrl },
+   117→        ]}
+   118→      />
+   119→      <FaqJsonLd faqs={faqs} />
+   120→      <WebApplicationJsonLd
+   121→        name="Title Loan Calculator"
+   122→        description="Free online title loan calculator. Estimate monthly payments, total interest, and view a full amortization schedule for any title loan."
+   123→        url={pageUrl}
+   124→      />
+   125→
+   126→      {/* Breadcrumbs */}
+   127→      <Breadcrumbs
+   128→        items={[
+   129→          { label: "Home", href: "/" },
+   130→          { label: "Loan Calculators", href: "/loans" },
+   131→          { label: "Title Loan Calculator" },
+   132→        ]}
+   133→        className="mb-8 print:hidden"
+   134→      />
+   135→
+   136→      {/* H1 */}
+   137→      <h1 className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-[2.5rem]">
+   138→        Title Loan Calculator
+   139→      </h1>
+   140→
+   141→      {/* Intro paragraph: targets featured snippet */}
+   142→      <p className="mt-3 text-lg text-muted-foreground leading-relaxed max-w-3xl print:hidden">
+   143→        A title loan calculator is a free online tool that estimates your
+   144→        monthly payment, total interest, and total repayment cost based on your
+   145→        vehicle&apos;s value, the loan amount, the interest rate, and the
+   146→        repayment term. It tells you exactly how much borrowing against your car
+   147→        title will cost before you sign, so you can compare lenders and avoid
+   148→        overpaying.
+   149→      </p>
+   150→
+   151→      {/* Calculator (client component, SSR with default values, no Suspense) */}
+   152→      <div className="mt-8">
+   153→        <TitleLoanCalculator />
+   154→      </div>
+   155→
+   156→      <div className="print:hidden">
+   157→        <AdSlot slot="mid-content" />
+   158→      </div>
+   159→
+   160→      {/* ─── Content Sections (H2 long-tail keywords), hidden from print ─── */}
+   161→
+   162→      <div className="print:hidden">
+   163→
+   164→      <Separator className="my-12" />
+   165→
+   166→      {/* H2: How to Calculate Title Loan Interest */}
+   167→      <section className="space-y-4">
+   168→        <h2 className="text-2xl font-bold tracking-tight">
+   169→          How to Calculate Title Loan Interest
+   170→        </h2>
+   171→        <p>
+   172→          Title loan interest is calculated using the standard amortizing loan
+   173→          formula. The lender applies a monthly interest rate to your remaining
+   174→          principal balance, meaning you pay more interest in the early months
+   175→          and more principal toward the end of the loan term.
+   176→        </p>
+   177→        <Card className="bg-muted/30">
+   178→          <CardContent className="p-5">
+   179→            <p className="text-sm font-semibold mb-2">Monthly Payment Formula</p>
+   180→            <p className="font-mono text-sm text-ember break-all">
+   181→              M = P &times; [r(1 + r)<sup>n</sup>] / [(1 + r)<sup>n</sup> &minus;
+   182→              1]
+   183→            </p>
+   184→            <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
+   185→              <li>
+   186→                <strong>M</strong> = Monthly payment
+   187→              </li>
+   188→              <li>
+   189→                <strong>P</strong> = Loan principal (borrowed amount)
+   190→              </li>
+   191→              <li>
+   192→                <strong>r</strong> = Monthly interest rate (APR &divide; 12)
+   193→              </li>
+   194→              <li>
+   195→                <strong>n</strong> = Total number of payments (months)
+   196→              </li>
+   197→            </ul>
+   198→          </CardContent>
+   199→        </Card>
+   200→        <p>
+   201→          For example, a $5,000 title loan at 120% APR for 12 months would have
+   202→          a monthly rate of 10%. Applying the formula: M = $5,000 &times;
+   203→          [0.10 &times; (1.10)<sup>12</sup>] / [(1.10)<sup>12</sup> &minus; 1]
+   204→          &asymp; <strong>{formatCurrency(EX.formula.monthlyPayment)} per month</strong>. The total interest paid
+   205→          would be approximately {formatCurrency(EX.formula.totalInterest)}, bringing the total cost to{" "}
+   206→          {formatCurrency(EX.formula.totalCost)}.
+   207→        </p>
+   208→      </section>
+   209→
+   210→      <Separator className="my-10" />
+   211→
+   212→      {/* H2: Title Loan Payment Calculator with Amortization */}
+   213→      <section className="space-y-4">
+   214→        <h2 className="text-2xl font-bold tracking-tight">
+   215→          Title Loan Payment Calculator with Amortization
+   216→        </h2>
+   217→        <p>
+   218→          The calculator above generates a full amortization schedule showing how
+   219→          each monthly payment is split between principal and interest. This is
+   220→          essential for understanding the true cost of borrowing. In the early
+   221→          months of a title loan, the majority of your payment goes toward
+   222→          interest rather than reducing the principal balance.
+   223→        </p>
+   224→        <p>
+   225→          By reviewing the amortization table, you can see exactly how much of
+   226→          each payment reduces your outstanding balance. This helps you plan for
+   227→          early repayment: even a small additional payment toward the principal
+   228→          each month can save significant money over the life of the loan.
+   229→        </p>
+   230→      </section>
+   231→
+   232→      <Separator className="my-10" />
+   233→
+   234→      {/* H2: How Much Does a Title Loan Cost? */}
+   235→      <section className="space-y-4">
+   236→        <h2 className="text-2xl font-bold tracking-tight">
+   237→          How Much Does a Title Loan Cost?
+   238→        </h2>
+   239→        <p>
+   240→          The total cost of a title loan depends on three factors: the amount
+   241→          you borrow, the interest rate, and the repayment term. Because title
+   242→          loan APRs are typically very high (often 100% to 300%), meaning the finance
+   243→          charges can exceed the original loan amount.
+   244→        </p>
+   245→        <p>
+   246→          For instance, borrowing $3,000 at 200% APR for 12 months would result
+   247→          in total interest charges of approximately {formatCurrency(EX.cost3k.totalInterest)}, making the total
+   248→          repayment around {formatCurrency(EX.cost3k.totalCost)}. That means you pay more in interest than the
+   249→          amount you originally borrowed. Always use a title loan calculator to
+   250→          compare the total cost before committing.
+   251→        </p>
+   252→        <p>
+   253→          Additionally, some lenders charge origination fees, lien fees, or
+   254→          documentation fees that add to the total cost. These fees vary by
+   255→          state and lender, so be sure to ask for a complete breakdown of all
+   256→          charges before signing.
+   257→        </p>
+   258→      </section>
+   259→
+   260→      <Separator className="my-10" />
+   261→
+   262→      {/* H2: Title Loan vs Payday Loan */}
+   263→      <section className="space-y-4">
+   264→        <h2 className="text-2xl font-bold tracking-tight">
+   265→          Title Loan vs Payday Loan: Key Differences
+   266→        </h2>
+   267→        <p>
+   268→          While both title loans and payday loans offer fast access to cash
+   269→          without a credit check, they differ significantly in structure. Title
+   270→          loans are secured by your vehicle and typically offer larger amounts
+   271→          ($100 to $50,000) with longer repayment terms (up to 48 months).
+   272→          Payday loans are unsecured, usually limited to $500, and must be
+   273→          repaid on your next payday (two to four weeks).
+   274→        </p>
+   275→        <p>
+   276→          The main risk with a title loan is vehicle repossession if you
+   277→          default. With a payday loan, the risk is a cycle of debt caused by
+   278→          rollovers and extremely high fees. Both are expensive forms of credit
+   279→          and should be considered only after exhausting all other options.
+   280→        </p>
+   281→      </section>
+   282→
+   283→      <Separator className="my-10" />
+   284→
+   285→      {/* H2: Title Loan Calculator Florida */}
+   286→      <section className="space-y-4">
+   287→        <h2 className="text-2xl font-bold tracking-tight">
+   288→          Title Loan Calculator Florida
+   289→        </h2>
+   290→        <p>
+   291→          Florida regulates title loans under the Florida Title Loan Act,{" "}
+   292→          <a
+   293→            href="https://www.flsenate.gov/Laws/Statutes/2024/537.011"
+   294→            target="_blank"
+   295→            rel="noopener noreferrer"
+   296→            className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+   297→          >
+   298→            Fla. Stat. §&nbsp;537.011
+   299→          </a>
+   300→          , administered by the{" "}
+   301→          <a
+   302→            href="https://www.flofr.gov/"
+   303→            target="_blank"
+   304→            rel="noopener noreferrer"
+   305→            className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+   306→          >
+   307→            Florida Office of Financial Regulation (OFR)
+   308→          </a>
+   309→          . Florida caps interest on title loans using a marginal-tier system:
+   310→          three per-annum rates that apply to different portions of the
+   311→          principal simultaneously:
+   312→        </p>
+   313→        <Card className="bg-muted/30">
+   314→          <CardContent className="p-5">
+   315→            <p className="text-sm font-semibold mb-3">
+   316→              Statutory Maximum Interest Rates (per Fla. Stat. §&nbsp;537.011)
+   317→            </p>
+   318→            <ul className="space-y-1.5 text-sm text-muted-foreground">
+   319→              <li>
+   320→                <strong>30% per annum</strong> on the first $2,000
+   321→              </li>
+   322→              <li>
+   323→                <strong>24% per annum</strong> on the portion from $2,000 to
+   324→                $3,000
+   325→              </li>
+   326→              <li>
+   327→                <strong>18% per annum</strong> on the portion above $3,000
+   328→              </li>
+   329→            </ul>
+   330→            <p className="mt-3 text-xs text-muted-foreground">
+   331→              These are marginal tiers, not brackets selected by loan size. A
+   332→              $5,000 loan triggers all three rates simultaneously, producing a
+   333→              blended annual rate lower than 30%.
+   334→            </p>
+   335→          </CardContent>
+   336→        </Card>
+   337→        <p>
+   338→          Florida title loans mature 30&nbsp;days from execution. Borrowers may
+   339→          extend the loan in additional 30-day periods by mutual consent, but
+   340→          the lender may not capitalize unpaid interest into an extension. Any
+   341→          interest charged in excess of the statutory cap violates{" "}
+   342→          <a
+   343→            href="https://www.flsenate.gov/Laws/Statutes/2024/687"
+   344→            target="_blank"
+   345→            rel="noopener noreferrer"
+   346→            className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+   347→          >
+   348→            Fla. Stat. ch.&nbsp;687
+   349→          </a>{" "}
+   350→          (Florida&apos;s usury statute); if the lender acted to circumvent
+   351→          the cap, the agreement is void.
+   352→        </p>
+   353→        <p>
+   354→          Florida caps title loan rates far below states like Texas. For
+   355→          context, the calculator&apos;s default of 120% APR would be illegal
+   356→          in Florida. The statutory maximum blended rate on any loan size is
+   357→          30% per annum.
+   358→        </p>
+   359→        <p>
+   360→          <strong>Important:</strong> Florida title loans are single-payment
+   361→          instruments. The borrower pays the full principal plus interest in one
+   362→          lump sum at the end of each 30-day period. The amortizing calculator
+   363→          above models monthly installment loans, which is a different product
+   364→          than what Florida law permits.
+   365→        </p>
+   366→        <p>
+   367→          <strong>Worked example (computed from statute):</strong> A $2,000
+   368→          Florida title loan for 30&nbsp;days falls entirely in the first tier
+   369→          (30% per annum = 2.5% per month). Interest ={" "}
+   370→          {formatCurrency(EX.florida2k.monthlyInterest)}, total to reclaim the
+   371→          title = {formatCurrency(EX.florida2k.totalRepayment)}.
+   372→        </p>
+   373→        <p>
+   374→          <strong>Blended-tier example (computed from statute):</strong> A
+   375→          $5,000 Florida title loan for 30&nbsp;days crosses all three tiers:{" "}
+   376→          {formatCurrency(EX.florida5k.tiers[0].interest)} on the first $2,000
+   377→          (30% p.a.), {formatCurrency(EX.florida5k.tiers[1].interest)} on the
+   378→          next $1,000 (24% p.a.), and {formatCurrency(EX.florida5k.tiers[2].interest)}{" "}
+   379→          on the remaining $2,000 (18% p.a.). Total interest ={" "}
+   380→          {formatCurrency(EX.florida5k.monthlyInterest)}, blended effective
+   381→          rate = {formatPercent(EX.florida5k.blendedAnnualRate)}, total to
+   382→          reclaim = {formatCurrency(EX.florida5k.totalRepayment)}.
+   383→        </p>
+   384→        <p className="text-xs text-muted-foreground">
+   385→          Sources: Fla. Stat. §&nbsp;537.011 (2024),{" "}
+   386→          <a
+   387→            href="https://www.flofr.gov/"
+   388→            target="_blank"
+   389→            rel="noopener noreferrer"
+   390→            className="text-ember hover:text-ember-hover underline underline-offset-4"
+   391→          >
+   392→            flofr.gov
+   393→          </a>
+   394→          . Last verified: {VERIFIED_DATE}.
+   395→        </p>
+   396→      </section>
+   397→
+   398→      <Separator className="my-10" />
+   399→
+   400→      {/* H2: Title Loan Calculator Texas */}
+   401→      <section className="space-y-4">
+   402→        <h2 className="text-2xl font-bold tracking-tight">
+   403→          Title Loan Calculator Texas
+   404→        </h2>
+   405→        <p>
+   406→          Texas regulates title loans through the{" "}
+   407→          <a
+   408→            href={OCCC_BASE_URL}
+   409→            target="_blank"
+   410→            rel="noopener noreferrer"
+   411→            className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+   412→          >
+   413→            Office of Consumer Credit Commissioner (OCCC)
+   414→          </a>
+   415→          . Most Texas title lenders operate as Credit Access Businesses (CABs)
+   416→          or Credit Services Organizations (CSOs). In this model, a third-party
+   417→          lender provides the actual loan funds at 10% APR or less, while the CAB
+   418→          charges a separate fee that is{" "}
+   419→          <strong>not capped by state law</strong>.
+   420→        </p>
+   421→        <p>
+   422→          According to the OCCC&apos;s{" "}
+   423→          <a
+   424→            href={OCCC_REPORT_URL}
+   425→            target="_blank"
+   426→            rel="noopener noreferrer"
+   427→            className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+   428→          >
+   429→            2025 Report on Availability, Quality and Pricing of Certain
+   430→            Financial Services and Consumer Loan Products
+   431→          </a>{" "}
+   432→          (published December&nbsp;1, 2025, covering 2024 data), effective APRs
+   433→          on Texas title loans routinely exceed 400%. Typical loan amounts range
+   434→          from $400 to $1,200, and there is no statutory maximum loan amount.
+   435→          CAB agreement terms are limited to 180&nbsp;days or less.
+   436→        </p>
+   437→        <Card className="bg-muted/30">
+   438→          <CardContent className="p-5">
+   439→            <p className="text-sm font-semibold mb-2">
+   440→              Key Texas Title Loan Facts (OCCC 2025 Report)
+   441→            </p>
+   442→            <ul className="space-y-1.5 text-sm text-muted-foreground">
+   443→              <li>
+   444→                Third-party lender interest: 10% APR or less
+   445→              </li>
+   446→              <li>
+   447→                CAB fees: uncapped by state law
+   448→              </li>
+   449→              <li>
+   450→                Effective APR: routinely exceeds 400%
+   451→              </li>
+   452→              <li>
+   453→                Typical loan amounts: $400 to $1,200; no statutory maximum
+   454→              </li>
+   455→              <li>
+   456→                Maximum term: 180 days (6 months)
+   457→              </li>
+   458→              <li>
+   459→                Late charge: 5% of payment amount or $7.50, whichever is
+   460→                greater, after 10 days
+   461→              </li>
+   462→              <li>
+   463→                Repossessions: approximately 9,700 per quarter, roughly 4.2% of
+   464→                active title loans
+   465→              </li>
+   466→            </ul>
+   467→          </CardContent>
+   468→        </Card>
+   469→        <p>
+   470→          The OCCC&apos;s own benchmark illustrates the cost: a $1,500 title
+   471→          loan carries an effective APR of 262% to 366%, with 11 monthly
+   472→          payments of $327 plus a final payment of $1,827. The finance charge
+   473→          totals $3,921, and the total repayment is $5,421, nearly 3.6 times
+   474→          the amount borrowed.
+   475→        </p>
+   476→        <p>
+   477→          <strong>Worked example (computed by engine):</strong> A $1,500 title
+   478→          loan in Texas at 300% APR over the maximum 180-day (6-month) term
+   479→          produces a monthly payment of {formatCurrency(EX.texas.monthlyPayment)}.
+   480→          Total interest reaches {formatCurrency(EX.texas.totalInterest)},
+   481→          making the total repayment {formatCurrency(EX.texas.totalCost)},
+   482→          roughly double the original loan. Enter 300% APR and $1,500 in the
+   483→          calculator above with a 6-month term to see the full amortization.
+   484→        </p>
+   485→        <p className="text-xs text-muted-foreground">
+   486→          Source:{" "}
+   487→          <a
+   488→            href={OCCC_REPORT_URL}
+   489→            target="_blank"
+   490→            rel="noopener noreferrer"
+   491→            className="text-ember hover:text-ember-hover underline underline-offset-4"
+   492→          >
+   493→            Texas OCCC, 2025 Report on Availability, Quality and Pricing of
+   494→            Certain Financial Services and Consumer Loan Products
+   495→          </a>{" "}
+   496→          (Dec.&nbsp;1, 2025, covering 2024 data),{" "}
+   497→          <a
+   498→            href={OCCC_BASE_URL}
+   499→            target="_blank"
+   500→            rel="noopener noreferrer"
+   501→            className="text-ember hover:text-ember-hover underline underline-offset-4"
+   502→          >
+   503→            occc.texas.gov
+   504→          </a>
+   505→          . Last verified: {VERIFIED_DATE}.
+   506→        </p>
+   507→      </section>
+   508→
+   509→      <Separator className="my-10" />
+   510→
+   511→      {/* H2: Car Title Loan Calculator with Payments */}
+   512→      <section className="space-y-4">
+   513→        <h2 className="text-2xl font-bold tracking-tight">
+   514→          Car Title Loan Calculator with Payments
+   515→        </h2>
+   516→        <p>
+   517→          A car title loan uses your vehicle as collateral, and the monthly
+   518→          payment schedule depends entirely on the loan size, interest rate, and
+   519→          term. Because title loans amortize, each payment includes both
+   520→          interest and principal, but the ratio shifts over time. In month
+   521→          one, the vast majority of your payment covers interest. By the final
+   522→          months, nearly the entire payment goes toward principal.
+   523→        </p>
+   524→        <p>
+   525→          Here is what monthly payments typically look like at common loan sizes
+   526→          (assuming a 120% APR):
+   527→        </p>
+   528→        <Card className="bg-muted/30">
+   529→          <CardContent className="p-5">
+   530→            <ul className="space-y-2 text-sm">
+   531→              <li className="flex justify-between">
+   532→                <span className="font-medium">$1,000 loan, 12 months</span>
+   533→                <span className="font-semibold text-ember">{formatCurrency(EX.payments[0].monthlyPayment)}/mo</span>
+   534→              </li>
+   535→              <li className="flex justify-between">
+   536→                <span className="font-medium">$2,500 loan, 12 months</span>
+   537→                <span className="font-semibold text-ember">{formatCurrency(EX.payments[1].monthlyPayment)}/mo</span>
+   538→              </li>
+   539→              <li className="flex justify-between">
+   540→                <span className="font-medium">$5,000 loan, 12 months</span>
+   541→                <span className="font-semibold text-ember">{formatCurrency(EX.payments[2].monthlyPayment)}/mo</span>
+   542→              </li>
+   543→              <li className="flex justify-between">
+   544→                <span className="font-medium">$10,000 loan, 24 months</span>
+   545→                <span className="font-semibold text-ember">{formatCurrency(EX.payments[3].monthlyPayment)}/mo</span>
+   546→              </li>
+   547→            </ul>
+   548→          </CardContent>
+   549→        </Card>
+   550→        <p>
+   551→          At 120% APR, the total interest on these loans ranges from{" "}
+   552→          {`${Math.round(EX.payments[0].totalInterest / EX.paymentAmounts[0] * 100)}%`}
+   553→          {" "}to{" "}
+   554→          {`${Math.round(EX.payments[3].totalInterest / EX.paymentAmounts[3] * 100)}%`}
+   555→          {" "}of the original borrowed amount. Shortening the term lowers
+   556→          total interest but raises the monthly payment, while extending the
+   557→          term does the opposite. Use the calculator to experiment with
+   558→          different combinations and find a payment you can afford.
+   559→        </p>
+   560→      </section>
+   561→
+   562→      <Separator className="my-10" />
+   563→
+   564→      {/* H2: Title Loan Payoff Calculator */}
+   565→      <section className="space-y-4">
+   566→        <h2 className="text-2xl font-bold tracking-tight">
+   567→          Title Loan Payoff Calculator
+   568→        </h2>
+   569→        <p>
+   570→          Paying off a title loan early is one of the most effective ways to
+   571→          reduce its total cost. Because title loan interest is calculated on
+   572→          the remaining balance each month, every extra dollar you pay toward
+   573→          principal immediately stops future interest from accruing on that
+   574→          dollar. Most states require lenders to prorate interest, meaning you
+   575→          only pay interest for the days the loan is outstanding.
+   576→        </p>
+   577→        <p>
+   578→          <strong>How early payoff works:</strong> Suppose you have a {formatCurrency(5000)}
+   579→          title loan at {formatPercent(120)} APR for 12 months with a {formatCurrency(EX.payoff.baseResult.monthlyPayment)} monthly payment.
+   580→          After month six, your remaining balance is approximately {formatCurrency(EX.payoff.baseResult.schedule[5].balance)}. If
+   581→          you then add an extra {formatCurrency(200)} per month to your regular payment starting in month 7,
+   582→          the additional principal payments
+   583→          would shorten your loan by {EX.payoff.monthsSaved} month{EX.payoff.monthsSaved !== 1 ? "s" : ""} and save{" "}
+   584→          {formatCurrency(EX.payoff.interestSaved)} in interest, cutting your total cost from {formatCurrency(EX.payoff.baseResult.totalCost)}{" "}
+   585→          to {formatCurrency(EX.payoff.result.totalCost)}. The calculator above now includes an extra payment field so you can compute this yourself.
+   586→        </p>
+   587→      </section>
+   588→
+   589→      <Separator className="my-10" />
+   590→
+   591→      {/* H2: Factors That Affect Your Title Loan Amount */}
+   592→      <section className="space-y-4">
+   593→        <h2 className="text-2xl font-bold tracking-tight">
+   594→          Factors That Affect Your Title Loan Amount
+   595→        </h2>
+   596→        <p>
+   597→          Several factors determine how much you can borrow with a title loan.
+   598→          The most important is your vehicle&apos;s appraised value: lenders
+   599→          typically offer 25% to 50% of that value. A car worth $15,000 might
+   600→          qualify you for a loan of $3,750 to $7,500, depending on the lender.
+   601→        </p>
+   602→        <p>
+   603→          Other factors include your ability to repay the loan (verified through
+   604→          income documentation), your state&apos;s legal limits on title loan
+   605→          amounts and interest rates, and the vehicle&apos;s age, mileage, and
+   606→          condition. Some lenders may also consider whether you own the vehicle
+   607→          outright or still have an existing auto loan balance.
+   608→        </p>
+   609→        <p>
+   610→          To get the best terms, shop around with multiple lenders and use this
+   611→          calculator to compare the total cost at different rates and terms
+   612→          before signing any agreement.
+   613→        </p>
+   614→      </section>
+   615→
+   616→      <Separator className="my-12" />
+   617→
+   618→      {/* ─── FAQ Section ─── */}
+   619→      <section className="space-y-6">
+   620→        <h2 className="text-2xl font-bold tracking-tight">
+   621→          Frequently Asked Questions
+   622→        </h2>
+   623→        <div className="space-y-4">
+   624→          {faqs.map((faq, index) => (
+   625→            <details
+   626→              key={index}
+   627→              className="group rounded-lg border bg-card"
+   628→            >
+   629→              <summary className="cursor-pointer select-none px-5 py-4 text-sm font-semibold text-foreground hover:text-ember transition-colors list-none flex items-center justify-between">
+   630→                {faq.question}
+   631→                <ChevronIcon />
+   632→              </summary>
+   633→              <div className="px-5 pb-4 text-sm leading-relaxed text-muted-foreground">
+   634→                {faq.answer}
+   635→              </div>
+   636→            </details>
+   637→          ))}
+   638→        </div>
+   639→      </section>
+   640→
+   641→      <Separator className="my-12" />
+   642→
+   643→      {/* ─── Related Calculators (only links to existing pages) ─── */}
+   644→      <section className="space-y-4">
+   645→        <h2 className="text-2xl font-bold tracking-tight">Related Calculators</h2>
+   646→        <p className="text-muted-foreground">
+   647→          Compare title loan costs against unsecured payday loans with our{" "}
+   648→          <a
+   649→            href="/loans/payday-loan-calculator"
+   650→            className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+   651→          >
+   652→            Payday Loan APR Calculator
+   653→          </a>
+   654→          , or browse all tools on the{" "}
+   655→          <a
+   656→            href="/loans"
+   657→            className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+   658→          >
+   659→            Loan Calculators
+   660→          </a>{" "}
+   661→          hub.
+   662→        </p>
+   663→      </section>
+   664→      </div>
+   665→
+   666→      <div className="print:hidden">
+   667→        <AdSlot slot="footer" lazy />
+   668→      </div>
+   669→    </div>
+   670→  );
+   671→}
+   672→
+   673→/* ─── Sub-components ─── */
+   674→
+   675→function ChevronIcon() {
+   676→  return (
+   677→    <svg
+   678→      className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+   679→      fill="none"
+   680→      viewBox="0 0 24 24"
+   681→      stroke="currentColor"
+   682→      strokeWidth={2}
+   683→      aria-hidden="true"
+   684→    >
+   685→      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+   686→    </svg>
+   687→  );
+   688→}
