@@ -445,3 +445,21 @@ Stage Summary:
 - New files: src/components/calculators/PersonalLoanCalculator.tsx, src/app/loans/personal-loan-calculator/page.tsx
 - Modified: src/lib/loan-math.ts (added calculateEffectiveAPR), src/config/site.config.ts (added personal loan entry), src/app/loans/page.tsx (updated intro + collectionDescription)
 - Key computed values: $20K at 12% APR 60mo = $444.89/mo, $6,693.31 interest; with 5% fee: $19,000 received, effective APR 14.3%; $100/mo extra saves 12 months and $1,382.85 interest
+
+---
+Task ID: 11
+Agent: Main Agent
+Task: Build /loans/auto-loan-calculator + title loan extra-payments verification
+
+Work Log:
+- Read full TitleLoanCalculator.tsx (755 lines) line by line. Confirmed extra-payments feature at every layer: interface (lines 48-49), defaults (59-60), URL params (83-84, 91-92, 136-137), calculateLoanWithExtra call (110-120), collapsible button UI (387-401), Extra Monthly Payment slider+input (428-455), Start From Month slider+input (481-508), Early Payoff Savings panel (558-577)
+- Browser-verified title loan: clicked "Extra Monthly Payments" button, set $200/mo, confirmed "Early Payoff Savings" panel shows "3" months saved, "$1,292.44" interest saved
+- Created AutoLoanCalculator.tsx with: vehicle price, trade-in value, amount owed on trade-in, down payment, sales tax %, APR, term (12-84mo), extra payments. Negative equity detection with red "Negative Equity Rollover" tile. URL params, print footer, amortization table
+- Created /loans/auto-loan-calculator/page.tsx with 5 H2 sections: (1) Car Payment Calculator with Trade In and Taxes, (2) Auto Loan Calculator with Extra Payments, (3) Car Loan Payoff Calculator with Extra Payments (negative equity worked example), (4) Auto Loan Calculator with Sales Tax by State (no state table), (5) 72 Month Car Loan Calculator (value table 36-84mo). FAQ, JSON-LD, Related Calculators
+- Added auto loan to calculatorPages in site.config.ts
+- Browser-verified: page loads, negative equity tile appears when owed > trade-in value, all inputs work, hub page shows new card, footer shows all 6 calculators, no errors in dev log
+
+Stage Summary:
+- New files: src/components/calculators/AutoLoanCalculator.tsx, src/app/loans/auto-loan-calculator/page.tsx
+- Modified: src/config/site.config.ts (added auto loan entry)
+- Title loan extra payments: CONFIRMED BUILT AND FUNCTIONAL via browser test

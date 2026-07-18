@@ -84,6 +84,18 @@ export const calculatorPages = [
     primaryKeyword: "personal loan calculator",
     category: "loans",
   },
+  {
+    label: "Auto Loan Calculator",
+    href: "/loans/auto-loan-calculator",
+    description:
+      "Calculate car payments with trade-in equity, negative equity rollover, sales tax, and extra payments.",
+    longDescription:
+      "Estimate monthly payments for auto loans with trade-in, negative equity rollover, down payment, and sales tax. Shows the financed amount, total interest, and full amortization schedule. Includes an early payoff option and a negative equity warning when old debt is rolled into the new loan.",
+    typesCopy:
+      "calculates car payments with trade-in equity, negative equity rollover, sales tax, and extra monthly payment support",
+    primaryKeyword: "auto loan calculator",
+    category: "loans",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────
