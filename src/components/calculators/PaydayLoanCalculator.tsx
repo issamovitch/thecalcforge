@@ -440,7 +440,7 @@ export default function PaydayLoanCalculator() {
                     </div>
 
                     {/* Breakdown Grid */}
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       <ResultCard
                         label="Finance Charge"
                         value={formatCurrency(singleResult.financeCharge)}
@@ -832,7 +832,7 @@ export default function PaydayLoanCalculator() {
                 </TableBody>
               </Table>
             </div>
-            <div className="mt-3 flex justify-end gap-6 text-sm font-medium">
+            <div className="mt-3 flex flex-wrap justify-end gap-x-6 gap-y-1 text-sm font-medium">
               <span>
                 Total Paid:{" "}
                 <span className="text-ember">

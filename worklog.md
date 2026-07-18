@@ -492,3 +492,48 @@ Stage Summary:
     - Verdict: SAVES $5,484.89 in total, $73.32/mo less, 8 months sooner
   Computed values for $20K at 60 months: $444.89/mo, $6,693.31 interest, saves $4,072.02 interest, extends 4 months
   Computed values for "costs more" case ($10K aggressive, consolidated 48mo): costs $1,750.93 more in total
+---
+Task ID: 8
+Agent: Main Agent
+Task: Build /loans/car-affordability-calculator (8th and final Loans page) + 3 cosmetic fixes
+
+Work Log:
+- Read all existing codebase patterns: site.config.ts, loan-math.ts, hub page, AutoLoanCalculator component
+- Added `reverseSolveMaxPrincipal()` to loan-math.ts (present value of annuity formula)
+- Built CarAffordabilityCalculator component with 3 modes: From Income, From Monthly Payment, 20/4/10 Rule
+- Built page.tsx with 5 H2 sections, all engine-computed prose numbers, FAQPage + WebApplication + BreadcrumbList JSON-LD
+- Added Car Affordability Calculator to site.config.ts (appears in nav dropdown, footer, hub automatically)
+- Fixed title loan slider/input mismatch: clamped termMonths to 1-48 in handleInputChange
+- Fixed extraMonthly slider/input max mismatch (slider 2000 → 5000) in 4 files: TitleLoan, AutoLoan, PersonalLoan, BoatRV
+- Fixed debt consolidation unsourced claim ("Credit card debt typically carries a higher APR...")
+- Verified with agent-browser: all 3 modes work, warnings display, hub picks up new calculator, nav dropdown includes it
+
+Stage Summary:
+- New files: src/components/calculators/CarAffordabilityCalculator.tsx, src/app/loans/car-affordability-calculator/page.tsx
+- Modified files: src/lib/loan-math.ts, src/config/site.config.ts, 4 calculator components (slider fix), debt-consolidation page (claim fix)
+- Loans category complete at 8 calculators plus hub
+- Computed values: S1 price=$16,614.18, S3B price=$8,724.31, S4 price=$24,670.38, S5 price=$21,173.15
+---
+Task ID: 1
+Agent: Main Agent
+Task: Enable "Loan Calculators" card on homepage + Full mobile responsiveness audit and fixes
+
+Work Log:
+- Changed homepage `departments` array: set `live: true` for "Loan Calculators" entry
+- Updated card rendering: live cards show "Live" badge (ember-colored), link directly to page, show "Open calculator" text; non-live cards keep "Coming Soon" badge and "Learn more" link
+- Added `group` class and `group-hover:text-ember` for live card hover effect
+- Audited all pages and components for mobile responsiveness issues
+- Fixed `grid-cols-3` → `grid-cols-2 sm:grid-cols-3` in 7 calculator components (AutoLoan, TitleLoan, BusinessLoan, PaydayLoan, PersonalLoan, BoatRV) for Early Payoff Savings and breakdown grids
+- Fixed `flex justify-end gap-6` → `flex flex-wrap justify-end gap-x-6 gap-y-1` in 5 calculator components (AutoLoan, TitleLoan, PaydayLoan, PersonalLoan, BoatRV) for amortization table footers
+- Fixed Footer: `grid-cols-2` → `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` for better mobile stacking
+- Fixed mobile Sheet width: `w-80` → `w-[85vw] sm:w-80` to prevent full-viewport takeover on 320px screens
+- Verified via Agent Browser at 375px (iPhone X) and 320px (smallest common) viewports
+- Verified via VLM analysis of screenshots: no layout issues found
+- All pages return 200, no new lint errors
+
+Stage Summary:
+- Homepage Loan Calculators card is now live and clickable
+- All calculator components are fully responsive down to 320px width
+- Footer stacks cleanly on mobile
+- Mobile menu adapts to viewport width
+- Pre-existing em-dash lint errors in title-loan-calculator page remain (not modified)

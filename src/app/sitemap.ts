@@ -8,14 +8,22 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const pages: MetadataRoute.Sitemap = [
     { url: base, lastModified: new Date(), changeFrequency: "weekly", priority: 1.0 },
+    // Loans hub + 8 calculators
+    { url: `${base}/loans`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/loans/title-loan-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/loans/payday-loan-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/loans/business-loan-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
-    { url: `${base}/loans`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/loans/boat-rv-motorcycle-loan-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
+    { url: `${base}/loans/personal-loan-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
+    { url: `${base}/loans/auto-loan-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
+    { url: `${base}/loans/debt-consolidation-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
+    { url: `${base}/loans/car-affordability-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
+    // Department stubs
     { url: `${base}/debt`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
     { url: `${base}/auto`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
     { url: `${base}/home-buying`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
     { url: `${base}/insurance`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
+    // Info pages
     { url: `${base}/about`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.3 },
     { url: `${base}/contact`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
     { url: `${base}/privacy-policy`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.2 },

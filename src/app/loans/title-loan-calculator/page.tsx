@@ -6,7 +6,6 @@ import {
   FaqJsonLd,
   WebApplicationJsonLd,
 } from "@/components/seo/JsonLd";
-import { CanonicalUrl } from "@/components/seo/CanonicalUrl";
 import { TitleLoanCalculator } from "@/components/calculators/TitleLoanCalculator";
 import {
   calculateLoan,
@@ -58,11 +57,13 @@ export const metadata: Metadata = {
     siteName: siteConfig.name,
     locale: "en_US",
     type: "website",
+    images: [{ url: siteConfig.ogImage, width: 1200, height: 630, alt: siteConfig.name }],
   },
   twitter: {
     card: "summary_large_image",
     title: pageTitle,
     description: pageDescription,
+    images: [siteConfig.ogImage],
   },
   robots: {
     index: true,
@@ -107,7 +108,6 @@ export default function TitleLoanCalculatorPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
       {/* JSON-LD (server-rendered, no JS required) */}
-      <CanonicalUrl path="/loans/title-loan-calculator" />
       <BreadcrumbJsonLd
         items={[
           { name: "Home", url: siteConfig.url },

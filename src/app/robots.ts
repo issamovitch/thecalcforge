@@ -3,14 +3,26 @@ import { siteConfig } from "@/config/site.config";
 
 export const dynamic = "force-static";
 
-const departmentPaths = ["/debt", "/loans", "/auto", "/home-buying", "/insurance"];
+const loanPaths = [
+  "/loans",
+  "/loans/title-loan-calculator",
+  "/loans/payday-loan-calculator",
+  "/loans/business-loan-calculator",
+  "/loans/boat-rv-motorcycle-loan-calculator",
+  "/loans/personal-loan-calculator",
+  "/loans/auto-loan-calculator",
+  "/loans/debt-consolidation-calculator",
+  "/loans/car-affordability-calculator",
+];
+
+const departmentPaths = ["/debt", "/auto", "/home-buying", "/insurance"];
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/loans/title-loan-calculator", "/loans/payday-loan-calculator", "/loans/business-loan-calculator"],
+        allow: ["/", ...loanPaths],
         disallow: departmentPaths,
       },
     ],

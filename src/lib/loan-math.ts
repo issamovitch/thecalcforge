@@ -760,6 +760,35 @@ export function calculateFixedPaymentPayoff(
   return { monthsToPayoff: months, totalInterest, totalCost, neverPayoff: false };
 }
 
+// ── Reverse-solve: max principal from a given monthly payment ────────────────
+
+/**
+ * Given a fixed monthly payment, APR, and term, computes the maximum
+ * loan principal that payment can support.
+ *
+ * Formula (present value of an annuity):
+ *   P = M × (1 − (1+r)^(−n)) / r
+ *
+ * where M = monthly payment, r = APR/100/12, n = term in months.
+ * Returns 0 if inputs are invalid.
+ */
+export function reverseSolveMaxPrincipal(
+  monthlyPayment: number,
+  apr: number,
+  termMonths: number,
+): number {
+  if (monthlyPayment <= 0 || apr < 0 || termMonths <= 0) return 0;
+
+  const monthlyRate = apr / 100 / 12;
+
+  if (monthlyRate === 0) {
+    return r2(monthlyPayment * termMonths);
+  }
+
+  const factor = Math.pow(1 + monthlyRate, -termMonths);
+  return r2(monthlyPayment * (1 - factor) / monthlyRate);
+}
+
 // ── Formatters ───────────────────────────────────────────────────────────────
 
 export function formatCurrency(value: number): string {

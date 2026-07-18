@@ -14,9 +14,9 @@ export function Footer() {
   return (
     <footer className="mt-auto bg-slate-800 text-slate-300">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-12">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 sm:gap-8 lg:grid-cols-4 lg:gap-12">
           {/* Column 1: Brand */}
-          <div className="col-span-2 sm:col-span-2 lg:col-span-1">
+          <div className="sm:col-span-2 lg:col-span-1">
             <Link
               href="/"
               className="cursor-pointer inline-flex items-center gap-2.5 transition-opacity hover:opacity-80"

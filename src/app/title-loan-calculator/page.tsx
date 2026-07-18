@@ -6,7 +6,6 @@ import {
   FaqJsonLd,
   WebApplicationJsonLd,
 } from "@/components/seo/JsonLd";
-import { CanonicalUrl } from "@/components/seo/CanonicalUrl";
 import { siteConfig } from "@/config/site.config";
 import { TitleLoanCalculator } from "@/components/calculators/TitleLoanCalculator";
 import {
@@ -43,10 +42,10 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og-default.png",
+        url: siteConfig.ogImage,
         width: 1200,
         height: 630,
-        alt: "Title Loan Calculator",
+        alt: siteConfig.name,
       },
     ],
   },
@@ -55,7 +54,7 @@ export const metadata: Metadata = {
     title: "Title Loan Calculator",
     description:
       "Estimate your title loan monthly payment, total interest, and payoff cost.",
-    images: ["/og-default.png"],
+    images: [siteConfig.ogImage],
   },
 };
 
@@ -93,7 +92,6 @@ export default function TitleLoanCalculatorPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
       {/* JSON-LD */}
-      <CanonicalUrl path="/title-loan-calculator" />
       <BreadcrumbJsonLd
         items={[
           { name: "Home", url: siteConfig.url },

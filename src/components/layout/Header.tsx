@@ -107,7 +107,7 @@ export function Header() {
               <Menu className="size-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-80 overflow-y-auto">
+          <SheetContent side="right" className="w-[85vw] sm:w-80 overflow-y-auto">
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2.5">
                 <Image

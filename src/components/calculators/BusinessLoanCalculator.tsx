@@ -822,7 +822,7 @@ function TermLoanView({
                 <p className="text-sm font-semibold text-ember">
                   Early Payoff Savings
                 </p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div>
                     <p className="text-xs text-muted-foreground">Months Saved</p>
                     <p className="text-base font-bold">

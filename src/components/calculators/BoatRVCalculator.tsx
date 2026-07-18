@@ -590,7 +590,7 @@ export default function BoatRVCalculator() {
                         <Slider
                           id="extra-monthly"
                           min={0}
-                          max={2000}
+                          max={5000}
                           step={50}
                           value={[inputs.extraMonthly]}
                           onValueChange={([v]) =>
@@ -601,7 +601,7 @@ export default function BoatRVCalculator() {
                         />
                         <div className="flex justify-between text-xs text-muted-foreground">
                           <span>$0</span>
-                          <span>$2,000</span>
+                          <span>$5,000</span>
                         </div>
                         <Input
                           type="number"
@@ -721,7 +721,7 @@ export default function BoatRVCalculator() {
                     {inputs.extraMonthly > 0 && (
                       <div className="rounded-lg border border-ember/30 bg-ember/5 p-4 space-y-2">
                         <p className="text-sm font-semibold text-ember">Early Payoff Savings</p>
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                           <div>
                             <p className="text-xs text-muted-foreground">Months Saved</p>
                             <p className="text-base font-bold">{result.monthsSaved}</p>
@@ -849,7 +849,7 @@ export default function BoatRVCalculator() {
                   </TableBody>
                 </Table>
               </div>
-              <div className="mt-3 flex justify-end gap-6 text-sm font-medium">
+              <div className="mt-3 flex flex-wrap justify-end gap-x-6 gap-y-1 text-sm font-medium">
                 <span>
                   Total Paid:{" "}
                   <span className="text-ember">

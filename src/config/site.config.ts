@@ -108,6 +108,18 @@ export const calculatorPages = [
     primaryKeyword: "debt consolidation calculator",
     category: "loans",
   },
+  {
+    label: "Car Affordability Calculator",
+    href: "/loans/car-affordability-calculator",
+    description:
+      "Find the maximum vehicle price you can afford based on income or target payment, with 20/4/10 rule analysis.",
+    longDescription:
+      "Reverse-solve from your income or target monthly payment to find the maximum vehicle price you can finance. Includes a dedicated 20/4/10 rule mode that enforces the 20% down, 48-month term, and 10% income thresholds simultaneously, with user-entered insurance, fuel, and maintenance estimates.",
+    typesCopy:
+      "finds the maximum vehicle price you can afford based on income, target payment, or the 20/4/10 rule with full constraint checking",
+    primaryKeyword: "how much car can I afford calculator",
+    category: "loans",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────

@@ -21,7 +21,7 @@ import {
 import { siteConfig } from "@/config/site.config";
 
 const departments = [
-  { slug: "loans", name: "Loan Calculators", description: "Estimate monthly payments, total interest, and amortization schedules for any loan type.", icon: "Landmark", live: false, href: "/loans" },
+  { slug: "loans", name: "Loan Calculators", description: "Estimate monthly payments, total interest, and amortization schedules for any loan type.", icon: "Landmark", live: true, href: "/loans" },
   { slug: "debt", name: "Debt Calculators", description: "Build payoff strategies, compare snowball vs. avalanche, and see your debt-free date.", icon: "CreditCard", live: false, href: "/debt" },
   { slug: "auto", name: "Auto Calculators", description: "Factor in car payments, insurance, depreciation, and total cost of ownership.", icon: "Car", live: false, href: "/auto" },
   { slug: "home-buying", name: "Home Buying", description: "Crunch mortgage numbers, property taxes, PMI, and closing costs.", icon: "Home", live: false, href: "/home-buying" },
@@ -49,14 +49,14 @@ export const metadata = {
     locale: "en_US",
     type: "website",
     images: [
-      { url: "/og-default.png", width: 1200, height: 630, alt: siteConfig.name },
+      { url: siteConfig.ogImage, width: 1200, height: 630, alt: siteConfig.name },
     ],
   },
   twitter: {
     card: "summary_large_image" as const,
     title: `${siteConfig.name} – ${siteConfig.tagline}`,
     description: siteConfig.tagline,
-    images: ["/og-default.png"],
+    images: [siteConfig.ogImage],
   },
 };
 
@@ -111,10 +111,10 @@ export default function HomePage() {
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {departments.map((dept) => {
             const Icon = deptIcons[dept.icon] ?? <DollarSign className="h-7 w-7" />;
-            return (
+            const card = (
               <Card
                 key={dept.slug}
-                className="relative transition-shadow hover:shadow-md"
+                className={`relative transition-shadow h-full ${dept.live ? 'hover:shadow-md hover:border-ember/40 cursor-pointer' : 'hover:shadow-md'}`}
               >
                 <CardHeader className="flex flex-row items-start gap-3 pb-2">
                   <div className="mt-0.5 shrink-0 text-muted-foreground">
@@ -123,23 +123,45 @@ export default function HomePage() {
                   <div className="min-w-0 flex-1">
                     <CardTitle className="text-base">{dept.name}</CardTitle>
                   </div>
-                  <Badge variant="secondary" className="text-xs font-medium shrink-0">
-                    Coming Soon
-                  </Badge>
+                  {dept.live ? (
+                    <Badge className="bg-ember/10 text-ember border-ember/20 text-xs font-medium shrink-0">
+                      Live
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-xs font-medium shrink-0">
+                      Coming Soon
+                    </Badge>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <CardDescription className="text-sm leading-relaxed">
                     {dept.description}
                   </CardDescription>
-                  <a
-                    href={dept.href}
-                    className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Learn more
-                    <ArrowRight className="h-3 w-3" />
-                  </a>
+                  {dept.live ? (
+                    <div className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-ember transition-colors">
+                      Open calculator
+                      <ArrowRight className="h-3 w-3" />
+                    </div>
+                  ) : (
+                    <a
+                      href={dept.href}
+                      className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Learn more
+                      <ArrowRight className="h-3 w-3" />
+                    </a>
+                  )}
                 </CardContent>
               </Card>
+            );
+            return dept.live ? (
+              <Link key={dept.slug} href={dept.href} className="group">
+                {card}
+              </Link>
+            ) : (
+              <div key={dept.slug}>
+                {card}
+              </div>
             );
           })}
         </div>

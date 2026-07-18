@@ -143,7 +143,12 @@ export function TitleLoanCalculator() {
     (field: keyof TitleLoanInputs, value: string) => {
       const num = parseFloat(value);
       if (!isNaN(num)) {
-        setInputs((prev) => ({ ...prev, [field]: num }));
+        // Clamp termMonths to slider range (1–48)
+        const clamped =
+          field === "termMonths"
+            ? Math.min(Math.max(num, 1), 48)
+            : num;
+        setInputs((prev) => ({ ...prev, [field]: clamped }));
       }
     },
     []
@@ -428,7 +433,7 @@ export function TitleLoanCalculator() {
                         <Slider
                           id="extra-monthly"
                           min={0}
-                          max={2000}
+                          max={5000}
                           step={50}
                           value={[inputs.extraMonthly]}
                           onValueChange={([v]) =>
@@ -439,7 +444,7 @@ export function TitleLoanCalculator() {
                         />
                         <div className="flex justify-between text-xs text-muted-foreground">
                           <span>$0</span>
-                          <span>$2,000</span>
+                          <span>$5,000</span>
                         </div>
                         <Input
                           type="number"
@@ -559,7 +564,7 @@ export function TitleLoanCalculator() {
                     {inputs.extraMonthly > 0 && (
                       <div className="rounded-lg border border-ember/30 bg-ember/5 p-4 space-y-2">
                         <p className="text-sm font-semibold text-ember">Early Payoff Savings</p>
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                           <div>
                             <p className="text-xs text-muted-foreground">Months Saved</p>
                             <p className="text-base font-bold">{extraResult.monthsSaved}</p>
@@ -687,7 +692,7 @@ export function TitleLoanCalculator() {
                   </TableBody>
                 </Table>
               </div>
-              <div className="mt-3 flex justify-end gap-6 text-sm font-medium">
+              <div className="mt-3 flex flex-wrap justify-end gap-x-6 gap-y-1 text-sm font-medium">
                 <span>
                   Total Paid:{" "}
                   <span className="text-ember">
