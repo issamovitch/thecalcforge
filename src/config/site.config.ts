@@ -132,6 +132,18 @@ export const calculatorPages = [
     primaryKeyword: "debt payoff calculator",
     category: "debt",
   },
+  {
+    label: "DTI Calculator",
+    href: "/debt/dti-calculator",
+    description:
+      "Calculate your front-end and back-end debt-to-income ratio and see if you meet lender thresholds.",
+    longDescription:
+      "Calculate your front-end and back-end debt-to-income ratio by entering your gross monthly income and monthly debt payments. See where you fall against FHA, VA, and conventional lender thresholds with a visual meter. Includes a how-much-house-can-I-afford mini-calculator.",
+    typesCopy:
+      "calculates front-end and back-end DTI ratios, compares against FHA, VA, and conventional lender thresholds, and estimates maximum affordable housing payment",
+    primaryKeyword: "DTI calculator",
+    category: "debt",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────

@@ -119,18 +119,12 @@ function calculatePayoff(inputs: DebtInputs): PayoffResult {
     }
   });
 
-  // Build working balances
-  const balances = new Map<string, number>();
-  const minPayments = new Map<string, number>();
-  const aprs = new Map<string, number>();
-  const names = new Map<string, string>();
-
-  for (const d of sortedDebts) {
-    balances.set(d.id, d.balance);
-    minPayments.set(d.id, d.minimumPayment);
-    aprs.set(d.id, d.apr);
-    names.set(d.id, d.name);
-  }
+  // Build working state
+  const balances: number[] = sortedDebts.map((d) => d.balance);
+  const aprs: number[] = sortedDebts.map((d) => d.apr);
+  const mins: number[] = sortedDebts.map((d) => d.minimumPayment);
+  const names: string[] = sortedDebts.map((d) => d.name);
+  const ids: string[] = sortedDebts.map((d) => d.id);
 
   const schedule: MonthEntry[] = [];
   const payoffOrder: string[] = [];
@@ -139,110 +133,69 @@ function calculatePayoff(inputs: DebtInputs): PayoffResult {
   let month = 0;
   const maxMonths = 1200; // 100 years cap
 
+  // Freed minimums from debts already paid off (persists across months)
+  let freedMinimums = 0;
+
   while (month < maxMonths) {
-    // Check if all debts are paid
-    let allPaid = true;
-    for (const [, bal] of balances) {
-      if (bal > 0.005) {
-        allPaid = false;
-        break;
-      }
-    }
-    if (allPaid) break;
+    if (balances.every((b) => b < 0.005)) break;
 
     month++;
-    let extra = extraPayment;
+    // Extra pool = user's extra + all freed minimums from previously paid-off debts
+    let extra = extraPayment + freedMinimums;
+    let appliedExtra = false; // has extra been applied to the current priority debt?
+
     const monthData: MonthEntry = { month, debts: [] };
 
-    for (const d of sortedDebts) {
-      let bal = balances.get(d.id)!;
+    for (let i = 0; i < sortedDebts.length; i++) {
+      const bal = balances[i];
+
+      // Already paid off — its minimum is already in freedMinimums
       if (bal < 0.005) {
-        // Already paid off
-        monthData.debts.push({
-          id: d.id,
-          name: d.name,
-          payment: 0,
-          interest: 0,
-          principal: 0,
-          balance: 0,
-        });
+        monthData.debts.push({ id: ids[i], name: names[i], payment: 0, interest: 0, principal: 0, balance: 0 });
         continue;
       }
 
-      const apr = aprs.get(d.id)!;
-      const interest = bal * (apr / 100) / 12;
-      const minPay = Math.min(minPayments.get(d.id)!, bal + interest);
+      const interest = bal * (aprs[i] / 100) / 12;
+      const owed = bal + interest;
+      const minPay = Math.min(mins[i], owed);
 
       let payment = minPay;
 
-      // Apply extra payment to the first (priority) debt that still has balance
-      if (extra > 0) {
-        const remaining = bal + interest - payment;
+      // Apply extra to the first (priority) unpaid debt
+      if (!appliedExtra && extra > 0) {
+        const remaining = owed - payment;
         const extraToApply = Math.min(extra, Math.max(0, remaining));
         payment += extraToApply;
         extra -= extraToApply;
+        appliedExtra = true;
       }
 
       const principal = payment - interest;
-      let newBal = bal - principal;
+      const newBal = Math.max(0, bal - principal);
 
-      // If this debt is fully paid this month, add freed minimum to extra
-      if (newBal < 0.005) {
-        newBal = 0;
-        extra += minPayments.get(d.id)!; // freed-up minimum goes to extra
-        if (!payoffOrder.includes(d.name)) {
-          payoffOrder.push(d.name);
-        }
-      }
-
-      balances.set(d.id, newBal);
       totalInterest += interest;
       totalPaid += payment;
+      balances[i] = newBal;
 
       monthData.debts.push({
-        id: d.id,
-        name: d.name,
+        id: ids[i],
+        name: names[i],
         payment,
         interest,
         principal: Math.max(0, principal),
         balance: newBal,
       });
-    }
 
-    // If after this month, extra > 0, loop again through debts to apply remaining
-    // (This handles the case where the priority debt was paid off and freed minimum
-    // was added to extra, but we need to apply it to the next priority debt)
-    if (extra > 0) {
-      for (const d of sortedDebts) {
-        if (extra <= 0) break;
-        let bal = balances.get(d.id)!;
-        if (bal < 0.005) continue;
-
-        const apr = aprs.get(d.id)!;
-        const interest = bal * (apr / 100) / 12;
-        const remaining = bal + interest;
-        const extraToApply = Math.min(extra, Math.max(0, remaining));
-
-        if (extraToApply > 0) {
-          const principal = extraToApply;
-          let newBal = bal - principal;
-          if (newBal < 0.005) {
-            newBal = 0;
-            if (!payoffOrder.includes(d.name)) {
-              payoffOrder.push(d.name);
-            }
-          }
-          balances.set(d.id, newBal);
-          totalPaid += extraToApply;
-          extra -= extraToApply;
-
-          // Update the month entry for this debt
-          const entry = monthData.debts.find((e) => e.id === d.id);
-          if (entry) {
-            entry.payment += extraToApply;
-            entry.principal += extraToApply;
-            entry.balance = newBal;
-          }
+      // If this debt is fully paid off:
+      // Free its minimum for future months only.
+      // This month's remaining budget is already in `extra` from the
+      // unspent portion (e.g., priority debt didn't need all the extra).
+      // Reset appliedExtra so the next unpaid debt becomes the new priority.
+      if (newBal < 0.005) {
+        freedMinimums += mins[i];
+        appliedExtra = false;
+        if (!payoffOrder.includes(names[i])) {
+          payoffOrder.push(names[i]);
         }
       }
     }

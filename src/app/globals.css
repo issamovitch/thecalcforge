@@ -140,6 +140,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  a, button, summary, [role="button"], [role="tab"], [role="link"], label[for] {
+    cursor: pointer;
+  }
 }
 
 /* Custom scrollbar for long lists */
