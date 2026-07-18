@@ -16,6 +16,7 @@ import {
 } from "@/lib/loan-math";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import AdSlot from "@/components/monetization/AdSlot";
 
 /* ─── Build-time computed examples (single source of truth) ─── */
 
@@ -150,6 +151,10 @@ export default function TitleLoanCalculatorPage() {
       {/* Calculator (client component, SSR with default values, no Suspense) */}
       <div className="mt-8">
         <TitleLoanCalculator />
+      </div>
+
+      <div className="print:hidden">
+        <AdSlot slot="mid-content" />
       </div>
 
       {/* ─── Content Sections (H2 long-tail keywords), hidden from print ─── */}
@@ -656,6 +661,10 @@ export default function TitleLoanCalculatorPage() {
           hub.
         </p>
       </section>
+      </div>
+
+      <div className="print:hidden">
+        <AdSlot slot="footer" lazy />
       </div>
     </div>
   );

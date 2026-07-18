@@ -537,3 +537,109 @@ Stage Summary:
 - Footer stacks cleanly on mobile
 - Mobile menu adapts to viewport width
 - Pre-existing em-dash lint errors in title-loan-calculator page remain (not modified)
+---
+Task ID: share-buttons-integration
+Agent: Sub-agent (general-purpose)
+Task: Integrate ShareButtons component into 8 calculator files
+
+Summary:
+Added social share buttons (X, Facebook, WhatsApp, Reddit, Email + native share) to all calculator action rows. The ShareButtons component was already built; this task wired it into each calculator with context-appropriate summary text.
+
+Files Modified:
+
+1. **AutoLoanCalculator.tsx**
+   - Added `import ShareButtons` 
+   - Inserted `<ShareButtons>` after Reset button with: `"${formatCurrency(financedAmount)} at ${formatPercent(inputs.apr)} over ${inputs.termMonths} months = ${formatCurrency(baseResult.monthlyPayment)}/mo. Calculate yours:"`
+
+2. **TitleLoanCalculator.tsx**
+   - Added `import ShareButtons`
+   - Inserted `<ShareButtons>` after Reset button with: `"${formatCurrency(inputs.loanAmount)} at ${formatPercent(inputs.apr)} over ${inputs.termMonths} months = ${formatCurrency(result.monthlyPayment)}/mo. Calculate yours:"`
+
+3. **PersonalLoanCalculator.tsx**
+   - Added `import ShareButtons`
+   - Inserted `<ShareButtons>` after Reset button with: `"${formatCurrency(inputs.loanAmount)} at ${formatPercent(inputs.apr)} over ${inputs.termMonths} months = ${formatCurrency(baseResult.monthlyPayment)}/mo. Calculate yours:"`
+
+4. **BusinessLoanCalculator.tsx** (special case)
+   - Added `import ShareButtons`
+   - Extended `ActionButtons` sub-component with `summaryText: string` prop
+   - Added `<ShareButtons summaryText={summaryText} />` inside ActionButtons div
+   - Term mode: `"${formatCurrency(inputs.loanAmount)} at ${formatPercent(inputs.apr)} over ${inputs.termMonths} months = ${formatCurrency(result.result.monthlyPayment)}/mo. Calculate yours:"`
+   - Equipment mode: `"${formatCurrency(financedAmount)} equipment loan at ${formatPercent(inputs.apr)} over ${inputs.termMonths} months = ${formatCurrency(result.monthlyPayment)}/mo. Calculate yours:"`
+   - MCA mode: `"$${inputs.advanceAmount} advance → $${result.totalPayback} total repayment in ${result.repaymentMonths} months. Calculate yours:"`
+
+5. **PaydayLoanCalculator.tsx** (special case - 2 action rows)
+   - Added `import ShareButtons`
+   - Single-payment mode: `"${formatCurrency(singleInputs.amount)} + ${formatCurrency(singleResult.financeCharge)} fee = ${formatCurrency(singleResult.totalRepayment)} in ${singleInputs.days} days (APR: ${formatPercent(singleResult.apr)}). Calculate yours:"`
+   - Installment mode: `"${formatCurrency(installmentInputs.amount)} at ${formatPercent(installmentInputs.apr)} over ${installmentInputs.termMonths} months = ${formatCurrency(installmentResult.monthlyPayment)}/mo. Calculate yours:"`
+
+6. **BoatRVCalculator.tsx**
+   - Added `import ShareButtons`
+   - Inserted `<ShareButtons>` after Reset button with: `"${formatCurrency(financedAmount)} at ${formatPercent(inputs.apr)} over ${inputs.termMonths} months = ${formatCurrency(baseResult.monthlyPayment)}/mo. Calculate yours:"`
+
+7. **DebtConsolidationCalculator.tsx**
+   - Added `import ShareButtons`
+   - Inserted `<ShareButtons>` after Print button (different button order) with: `"${formatCurrency(totalBalance)} in debts → ${formatCurrency(comparison.consolidated.monthlyPayment)}/mo consolidated. Calculate yours:"`
+   - Wrapped in `{comparison && ...}` guard since comparison can be null
+
+8. **CarAffordabilityCalculator.tsx**
+   - Added `import ShareButtons`
+   - Inserted `<ShareButtons>` after Reset button with mode-conditional text:
+     - Income mode: `"On ${formatCurrency(inputs.grossAnnualIncome)}/yr salary, max vehicle price is ${formatCurrency(result.maxVehiclePrice)}. Calculate yours:"`
+     - Payment mode: `"With ${formatCurrency(inputs.targetPayment)}/mo budget, max vehicle price is ${formatCurrency(result.maxVehiclePrice)}. Calculate yours:"`
+     - Rule mode: `"20/4/10 rule: max vehicle price is ${formatCurrency(result.maxVehiclePrice)}. Calculate yours:"`
+
+Type-checking: All changes compile cleanly. The only remaining error in calculator files is a pre-existing `result.strictDown` possibly-undefined issue in CarAffordabilityCalculator.tsx (line 640), unrelated to this change.
+
+No existing functionality was modified. All ShareButtons are placed inside the existing `no-print` flex container, after the last action button (Reset for most, Print for DebtConsolidation).
+
+---
+Task ID: share-buttons
+Agent: Main Agent
+Task: Add social share buttons to all loan calculator result action rows
+
+Work Log:
+- Created `/src/components/calculators/ShareButtons.tsx` - shared component with inline SVG icons for X, Facebook, WhatsApp, Reddit, Email, and native Share (navigator.share)
+- Share buttons use official intent URLs (no third-party scripts/SDKs)
+- All links open in new tab with target="_blank" rel="noopener noreferrer"
+- All text/params are properly URL-encoded
+- Icon-only buttons (w-8 h-8) with tooltips for accessibility (aria-label on each)
+- Native Share button auto-hides on desktop where navigator.share is unavailable
+- Matched existing button styling: variant="outline" size="sm" text-xs with size-3.5 icons
+- Integrated into all 8 loan calculators with context-appropriate summary text:
+  - AutoLoanCalculator: "$22,450.00 at 6.5% over 60 months = $439.26/mo"
+  - TitleLoanCalculator: same pattern
+  - PersonalLoanCalculator: same pattern
+  - BusinessLoanCalculator: 3 mode-specific summaries via ActionButtons sub-component prop
+  - PaydayLoanCalculator: 2 mode-specific summaries (single-payment with fee/APR, installment with standard format)
+  - BoatRVCalculator: same pattern as AutoLoan
+  - DebtConsolidationCalculator: "$20,000 in debts → $XXX/mo consolidated"
+  - CarAffordabilityCalculator: 3 mode-specific summaries (income/payment/rule)
+- Verified via browser: 5 share links rendered per visible mode, correct hrefs, correct attributes
+- VLM analysis confirmed proper sizing, border matching, and clean row layout on both mobile and desktop
+- Zero new lint errors
+
+Stage Summary:
+- ShareButtons component is reusable for any future department/calculator page
+- All share links encode the current URL with input params so recipients see exact calculation
+- No third-party scripts, no tracking, no CWV impact
+
+---
+Task ID: task1-button-fixes
+Agent: Main Agent
+Task: Fix button row styling and grouping; add AdSlot ad placeholders
+
+Work Log:
+- Changed Reset button from variant="ghost" to variant="outline" in all 8 calculators (AutoLoan, TitleLoan, PersonalLoan, BusinessLoan, PaydayLoan x2, BoatRV, CarAffordability). DebtConsolidation was already outline.
+- Restructured action rows: wrapped Copy Link/Print/Reset in inner div, ShareButtons in outer div, changed outer gap-2 to gap-3 items-center
+- Verified native Share button renders only on mobile (navigator.share check), hidden on desktop
+- Created /src/components/monetization/AdSlot.tsx with lazy IntersectionObserver and responsive min-height (100px mobile, 250px desktop)
+- Fixed lazy loading bug: component now renders a zero-height sentinel div for the observer, then expands to full min-height when visible
+- Integrated AdSlot mid-content (after calculator results) + footer (lazy, bottom of page) on all 8 loan calculator pages
+- Both slots wrapped in print:hidden for print-friendliness
+- No ad scripts loaded, no CWV impact
+
+Stage Summary:
+- All button rows now have consistent outline style with grouped layout
+- AdSlot component is reusable via slot prop ("mid-content" / "footer") with lazy prop
+- VLM verified: button grouping, consistent styling, ad slot heights on mobile (100px) and desktop (250px)
+- Zero new lint errors

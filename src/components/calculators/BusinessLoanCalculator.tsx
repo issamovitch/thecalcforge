@@ -43,8 +43,7 @@ import {
   type BalloonLoanResult,
   type MCAResult,
 } from "@/lib/loan-math";
-
-/* ─── Types ─── */
+import ShareButtons from "@/components/calculators/ShareButtons";
 
 type Mode = "term" | "equipment" | "mca";
 
@@ -851,6 +850,7 @@ function TermLoanView({
               onCopyLink={onCopyLink}
               onPrint={onPrint}
               onReset={onReset}
+              summaryText={`${formatCurrency(inputs.loanAmount)} at ${formatPercent(inputs.apr)} over ${inputs.termMonths} months = ${formatCurrency(result.result.monthlyPayment)}/mo. Calculate yours:`}
             />
 
             {/* Disclaimer */}
@@ -1194,6 +1194,7 @@ function EquipmentLoanView({
               onCopyLink={onCopyLink}
               onPrint={onPrint}
               onReset={onReset}
+              summaryText={`${formatCurrency(financedAmount)} equipment loan at ${formatPercent(inputs.apr)} over ${inputs.termMonths} months = ${formatCurrency(result.monthlyPayment)}/mo. Calculate yours:`}
             />
 
             {/* Disclaimer */}
@@ -1465,6 +1466,7 @@ function MCAView({
               onCopyLink={onCopyLink}
               onPrint={onPrint}
               onReset={onReset}
+              summaryText={`$${inputs.advanceAmount.toLocaleString()} advance → $${result.totalPayback.toLocaleString()} total repayment in ${result.repaymentMonths} months. Calculate yours:`}
             />
 
             {/* MCA Disclaimer */}
@@ -1510,35 +1512,40 @@ function ActionButtons({
   onCopyLink,
   onPrint,
   onReset,
+  summaryText,
 }: {
   copied: boolean;
   onCopyLink: () => void;
   onPrint: () => void;
   onReset: () => void;
+  summaryText: string;
 }) {
   return (
-    <div className="flex flex-wrap gap-2 no-print">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={onCopyLink}
-        className="text-xs"
-      >
-        {copied ? (
-          <Check className="mr-1.5 size-3.5" />
-        ) : (
-          <Copy className="mr-1.5 size-3.5" />
-        )}
-        {copied ? "Copied" : "Copy Link"}
-      </Button>
-      <Button variant="outline" size="sm" onClick={onPrint} className="text-xs">
-        <Printer className="mr-1.5 size-3.5" />
-        Print
-      </Button>
-      <Button variant="ghost" size="sm" onClick={onReset} className="text-xs">
-        <RotateCcw className="mr-1.5 size-3.5" />
-        Reset
-      </Button>
+    <div className="flex flex-wrap items-center gap-3 no-print">
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onCopyLink}
+          className="text-xs"
+        >
+          {copied ? (
+            <Check className="mr-1.5 size-3.5" />
+          ) : (
+            <Copy className="mr-1.5 size-3.5" />
+          )}
+          {copied ? "Copied" : "Copy Link"}
+        </Button>
+        <Button variant="outline" size="sm" onClick={onPrint} className="text-xs">
+          <Printer className="mr-1.5 size-3.5" />
+          Print
+        </Button>
+        <Button variant="outline" size="sm" onClick={onReset} className="text-xs">
+          <RotateCcw className="mr-1.5 size-3.5" />
+          Reset
+        </Button>
+      </div>
+      <ShareButtons summaryText={summaryText} />
     </div>
   );
 }

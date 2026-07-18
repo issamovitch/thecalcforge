@@ -27,6 +27,7 @@ import {
   formatCurrency,
   formatPercent,
 } from "@/lib/loan-math";
+import ShareButtons from "@/components/calculators/ShareButtons";
 
 /* ─── Types ─── */
 
@@ -668,38 +669,46 @@ export default function CarAffordabilityCalculator() {
                     )}
 
                     {/* Actions */}
-                    <div className="flex flex-wrap gap-2 no-print">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleCopyLink}
-                        className="text-xs"
-                      >
-                        {copied ? (
-                          <Check className="mr-1.5 size-3.5" />
-                        ) : (
-                          <Copy className="mr-1.5 size-3.5" />
-                        )}
-                        {copied ? "Copied" : "Copy Link"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handlePrint}
-                        className="text-xs"
-                      >
-                        <Printer className="mr-1.5 size-3.5" />
-                        Print
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleReset}
-                        className="text-xs"
-                      >
-                        <RotateCcw className="mr-1.5 size-3.5" />
-                        Reset
-                      </Button>
+                    <div className="flex flex-wrap items-center gap-3 no-print">
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCopyLink}
+                          className="text-xs"
+                        >
+                          {copied ? (
+                            <Check className="mr-1.5 size-3.5" />
+                          ) : (
+                            <Copy className="mr-1.5 size-3.5" />
+                          )}
+                          {copied ? "Copied" : "Copy Link"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handlePrint}
+                          className="text-xs"
+                        >
+                          <Printer className="mr-1.5 size-3.5" />
+                          Print
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleReset}
+                          className="text-xs"
+                        >
+                          <RotateCcw className="mr-1.5 size-3.5" />
+                          Reset
+                        </Button>
+                      </div>
+                      <ShareButtons summaryText={inputs.mode === "income"
+                        ? `On ${formatCurrency(inputs.grossAnnualIncome)}/yr salary, max vehicle price is ${formatCurrency(result.maxVehiclePrice)}. Calculate yours:`
+                        : inputs.mode === "payment"
+                          ? `With ${formatCurrency(inputs.targetPayment)}/mo budget, max vehicle price is ${formatCurrency(result.maxVehiclePrice)}. Calculate yours:`
+                          : `20/4/10 rule: max vehicle price is ${formatCurrency(result.maxVehiclePrice)}. Calculate yours:`
+                      } />
                     </div>
 
                     {/* Disclaimer */}

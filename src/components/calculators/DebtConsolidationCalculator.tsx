@@ -23,6 +23,7 @@ import {
   formatPercent,
   type FixedPaymentPayoff,
 } from "@/lib/loan-math";
+import ShareButtons from "@/components/calculators/ShareButtons";
 
 /* ─── Types ─── */
 
@@ -613,23 +614,26 @@ export default function DebtConsolidationCalculator() {
               </section>
 
               {/* ─── Action buttons ─── */}
-              <div className="flex flex-wrap gap-2 no-print">
-                <Button variant="outline" size="sm" onClick={handleReset}>
-                  <RotateCcw className="size-4 mr-1" />
-                  Reset
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleCopyLink}>
-                  {copied ? (
-                    <Check className="size-4 mr-1" />
-                  ) : (
-                    <Copy className="size-4 mr-1" />
-                  )}
-                  {copied ? "Copied" : "Copy Link"}
-                </Button>
-                <Button variant="outline" size="sm" onClick={handlePrint}>
-                  <Printer className="size-4 mr-1" />
-                  Print
-                </Button>
+              <div className="flex flex-wrap items-center gap-3 no-print">
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={handleReset}>
+                    <RotateCcw className="size-4 mr-1" />
+                    Reset
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleCopyLink}>
+                    {copied ? (
+                      <Check className="size-4 mr-1" />
+                    ) : (
+                      <Copy className="size-4 mr-1" />
+                    )}
+                    {copied ? "Copied" : "Copy Link"}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handlePrint}>
+                    <Printer className="size-4 mr-1" />
+                    Print
+                  </Button>
+                </div>
+                {comparison && <ShareButtons summaryText={`${formatCurrency(totalBalance)} in debts → ${formatCurrency(comparison.consolidated.monthlyPayment)}/mo consolidated. Calculate yours:`} />}
               </div>
             </div>
           </CardContent>

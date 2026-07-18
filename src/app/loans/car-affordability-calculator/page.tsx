@@ -13,6 +13,7 @@ import {
   formatPercent,
 } from "@/lib/loan-math";
 import { Separator } from "@/components/ui/separator";
+import AdSlot from "@/components/monetization/AdSlot";
 
 /* ─── Helper: compute max price from a given monthly payment ─── */
 
@@ -184,6 +185,10 @@ export default function CarAffordabilityPage() {
       {/* Calculator */}
       <div className="mt-8">
         <CarAffordabilityCalculator />
+      </div>
+
+      <div className="print:hidden">
+        <AdSlot slot="mid-content" />
       </div>
 
       {/* ─── SEO Content (hidden from print) ─── */}
@@ -436,6 +441,10 @@ export default function CarAffordabilityPage() {
           hub.
         </p>
       </section>
+      </div>
+
+      <div className="print:hidden">
+        <AdSlot slot="footer" lazy />
       </div>
     </div>
   );

@@ -1,0 +1,917 @@
+     1→"use client";
+     2→
+     3→import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+     4→import {
+     5→  Calculator, Copy, Check, Printer, RotateCcw,
+     6→  ChevronDown, ChevronUp, Info, PlusCircle,
+     7→} from "lucide-react";
+     8→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+     9→import { Input } from "@/components/ui/input";
+    10→import { Label } from "@/components/ui/label";
+    11→import { Button } from "@/components/ui/button";
+    12→import {
+    13→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    14→} from "@/components/ui/table";
+    15→import {
+    16→  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+    17→} from "@/components/ui/tooltip";
+    18→import { Slider } from "@/components/ui/slider";
+    19→import { toast } from "sonner";
+    20→import {
+    21→  calculateLoan, calculateLoanWithExtra, formatCurrency, formatPercent,
+    22→  type LoanWithExtraResult,
+    23→} from "@/lib/loan-math";
+    24→
+    25→/* ─── Types ─── */
+    26→
+    27→type VehicleType = "boat" | "rv" | "motorcycle";
+    28→
+    29→interface BoatRVInputs {
+    30→  vehicleType: VehicleType;
+    31→  purchasePrice: number;
+    32→  tradeInValue: number;
+    33→  downPayment: number;
+    34→  salesTaxRate: number;
+    35→  apr: number;
+    36→  termMonths: number;
+    37→  extraMonthly: number;
+    38→  extraStartMonth: number;
+    39→}
+    40→
+    41→/* ─── Vehicle config (slider ranges and labels) ─── */
+    42→
+    43→const VEHICLE_CONFIG = {
+    44→  boat: {
+    45→    label: "Boat",
+    46→    priceMin: 5000, priceMax: 500000, priceStep: 1000,
+    47→    termMin: 12, termMax: 180,
+    48→    aprMin: 0, aprMax: 25, aprStep: 0.1,
+    49→    defaultPrice: 75000, defaultTerm: 120, defaultApr: 8.5,
+    50→  },
+    51→  rv: {
+    52→    label: "RV",
+    53→    priceMin: 10000, priceMax: 500000, priceStep: 1000,
+    54→    termMin: 12, termMax: 240,
+    55→    aprMin: 0, aprMax: 20, aprStep: 0.1,
+    56→    defaultPrice: 120000, defaultTerm: 180, defaultApr: 7,
+    57→  },
+    58→  motorcycle: {
+    59→    label: "Motorcycle",
+    60→    priceMin: 1000, priceMax: 100000, priceStep: 500,
+    61→    termMin: 12, termMax: 84,
+    62→    aprMin: 0, aprMax: 25, aprStep: 0.1,
+    63→    defaultPrice: 15000, defaultTerm: 60, defaultApr: 9,
+    64→  },
+    65→} as const;
+    66→
+    67→/* ─── Defaults ─── */
+    68→
+    69→export const DEFAULT_INPUTS: BoatRVInputs = {
+    70→  vehicleType: "boat",
+    71→  purchasePrice: 75000,
+    72→  tradeInValue: 15000,
+    73→  downPayment: 10000,
+    74→  salesTaxRate: 0,
+    75→  apr: 8.5,
+    76→  termMonths: 120,
+    77→  extraMonthly: 0,
+    78→  extraStartMonth: 1,
+    79→};
+    80→
+    81→/* Pre-compute default result at module level (available during SSR) */
+    82→const defaultFinanced = DEFAULT_INPUTS.purchasePrice
+    83→  + (DEFAULT_INPUTS.purchasePrice * DEFAULT_INPUTS.salesTaxRate / 100)
+    84→  - DEFAULT_INPUTS.tradeInValue
+    85→  - DEFAULT_INPUTS.downPayment;
+    86→
+    87→export const DEFAULT_RESULT = calculateLoanWithExtra({
+    88→  loanAmount: defaultFinanced,
+    89→  apr: DEFAULT_INPUTS.apr,
+    90→  termMonths: DEFAULT_INPUTS.termMonths,
+    91→});
+    92→
+    93→/* ─── Component ─── */
+    94→
+    95→export default function BoatRVCalculator() {
+    96→  const [inputs, setInputs] = useState<BoatRVInputs>(() => {
+    97→    if (typeof window === "undefined") return DEFAULT_INPUTS;
+    98→    const params = new URLSearchParams(window.location.search);
+    99→    const type = params.get("type");
+   100→    const price = params.get("price");
+   101→    const tradein = params.get("tradein");
+   102→    const down = params.get("down");
+   103→    const tax = params.get("tax");
+   104→    const rate = params.get("rate");
+   105→    const term = params.get("term");
+   106→    const extra = params.get("extra");
+   107→    const extrastart = params.get("extrastart");
+   108→    if (!type && !price && !tradein && !down && !tax && !rate && !term && !extra && !extrastart) return DEFAULT_INPUTS;
+   109→    return {
+   110→      vehicleType: (type === "boat" || type === "rv" || type === "motorcycle") ? type : DEFAULT_INPUTS.vehicleType,
+   111→      purchasePrice: price ? parseFloat(price) : DEFAULT_INPUTS.purchasePrice,
+   112→      tradeInValue: tradein ? parseFloat(tradein) : DEFAULT_INPUTS.tradeInValue,
+   113→      downPayment: down ? parseFloat(down) : DEFAULT_INPUTS.downPayment,
+   114→      salesTaxRate: tax ? parseFloat(tax) : DEFAULT_INPUTS.salesTaxRate,
+   115→      apr: rate ? parseFloat(rate) : DEFAULT_INPUTS.apr,
+   116→      termMonths: term ? parseInt(term, 10) : DEFAULT_INPUTS.termMonths,
+   117→      extraMonthly: extra ? parseFloat(extra) : DEFAULT_INPUTS.extraMonthly,
+   118→      extraStartMonth: extrastart ? parseInt(extrastart, 10) : DEFAULT_INPUTS.extraStartMonth,
+   119→    };
+   120→  });
+   121→  const [copied, setCopied] = useState(false);
+   122→  const [showAmortization, setShowAmortization] = useState(true);
+   123→  const [showExtraInputs, setShowExtraInputs] = useState(false);
+   124→
+   125→  const config = VEHICLE_CONFIG[inputs.vehicleType];
+   126→
+   127→  const financedAmount = useMemo(
+   128→    () => Math.max(0,
+   129→      inputs.purchasePrice
+   130→      + (inputs.purchasePrice * inputs.salesTaxRate / 100)
+   131→      - inputs.tradeInValue
+   132→      - inputs.downPayment
+   133→    ),
+   134→    [inputs.purchasePrice, inputs.salesTaxRate, inputs.tradeInValue, inputs.downPayment]
+   135→  );
+   136→
+   137→  const result = useMemo(
+   138→    () => calculateLoanWithExtra({
+   139→      loanAmount: financedAmount,
+   140→      apr: inputs.apr,
+   141→      termMonths: inputs.termMonths,
+   142→      extraMonthly: inputs.extraMonthly,
+   143→      extraStartMonth: inputs.extraStartMonth,
+   144→    }),
+   145→    [financedAmount, inputs.apr, inputs.termMonths, inputs.extraMonthly, inputs.extraStartMonth]
+   146→  );
+   147→
+   148→  const baseResult = useMemo(
+   149→    () => calculateLoan({
+   150→      loanAmount: financedAmount,
+   151→      apr: inputs.apr,
+   152→      termMonths: inputs.termMonths,
+   153→    }),
+   154→    [financedAmount, inputs.apr, inputs.termMonths]
+   155→  );
+   156→
+   157→  const salesTaxAmount = useMemo(
+   158→    () => Math.round(inputs.purchasePrice * inputs.salesTaxRate / 100 * 100) / 100,
+   159→    [inputs.purchasePrice, inputs.salesTaxRate]
+   160→  );
+   161→
+   162→  // Sync URL query string when inputs change (skip initial render)
+   163→  const isInitialMount = useRef(true);
+   164→  useEffect(() => {
+   165→    if (isInitialMount.current) {
+   166→      isInitialMount.current = false;
+   167→      return;
+   168→    }
+   169→    if (typeof window === "undefined") return;
+   170→    const params = new URLSearchParams();
+   171→    params.set("type", inputs.vehicleType);
+   172→    params.set("price", inputs.purchasePrice.toString());
+   173→    params.set("tradein", inputs.tradeInValue.toString());
+   174→    params.set("down", inputs.downPayment.toString());
+   175→    params.set("tax", inputs.salesTaxRate.toString());
+   176→    params.set("rate", inputs.apr.toString());
+   177→    params.set("term", inputs.termMonths.toString());
+   178→    params.set("extra", inputs.extraMonthly.toString());
+   179→    params.set("extrastart", inputs.extraStartMonth.toString());
+   180→    const newUrl = `${window.location.pathname}?${params.toString()}`;
+   181→    window.history.replaceState(null, "", newUrl);
+   182→  }, [inputs]);
+   183→
+   184→  const handleInputChange = useCallback(
+   185→    (field: keyof BoatRVInputs, value: string) => {
+   186→      const num = parseFloat(value);
+   187→      if (!isNaN(num)) {
+   188→        setInputs((prev) => ({ ...prev, [field]: num }));
+   189→      }
+   190→    },
+   191→    []
+   192→  );
+   193→
+   194→  const handleVehicleTypeChange = useCallback((type: VehicleType) => {
+   195→    setInputs((prev) => {
+   196→      const newConfig = VEHICLE_CONFIG[type];
+   197→      return {
+   198→        ...prev,
+   199→        vehicleType: type,
+   200→        purchasePrice: Math.min(prev.purchasePrice, newConfig.priceMax),
+   201→        termMonths: prev.termMonths > newConfig.termMax ? newConfig.defaultTerm : prev.termMonths,
+   202→        apr: prev.apr > newConfig.aprMax ? newConfig.defaultApr : prev.apr,
+   203→      };
+   204→    });
+   205→  }, []);
+   206→
+   207→  const handleReset = useCallback(() => {
+   208→    setInputs(DEFAULT_INPUTS);
+   209→    toast.success("Calculator reset to defaults");
+   210→  }, []);
+   211→
+   212→  const handleCopyLink = useCallback(async () => {
+   213→    try {
+   214→      await navigator.clipboard.writeText(window.location.href);
+   215→      setCopied(true);
+   216→      toast.success("Link copied to clipboard");
+   217→      setTimeout(() => setCopied(false), 2000);
+   218→    } catch {
+   219→      toast.error("Failed to copy link");
+   220→    }
+   221→  }, []);
+   222→
+   223→  const handlePrint = useCallback(() => {
+   224→    window.print();
+   225→  }, []);
+   226→
+   227→  const maxTradeIn = inputs.purchasePrice;
+   228→  const maxDown = Math.max(0, inputs.purchasePrice - inputs.tradeInValue);
+   229→
+   230→  return (
+   231→    <TooltipProvider delayDuration={300}>
+   232→      <div className="space-y-6">
+   233→        {/* ─── Calculator Card ─── */}
+   234→        <Card className="print-break-inside">
+   235→          <CardHeader className="pb-4">
+   236→            <CardTitle className="flex items-center gap-2 text-xl">
+   237→              <Calculator className="size-5 text-ember" />
+   238→              Boat, RV &amp; Motorcycle Loan Calculator
+   239→            </CardTitle>
+   240→            <p className="text-sm text-muted-foreground">
+   241→              Estimate monthly payments for recreational vehicle financing.
+   242→              Adjust the vehicle type, price, and loan terms to see your
+   243→              amortization schedule.
+   244→            </p>
+   245→
+   246→            {/* Vehicle Type Toggle */}
+   247→            <div className="flex gap-2 pt-2 no-print">
+   248→              {(["boat", "rv", "motorcycle"] as const).map((type) => (
+   249→                <Button
+   250→                  key={type}
+   251→                  variant="outline"
+   252→                  size="sm"
+   253→                  onClick={() => handleVehicleTypeChange(type)}
+   254→                  className={
+   255→                    inputs.vehicleType === type
+   256→                      ? "bg-ember/10 text-ember border-ember/30"
+   257→                      : ""
+   258→                  }
+   259→                >
+   260→                  {VEHICLE_CONFIG[type].label}
+   261→                </Button>
+   262→              ))}
+   263→            </div>
+   264→            {/* Print-only label */}
+   265→            <p className="hidden print:block text-sm font-medium">
+   266→              Vehicle Type: {config.label}
+   267→            </p>
+   268→          </CardHeader>
+   269→          <CardContent>
+   270→            <div className="grid gap-6 lg:grid-cols-2">
+   271→              {/* ─── Inputs ─── */}
+   272→              <div className="space-y-5">
+   273→                {/* Purchase Price */}
+   274→                <div className="space-y-2">
+   275→                  <div className="flex items-center justify-between">
+   276→                    <Label htmlFor="purchase-price" className="text-sm font-medium">
+   277→                      Purchase Price
+   278→                    </Label>
+   279→                    <span className="text-sm font-semibold text-foreground">
+   280→                      {formatCurrency(inputs.purchasePrice)}
+   281→                    </span>
+   282→                  </div>
+   283→                  <div className="no-print">
+   284→                    <Slider
+   285→                      id="purchase-price"
+   286→                      min={config.priceMin}
+   287→                      max={config.priceMax}
+   288→                      step={config.priceStep}
+   289→                      value={[inputs.purchasePrice]}
+   290→                      onValueChange={([v]) =>
+   291→                        setInputs((p) => ({ ...p, purchasePrice: v }))
+   292→                      }
+   293→                      aria-label="Purchase price"
+   294→                      className="w-full"
+   295→                    />
+   296→                    <div className="flex justify-between text-xs text-muted-foreground">
+   297→                      <span>{formatCurrency(config.priceMin)}</span>
+   298→                      <span>{formatCurrency(config.priceMax)}</span>
+   299→                    </div>
+   300→                    <Input
+   301→                      type="number"
+   302→                      min={config.priceMin}
+   303→                      max={config.priceMax}
+   304→                      step={config.priceStep}
+   305→                      value={inputs.purchasePrice}
+   306→                      onChange={(e) =>
+   307→                        handleInputChange("purchasePrice", e.target.value)
+   308→                      }
+   309→                      className="mt-1"
+   310→                      aria-label="Purchase price input"
+   311→                    />
+   312→                  </div>
+   313→                </div>
+   314→
+   315→                {/* Trade-In Value */}
+   316→                <div className="space-y-2">
+   317→                  <div className="flex items-center justify-between">
+   318→                    <div className="flex items-center gap-1.5">
+   319→                      <Label htmlFor="trade-in-value" className="text-sm font-medium">
+   320→                        Trade-In Value
+   321→                      </Label>
+   322→                      <Tooltip>
+   323→                        <TooltipTrigger asChild>
+   324→                          <Info className="size-3.5 text-muted-foreground cursor-help no-print" />
+   325→                        </TooltipTrigger>
+   326→                        <TooltipContent side="top" className="max-w-[240px] text-xs">
+   327→                          The appraised value of your current vehicle being
+   328→                          traded in. This amount is subtracted from the
+   329→                          purchase price to reduce the amount financed.
+   330→                        </TooltipContent>
+   331→                      </Tooltip>
+   332→                    </div>
+   333→                    <span className="text-sm font-semibold text-foreground">
+   334→                      {formatCurrency(inputs.tradeInValue)}
+   335→                    </span>
+   336→                  </div>
+   337→                  <div className="no-print">
+   338→                    <Slider
+   339→                      id="trade-in-value"
+   340→                      min={0}
+   341→                      max={maxTradeIn}
+   342→                      step={config.priceStep}
+   343→                      value={[inputs.tradeInValue]}
+   344→                      onValueChange={([v]) =>
+   345→                        setInputs((p) => ({ ...p, tradeInValue: v }))
+   346→                      }
+   347→                      aria-label="Trade-in value"
+   348→                      className="w-full"
+   349→                    />
+   350→                    <div className="flex justify-between text-xs text-muted-foreground">
+   351→                      <span>{formatCurrency(0)}</span>
+   352→                      <span>{formatCurrency(maxTradeIn)}</span>
+   353→                    </div>
+   354→                    <Input
+   355→                      type="number"
+   356→                      min={0}
+   357→                      max={maxTradeIn}
+   358→                      step={config.priceStep}
+   359→                      value={inputs.tradeInValue}
+   360→                      onChange={(e) =>
+   361→                        handleInputChange("tradeInValue", e.target.value)
+   362→                      }
+   363→                      className="mt-1"
+   364→                      aria-label="Trade-in value input"
+   365→                    />
+   366→                  </div>
+   367→                </div>
+   368→
+   369→                {/* Down Payment */}
+   370→                <div className="space-y-2">
+   371→                  <div className="flex items-center justify-between">
+   372→                    <Label htmlFor="down-payment" className="text-sm font-medium">
+   373→                      Down Payment
+   374→                    </Label>
+   375→                    <span className="text-sm font-semibold text-foreground">
+   376→                      {formatCurrency(inputs.downPayment)}
+   377→                    </span>
+   378→                  </div>
+   379→                  <div className="no-print">
+   380→                    <Slider
+   381→                      id="down-payment"
+   382→                      min={0}
+   383→                      max={maxDown}
+   384→                      step={config.priceStep}
+   385→                      value={[inputs.downPayment]}
+   386→                      onValueChange={([v]) =>
+   387→                        setInputs((p) => ({ ...p, downPayment: v }))
+   388→                      }
+   389→                      aria-label="Down payment"
+   390→                      className="w-full"
+   391→                    />
+   392→                    <div className="flex justify-between text-xs text-muted-foreground">
+   393→                      <span>{formatCurrency(0)}</span>
+   394→                      <span>{formatCurrency(maxDown)}</span>
+   395→                    </div>
+   396→                    <Input
+   397→                      type="number"
+   398→                      min={0}
+   399→                      max={maxDown}
+   400→                      step={config.priceStep}
+   401→                      value={inputs.downPayment}
+   402→                      onChange={(e) =>
+   403→                        handleInputChange("downPayment", e.target.value)
+   404→                      }
+   405→                      className="mt-1"
+   406→                      aria-label="Down payment input"
+   407→                    />
+   408→                  </div>
+   409→                </div>
+   410→
+   411→                {/* Sales Tax Rate */}
+   412→                <div className="space-y-2">
+   413→                  <div className="flex items-center justify-between">
+   414→                    <div className="flex items-center gap-1.5">
+   415→                      <Label htmlFor="sales-tax" className="text-sm font-medium">
+   416→                        Sales Tax Rate
+   417→                      </Label>
+   418→                      <Tooltip>
+   419→                        <TooltipTrigger asChild>
+   420→                          <Info className="size-3.5 text-muted-foreground cursor-help no-print" />
+   421→                        </TooltipTrigger>
+   422→                        <TooltipContent side="top" className="max-w-[280px] text-xs">
+   423→                          Sales tax rates vary by state and locality. Some
+   424→                          states tax only the difference after trade-in.
+   425→                          Enter your actual rate.
+   426→                        </TooltipContent>
+   427→                      </Tooltip>
+   428→                    </div>
+   429→                    <span className="text-sm font-semibold text-foreground">
+   430→                      {formatPercent(inputs.salesTaxRate)}
+   431→                    </span>
+   432→                  </div>
+   433→                  <div className="no-print">
+   434→                    <Slider
+   435→                      id="sales-tax"
+   436→                      min={0}
+   437→                      max={15}
+   438→                      step={0.1}
+   439→                      value={[inputs.salesTaxRate]}
+   440→                      onValueChange={([v]) =>
+   441→                        setInputs((p) => ({ ...p, salesTaxRate: v }))
+   442→                      }
+   443→                      aria-label="Sales tax rate"
+   444→                      className="w-full"
+   445→                    />
+   446→                    <div className="flex justify-between text-xs text-muted-foreground">
+   447→                      <span>0%</span>
+   448→                      <span>15%</span>
+   449→                    </div>
+   450→                    <Input
+   451→                      type="number"
+   452→                      min={0}
+   453→                      max={15}
+   454→                      step={0.1}
+   455→                      value={inputs.salesTaxRate}
+   456→                      onChange={(e) =>
+   457→                        handleInputChange("salesTaxRate", e.target.value)
+   458→                      }
+   459→                      className="mt-1"
+   460→                      aria-label="Sales tax rate input"
+   461→                    />
+   462→                  </div>
+   463→                </div>
+   464→
+   465→                {/* APR */}
+   466→                <div className="space-y-2">
+   467→                  <div className="flex items-center justify-between">
+   468→                    <Label htmlFor="annual-rate" className="text-sm font-medium">
+   469→                      Annual Interest Rate (APR)
+   470→                    </Label>
+   471→                    <span className="text-sm font-semibold text-foreground">
+   472→                      {formatPercent(inputs.apr)}
+   473→                    </span>
+   474→                  </div>
+   475→                  <div className="no-print">
+   476→                    <Slider
+   477→                      id="annual-rate"
+   478→                      min={config.aprMin}
+   479→                      max={config.aprMax}
+   480→                      step={config.aprStep}
+   481→                      value={[inputs.apr]}
+   482→                      onValueChange={([v]) =>
+   483→                        setInputs((p) => ({ ...p, apr: v }))
+   484→                      }
+   485→                      aria-label="Annual interest rate"
+   486→                      className="w-full"
+   487→                    />
+   488→                    <div className="flex justify-between text-xs text-muted-foreground">
+   489→                      <span>{formatPercent(config.aprMin)}</span>
+   490→                      <span>{formatPercent(config.aprMax)}</span>
+   491→                    </div>
+   492→                    <Input
+   493→                      type="number"
+   494→                      min={config.aprMin}
+   495→                      max={config.aprMax}
+   496→                      step={config.aprStep}
+   497→                      value={inputs.apr}
+   498→                      onChange={(e) =>
+   499→                        handleInputChange("apr", e.target.value)
+   500→                      }
+   501→                      className="mt-1"
+   502→                      aria-label="Annual interest rate input"
+   503→                    />
+   504→                  </div>
+   505→                </div>
+   506→
+   507→                {/* Term (Months) */}
+   508→                <div className="space-y-2">
+   509→                  <div className="flex items-center justify-between">
+   510→                    <Label htmlFor="term-months" className="text-sm font-medium">
+   511→                      Loan Term (Months)
+   512→                    </Label>
+   513→                    <span className="text-sm font-semibold text-foreground">
+   514→                      {inputs.termMonths} mo
+   515→                    </span>
+   516→                  </div>
+   517→                  <div className="no-print">
+   518→                    <Slider
+   519→                      id="term-months"
+   520→                      min={config.termMin}
+   521→                      max={config.termMax}
+   522→                      step={1}
+   523→                      value={[inputs.termMonths]}
+   524→                      onValueChange={([v]) =>
+   525→                        setInputs((p) => ({ ...p, termMonths: v }))
+   526→                      }
+   527→                      aria-label="Loan term in months"
+   528→                      className="w-full"
+   529→                    />
+   530→                    <div className="flex justify-between text-xs text-muted-foreground">
+   531→                      <span>{config.termMin} mo</span>
+   532→                      <span>{config.termMax} mo</span>
+   533→                    </div>
+   534→                    <Input
+   535→                      type="number"
+   536→                      min={config.termMin}
+   537→                      max={config.termMax}
+   538→                      step={1}
+   539→                      value={inputs.termMonths}
+   540→                      onChange={(e) =>
+   541→                        handleInputChange("termMonths", e.target.value)
+   542→                      }
+   543→                      className="mt-1"
+   544→                      aria-label="Loan term in months input"
+   545→                    />
+   546→                  </div>
+   547→                </div>
+   548→
+   549→                {/* ─── Extra Payments (collapsible) ─── */}
+   550→                <div className="no-print">
+   551→                  <button
+   552→                    type="button"
+   553→                    onClick={() => setShowExtraInputs(!showExtraInputs)}
+   554→                    className="flex w-full items-center gap-2 rounded-md border border-dashed border-muted-foreground/30 px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-ember/40 hover:text-ember"
+   555→                  >
+   556→                    <PlusCircle className="size-4" />
+   557→                    <span>Extra Monthly Payments</span>
+   558→                    {showExtraInputs ? (
+   559→                      <ChevronUp className="ml-auto size-4" />
+   560→                    ) : (
+   561→                      <ChevronDown className="ml-auto size-4" />
+   562→                    )}
+   563→                  </button>
+   564→
+   565→                  {showExtraInputs && (
+   566→                    <div className="mt-3 space-y-4 rounded-lg border border-ember/20 bg-ember/5 p-4">
+   567→                      {/* Extra Monthly Payment */}
+   568→                      <div className="space-y-2">
+   569→                        <div className="flex items-center justify-between">
+   570→                          <div className="flex items-center gap-1.5">
+   571→                            <Label htmlFor="extra-monthly" className="text-sm font-medium">
+   572→                              Extra Monthly Payment
+   573→                            </Label>
+   574→                            <Tooltip>
+   575→                              <TooltipTrigger asChild>
+   576→                                <Info className="size-3.5 text-muted-foreground cursor-help" />
+   577→                              </TooltipTrigger>
+   578→                              <TooltipContent side="top" className="max-w-[240px] text-xs">
+   579→                                An additional amount you pay each month on top
+   580→                                of your regular payment. This goes directly
+   581→                                toward reducing your principal balance, helping
+   582→                                you pay off the loan faster and save on interest.
+   583→                              </TooltipContent>
+   584→                            </Tooltip>
+   585→                          </div>
+   586→                          <span className="text-sm font-semibold text-foreground">
+   587→                            {formatCurrency(inputs.extraMonthly)}
+   588→                          </span>
+   589→                        </div>
+   590→                        <Slider
+   591→                          id="extra-monthly"
+   592→                          min={0}
+   593→                          max={5000}
+   594→                          step={50}
+   595→                          value={[inputs.extraMonthly]}
+   596→                          onValueChange={([v]) =>
+   597→                            setInputs((p) => ({ ...p, extraMonthly: v }))
+   598→                          }
+   599→                          aria-label="Extra monthly payment"
+   600→                          className="w-full"
+   601→                        />
+   602→                        <div className="flex justify-between text-xs text-muted-foreground">
+   603→                          <span>$0</span>
+   604→                          <span>$5,000</span>
+   605→                        </div>
+   606→                        <Input
+   607→                          type="number"
+   608→                          min={0}
+   609→                          max={5000}
+   610→                          step={50}
+   611→                          value={inputs.extraMonthly}
+   612→                          onChange={(e) =>
+   613→                            handleInputChange("extraMonthly", e.target.value)
+   614→                          }
+   615→                          className="mt-1"
+   616→                          aria-label="Extra monthly payment input"
+   617→                        />
+   618→                      </div>
+   619→
+   620→                      {/* Start From Month */}
+   621→                      <div className="space-y-2">
+   622→                        <div className="flex items-center justify-between">
+   623→                          <div className="flex items-center gap-1.5">
+   624→                            <Label htmlFor="extra-start-month" className="text-sm font-medium">
+   625→                              Start From Month
+   626→                            </Label>
+   627→                            <Tooltip>
+   628→                              <TooltipTrigger asChild>
+   629→                                <Info className="size-3.5 text-muted-foreground cursor-help" />
+   630→                              </TooltipTrigger>
+   631→                              <TooltipContent side="top" className="max-w-[240px] text-xs">
+   632→                                The month number when you begin making extra
+   633→                                payments. For example, set to 1 to start
+   634→                                immediately, or 3 to begin after the third
+   635→                                regular payment.
+   636→                              </TooltipContent>
+   637→                            </Tooltip>
+   638→                          </div>
+   639→                          <span className="text-sm font-semibold text-foreground">
+   640→                            Month {inputs.extraStartMonth}
+   641→                          </span>
+   642→                        </div>
+   643→                        <Slider
+   644→                          id="extra-start-month"
+   645→                          min={1}
+   646→                          max={inputs.termMonths}
+   647→                          step={1}
+   648→                          value={[inputs.extraStartMonth]}
+   649→                          onValueChange={([v]) =>
+   650→                            setInputs((p) => ({ ...p, extraStartMonth: v }))
+   651→                          }
+   652→                          aria-label="Start extra payments from month"
+   653→                          className="w-full"
+   654→                        />
+   655→                        <div className="flex justify-between text-xs text-muted-foreground">
+   656→                          <span>1</span>
+   657→                          <span>{inputs.termMonths}</span>
+   658→                        </div>
+   659→                        <Input
+   660→                          type="number"
+   661→                          min={1}
+   662→                          max={inputs.termMonths}
+   663→                          step={1}
+   664→                          value={inputs.extraStartMonth}
+   665→                          onChange={(e) =>
+   666→                            handleInputChange("extraStartMonth", e.target.value)
+   667→                          }
+   668→                          className="mt-1"
+   669→                          aria-label="Start extra payments from month input"
+   670→                        />
+   671→                      </div>
+   672→                    </div>
+   673→                  )}
+   674→                </div>
+   675→              </div>
+   676→
+   677→              {/* ─── Results ─── */}
+   678→              <div className="space-y-4">
+   679→                {baseResult.schedule.length > 0 ? (
+   680→                  <>
+   681→                    {/* Monthly Payment Highlight */}
+   682→                    <div className="rounded-lg bg-ember/10 border border-ember/20 p-5 text-center">
+   683→                      <p className="text-sm font-medium text-muted-foreground mb-1">
+   684→                        Estimated Monthly Payment
+   685→                      </p>
+   686→                      <p className="text-4xl font-bold tracking-tight text-ember">
+   687→                        {formatCurrency(baseResult.monthlyPayment)}
+   688→                      </p>
+   689→                      <p className="text-xs text-muted-foreground mt-1">
+   690→                        for {inputs.termMonths} month{inputs.termMonths !== 1 ? "s" : ""}
+   691→                      </p>
+   692→                    </div>
+   693→
+   694→                    {/* Breakdown Grid */}
+   695→                    <div className="grid grid-cols-2 gap-3">
+   696→                      <ResultCard
+   697→                        label="Financed Amount"
+   698→                        value={formatCurrency(financedAmount)}
+   699→                        subtext={`Price ${formatCurrency(inputs.purchasePrice)} - trade-in ${formatCurrency(inputs.tradeInValue)} - down ${formatCurrency(inputs.downPayment)}${inputs.salesTaxRate > 0 ? ` + tax ${formatCurrency(salesTaxAmount)}` : ""}`}
+   700→                      />
+   701→                      <ResultCard
+   702→                        label="Total Interest"
+   703→                        value={formatCurrency(baseResult.totalInterest)}
+   704→                        subtext={`${formatPercent(
+   705→                          (baseResult.totalInterest / baseResult.totalCost) * 100
+   706→                        )} of total cost`}
+   707→                      />
+   708→                      <ResultCard
+   709→                        label="Total Cost"
+   710→                        value={formatCurrency(baseResult.totalCost)}
+   711→                        subtext="Principal + interest"
+   712→                      />
+   713→                      <ResultCard
+   714→                        label="Sales Tax Amount"
+   715→                        value={formatCurrency(salesTaxAmount)}
+   716→                        subtext={`${formatPercent(inputs.salesTaxRate)} of ${formatCurrency(inputs.purchasePrice)}`}
+   717→                      />
+   718→                    </div>
+   719→
+   720→                    {/* Early Payoff Savings */}
+   721→                    {inputs.extraMonthly > 0 && (
+   722→                      <div className="rounded-lg border border-ember/30 bg-ember/5 p-4 space-y-2">
+   723→                        <p className="text-sm font-semibold text-ember">Early Payoff Savings</p>
+   724→                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+   725→                          <div>
+   726→                            <p className="text-xs text-muted-foreground">Months Saved</p>
+   727→                            <p className="text-base font-bold">{result.monthsSaved}</p>
+   728→                          </div>
+   729→                          <div>
+   730→                            <p className="text-xs text-muted-foreground">Interest Saved</p>
+   731→                            <p className="text-base font-bold text-ember">{formatCurrency(result.interestSaved)}</p>
+   732→                          </div>
+   733→                          <div>
+   734→                            <p className="text-xs text-muted-foreground">New Total Cost</p>
+   735→                            <p className="text-base font-bold">{formatCurrency(result.result.totalCost)}</p>
+   736→                          </div>
+   737→                        </div>
+   738→                      </div>
+   739→                    )}
+   740→
+   741→                    {/* Actions */}
+   742→                    <div className="flex flex-wrap gap-2 no-print">
+   743→                      <Button
+   744→                        variant="outline"
+   745→                        size="sm"
+   746→                        onClick={handleCopyLink}
+   747→                        className="text-xs"
+   748→                      >
+   749→                        {copied ? (
+   750→                          <Check className="mr-1.5 size-3.5" />
+   751→                        ) : (
+   752→                          <Copy className="mr-1.5 size-3.5" />
+   753→                        )}
+   754→                        {copied ? "Copied" : "Copy Link"}
+   755→                      </Button>
+   756→                      <Button
+   757→                        variant="outline"
+   758→                        size="sm"
+   759→                        onClick={handlePrint}
+   760→                        className="text-xs"
+   761→                      >
+   762→                        <Printer className="mr-1.5 size-3.5" />
+   763→                        Print
+   764→                      </Button>
+   765→                      <Button
+   766→                        variant="ghost"
+   767→                        size="sm"
+   768→                        onClick={handleReset}
+   769→                        className="text-xs"
+   770→                      >
+   771→                        <RotateCcw className="mr-1.5 size-3.5" />
+   772→                        Reset
+   773→                      </Button>
+   774→                    </div>
+   775→
+   776→                    {/* Disclaimer */}
+   777→                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+   778→                      This is an estimate for informational purposes only. Actual
+   779→                      terms vary by lender, state, and credit profile. Always
+   780→                      review your loan agreement carefully before signing.
+   781→                    </p>
+   782→                  </>
+   783→                ) : (
+   784→                  <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+   785→                    Enter valid loan details to see results.
+   786→                  </div>
+   787→                )}
+   788→              </div>
+   789→            </div>
+   790→          </CardContent>
+   791→        </Card>
+   792→
+   793→        {/* ─── Amortization Table ─── */}
+   794→        {baseResult.schedule.length > 0 && (
+   795→          <Card className="print-break-inside">
+   796→            <CardHeader className="pb-3">
+   797→              <button
+   798→                type="button"
+   799→                onClick={() => setShowAmortization(!showAmortization)}
+   800→                className="no-print flex w-full items-center justify-between text-left"
+   801→                aria-expanded={showAmortization}
+   802→              >
+   803→                <CardTitle className="text-lg">
+   804→                  Amortization Schedule
+   805→                </CardTitle>
+   806→                {showAmortization ? (
+   807→                  <ChevronUp className="size-5 text-muted-foreground" />
+   808→                ) : (
+   809→                  <ChevronDown className="size-5 text-muted-foreground" />
+   810→                )}
+   811→              </button>
+   812→              {/* Print-only title (button is hidden in print) */}
+   813→              <CardTitle className="hidden print:block text-lg">
+   814→                Amortization Schedule
+   815→              </CardTitle>
+   816→            </CardHeader>
+   817→            <CardContent className={showAmortization ? "" : "hidden print:block"}>
+   818→              <div className="amortization-scroll max-h-96 overflow-y-auto custom-scrollbar rounded-md border">
+   819→                <Table>
+   820→                  <TableHeader>
+   821→                    <TableRow>
+   822→                      <TableHead className="w-16">Month</TableHead>
+   823→                      <TableHead className="text-right">Payment</TableHead>
+   824→                      <TableHead className="text-right">Principal</TableHead>
+   825→                      <TableHead className="text-right">Interest</TableHead>
+   826→                      <TableHead className="text-right">Balance</TableHead>
+   827→                    </TableRow>
+   828→                  </TableHeader>
+   829→                  <TableBody>
+   830→                    {baseResult.schedule.map((row) => (
+   831→                      <TableRow key={row.month}>
+   832→                        <TableCell className="font-medium">
+   833→                          {row.month}
+   834→                        </TableCell>
+   835→                        <TableCell className="text-right">
+   836→                          {formatCurrency(row.payment)}
+   837→                        </TableCell>
+   838→                        <TableCell className="text-right">
+   839→                          {formatCurrency(row.principal)}
+   840→                        </TableCell>
+   841→                        <TableCell className="text-right">
+   842→                          {formatCurrency(row.interest)}
+   843→                        </TableCell>
+   844→                        <TableCell className="text-right font-medium">
+   845→                          {formatCurrency(row.balance)}
+   846→                        </TableCell>
+   847→                      </TableRow>
+   848→                    ))}
+   849→                  </TableBody>
+   850→                </Table>
+   851→              </div>
+   852→              <div className="mt-3 flex flex-wrap justify-end gap-x-6 gap-y-1 text-sm font-medium">
+   853→                <span>
+   854→                  Total Paid:{" "}
+   855→                  <span className="text-ember">
+   856→                    {formatCurrency(baseResult.totalCost)}
+   857→                  </span>
+   858→                </span>
+   859→                <span>
+   860→                  Total Interest:{" "}
+   861→                  <span className="text-destructive">
+   862→                    {formatCurrency(baseResult.totalInterest)}
+   863→                  </span>
+   864→                </span>
+   865→              </div>
+   866→            </CardContent>
+   867→          </Card>
+   868→        )}
+   869→
+   870→        {/* ─── Print-only footer: URL + date ─── */}
+   871→        <PrintFooter />
+   872→      </div>
+   873→    </TooltipProvider>
+   874→  );
+   875→}
+   876→
+   877→/* ─── Sub-components ─── */
+   878→
+   879→function ResultCard({
+   880→  label,
+   881→  value,
+   882→  subtext,
+   883→}: {
+   884→  label: string;
+   885→  value: string;
+   886→  subtext: string;
+   887→}) {
+   888→  return (
+   889→    <div className="rounded-md border bg-card p-3">
+   890→      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+   891→      <p className="mt-0.5 text-lg font-bold tracking-tight">{value}</p>
+   892→      <p className="text-[11px] text-muted-foreground">{subtext}</p>
+   893→    </div>
+   894→  );
+   895→}
+   896→
+   897→function PrintFooter() {
+   898→  return (
+   899→    <div className="hidden print:block print:mt-6 print:pt-3 print:border-t print:border-gray-300 print:text-[8pt] print:text-gray-500 print:flex print:justify-between">
+   900→      <span>CalcForge - thecalcforge.com</span>
+   901→      <PrintDateAndUrl />
+   902→    </div>
+   903→  );
+   904→}
+   905→
+   906→function PrintDateAndUrl() {
+   907→  const text = useMemo(() => {
+   908→    if (typeof window === "undefined") return "";
+   909→    const d = new Date().toLocaleDateString("en-US", {
+   910→      year: "numeric",
+   911→      month: "long",
+   912→      day: "numeric",
+   913→    });
+   914→    return `${window.location.host}${window.location.pathname} · Printed ${d}`;
+   915→  }, []);
+   916→  return <span>{text}</span>;
+   917→}
