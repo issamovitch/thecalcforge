@@ -463,3 +463,32 @@ Stage Summary:
 - New files: src/components/calculators/AutoLoanCalculator.tsx, src/app/loans/auto-loan-calculator/page.tsx
 - Modified: src/config/site.config.ts (added auto loan entry)
 - Title loan extra payments: CONFIRMED BUILT AND FUNCTIONAL via browser test
+
+---
+Task ID: 1
+Agent: Main
+Task: Build /loans/debt-consolidation-calculator + fix auto loan page + answer title loan extra-payments (6th request)
+
+Work Log:
+- Read all template files (BoatRVCalculator, PersonalLoanCalculator, TitleLoanCalculator, loan-math.ts, site.config.ts, auto loan page, loans hub)
+- Confirmed Title Loan Calculator already has extra payments (extraMonthly, extraStartMonth, calculateLoanWithExtra, collapsible "Extra Monthly Payments" button, "Early Payoff Savings" panel). Hub FAQ is correct.
+- Fixed auto loan page: changed "A 72-month (6-year) term is common for new and used car purchases" to "A 72-month (6-year) term extends the repayment window to six years" (removed unsourced market claim)
+- Added calculateFixedPaymentPayoff() to loan-math.ts: simulates month-by-month payoff given balance, APR, and fixed monthly payment. Returns monthsToPayoff, totalInterest, totalCost, neverPayoff flag. Capped at 600 months.
+- Built DebtConsolidationCalculator.tsx: comparison tool with repeatable debt rows (add/remove), consolidation loan side (auto-filled balance, APR slider, term slider, origination fee), side-by-side verdict table, per-debt breakdown, honesty callout about secured loans and spending habits. URL params encoding (pipe-delimited rows). Print footer.
+- Built /loans/debt-consolidation-calculator/page.tsx: 5 H2 sections, engine-computed prose, FAQ (5 items), JSON-LD (BreadcrumbList, FAQPage, WebApplication), related calculators links.
+- Added entry to calculatorPages in site.config.ts (label, href, description, longDescription, typesCopy, primaryKeyword, category).
+- Lint clean, no console errors. Browser-verified: page renders, 3 default debts show correct payoff months and interest, verdict shows "saves $5,484.89", Add Debt adds 4th row, URL params sync, changing to aggressive-payer debts triggers "costs more" verdict ($1,750.93), hub page lists new calculator.
+
+Stage Summary:
+- Title loan extra-payments: CONFIRMED EXISTS (6th time answering). The component has extraMonthly, extraStartMonth in interface/defaults, URL param read/write, calculateLoanWithExtra() call, collapsible UI, "Early Payoff Savings" panel. Hub FAQ is correct and needs no change.
+- Auto loan page fix: "is common" removed, replaced with descriptive statement.
+- Debt consolidation calculator: fully built and browser-verified.
+  Computed values for default scenario ($20K across 3 cards at 22/19/24% with $600/mo, consolidated at 12% for 48mo):
+    - Card A ($8K@22%, $250/mo): 49 months, $4,158.37 interest
+    - Card B ($7K@19%, $200/mo): 52 months, $3,284.87 interest
+    - Card C ($5K@24%, $150/mo): 56 months, $3,322.09 interest
+    - Current total: $600/mo, $10,765.33 interest, 56 months max
+    - Consolidated: $526.68/mo, $5,280.44 interest, 48 months
+    - Verdict: SAVES $5,484.89 in total, $73.32/mo less, 8 months sooner
+  Computed values for $20K at 60 months: $444.89/mo, $6,693.31 interest, saves $4,072.02 interest, extends 4 months
+  Computed values for "costs more" case ($10K aggressive, consolidated 48mo): costs $1,750.93 more in total

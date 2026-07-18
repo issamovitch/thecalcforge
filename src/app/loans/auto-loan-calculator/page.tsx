@@ -344,7 +344,7 @@ export default function AutoLoanCalculatorPage() {
           72 Month Car Loan Calculator
         </h2>
         <p>
-          A 72-month (6-year) term is common for new and used car purchases.
+          A 72-month (6-year) term extends the repayment window to six years.
           Extending the term from 36 months to 84 months lowers each monthly
           payment but raises the total interest paid, and it extends the window
           during which the borrower owes more than the car is worth. The table

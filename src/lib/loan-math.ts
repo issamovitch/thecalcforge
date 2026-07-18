@@ -688,6 +688,78 @@ export function calculateEffectiveAPR(
   return r2(monthlyRate * 12 * 100);
 }
 
+// ── Fixed-payment payoff (for debt consolidation comparison) ─────────────
+
+export interface FixedPaymentPayoff {
+  /** Number of months until balance reaches zero */
+  monthsToPayoff: number;
+  /** Total interest paid over the payoff period */
+  totalInterest: number;
+  /** Total amount paid (principal + interest) */
+  totalCost: number;
+  /** True if the monthly payment does not cover monthly interest */
+  neverPayoff: boolean;
+}
+
+/**
+ * Given a balance, APR, and fixed monthly payment, simulates
+ * month-by-month until the balance is zero (or flags as never
+ * paying off if the payment does not exceed monthly interest).
+ *
+ * Used by the debt consolidation calculator to evaluate each
+ * existing debt at its current payment level.
+ */
+export function calculateFixedPaymentPayoff(
+  balance: number,
+  apr: number,
+  monthlyPayment: number,
+): FixedPaymentPayoff {
+  if (balance <= 0) {
+    return { monthsToPayoff: 0, totalInterest: 0, totalCost: 0, neverPayoff: false };
+  }
+  if (monthlyPayment <= 0) {
+    return { monthsToPayoff: 0, totalInterest: 0, totalCost: 0, neverPayoff: true };
+  }
+
+  const monthlyRate = apr / 100 / 12;
+  const firstMonthInterest = balance * monthlyRate;
+
+  if (monthlyPayment <= firstMonthInterest) {
+    return { monthsToPayoff: 0, totalInterest: 0, totalCost: 0, neverPayoff: true };
+  }
+
+  let remaining = balance;
+  let totalPayments = 0;
+  let months = 0;
+  const maxMonths = 600; // 50-year safety cap
+
+  while (remaining > 0 && months < maxMonths) {
+    months++;
+    const interest = remaining * monthlyRate;
+    const principal = monthlyPayment - interest;
+
+    if (principal >= remaining) {
+      // Final month: pay remaining balance + accrued interest
+      totalPayments += remaining + interest;
+      remaining = 0;
+      break;
+    }
+
+    remaining -= principal;
+    totalPayments += monthlyPayment;
+  }
+
+  // If still positive after 600 months, treat as never paying off
+  if (remaining > 0) {
+    return { monthsToPayoff: 0, totalInterest: 0, totalCost: 0, neverPayoff: true };
+  }
+
+  const totalCost = r2(totalPayments);
+  const totalInterest = r2(totalCost - balance);
+
+  return { monthsToPayoff: months, totalInterest, totalCost, neverPayoff: false };
+}
+
 // ── Formatters ───────────────────────────────────────────────────────────────
 
 export function formatCurrency(value: number): string {

@@ -69,9 +69,9 @@ export function Header() {
                 <ChevronDown className="size-3.5" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuContent align="start" className="w-72">
               {calculatorPages.map((p) => (
-                <DropdownMenuItem key={p.href} asChild>
+                <DropdownMenuItem key={p.href} asChild className="whitespace-nowrap">
                   <Link href={p.href}>{p.label}</Link>
                 </DropdownMenuItem>
               ))}

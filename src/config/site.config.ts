@@ -96,6 +96,18 @@ export const calculatorPages = [
     primaryKeyword: "auto loan calculator",
     category: "loans",
   },
+  {
+    label: "Debt Consolidation Calculator",
+    href: "/loans/debt-consolidation-calculator",
+    description:
+      "Compare current debts against a consolidation loan to see total cost, monthly payment, and whether you save or overpay.",
+    longDescription:
+      "Enter your existing debts with balances, rates, and current payments, then compare keeping them against a single consolidation loan. The tool shows a side-by-side verdict: total interest, monthly payment, payoff timeline, and whether consolidation saves money or costs more. Supports origination fees and flags debts that will never pay off at their current payment level.",
+    typesCopy:
+      "compares current debts against a consolidation loan with verdict on total cost, monthly savings, and payoff timeline",
+    primaryKeyword: "debt consolidation calculator",
+    category: "loans",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────
