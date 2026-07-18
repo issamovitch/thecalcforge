@@ -379,8 +379,9 @@ export default function DTICalculator() {
                   {inputs.debts.map((debt, idx) => (
                     <div
                       key={debt.id}
-                      className="rounded-lg border bg-card p-3 sm:p-4"
+                      className="rounded-lg border bg-card p-3 sm:p-4 space-y-2"
                     >
+                      {/* Row 1: Number badge + Debt name (full width) */}
                       <div className="flex items-center gap-2">
                         <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-ember/10 text-xs font-semibold text-ember">
                           {idx + 1}
@@ -390,13 +391,16 @@ export default function DTICalculator() {
                           value={debt.name}
                           onChange={(e) => updateDebtName(debt.id, e.target.value)}
                           placeholder="Debt name"
-                          className="flex-1 h-8 text-sm no-print"
+                          className="w-full h-8 text-sm no-print"
                           aria-label={`Debt ${idx + 1} name`}
                         />
-                        <span className="hidden sm:inline text-sm font-medium min-w-0 truncate max-w-[180px] print:inline">
+                        <span className="hidden print:inline text-sm font-medium">
                           {debt.name || `Debt ${idx + 1}`}
                         </span>
-                        <div className="relative shrink-0 w-28 sm:w-32 no-print">
+                      </div>
+                      {/* Row 2: Amount + Remove button */}
+                      <div className="flex items-center gap-2 no-print">
+                        <div className="relative shrink-0 w-28 sm:w-32">
                           <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
                             $
                           </span>
@@ -411,14 +415,11 @@ export default function DTICalculator() {
                             aria-label={`Debt ${idx + 1} amount`}
                           />
                         </div>
-                        <span className="hidden print:inline text-sm font-medium ml-auto">
-                          {fmtCurrency(debt.amount)}
-                        </span>
                         {!debt.isDefault && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="size-7 p-0 text-muted-foreground hover:text-destructive no-print shrink-0"
+                            className="size-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
                             onClick={() => removeDebt(debt.id)}
                             aria-label={`Remove ${debt.name || `debt ${idx + 1}`}`}
                           >
@@ -426,6 +427,9 @@ export default function DTICalculator() {
                           </Button>
                         )}
                       </div>
+                      <span className="hidden print:inline text-sm font-medium">
+                        Amount: {fmtCurrency(debt.amount)}
+                      </span>
                     </div>
                   ))}
 

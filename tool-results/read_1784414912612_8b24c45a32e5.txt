@@ -1,0 +1,717 @@
+     1→"use client";
+     2→
+     3→import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+     4→import { Copy, Check, Printer, RotateCcw, Info, Plus, X, Home } from "lucide-react";
+     5→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+     6→import { Input } from "@/components/ui/input";
+     7→import { Label } from "@/components/ui/label";
+     8→import { Button } from "@/components/ui/button";
+     9→import {
+    10→  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+    11→} from "@/components/ui/tooltip";
+    12→import { toast } from "sonner";
+    13→import ShareButtons from "@/components/calculators/ShareButtons";
+    14→
+    15→/* ─── Types ─── */
+    16→
+    17→interface DebtRow {
+    18→  id: string;
+    19→  name: string;
+    20→  amount: number;
+    21→  isDefault: boolean;
+    22→}
+    23→
+    24→interface DTIInputs {
+    25→  income: number;
+    26→  debts: DebtRow[];
+    27→}
+    28→
+    29→interface DTIResult {
+    30→  frontEnd: number;
+    31→  backEnd: number;
+    32→  frontEndVerdict: { label: string; text: string };
+    33→  backEndVerdict: { label: string; text: string };
+    34→  maxHousing28: number;
+    35→  maxHousing36: number;
+    36→  totalDebts: number;
+    37→  nonHousingDebts: number;
+    38→}
+    39→
+    40→/* ─── Defaults ─── */
+    41→
+    42→const genId = () => Math.random().toString(36).slice(2, 9);
+    43→
+    44→const DEFAULT_DEBTS: DebtRow[] = [
+    45→  { id: genId(), name: "Rent / Mortgage Payment", amount: 1500, isDefault: true },
+    46→  { id: genId(), name: "Car Loan / Lease", amount: 350, isDefault: true },
+    47→  { id: genId(), name: "Student Loan", amount: 250, isDefault: true },
+    48→  { id: genId(), name: "Credit Card Minimums", amount: 150, isDefault: true },
+    49→  { id: genId(), name: "Other Debts", amount: 0, isDefault: true },
+    50→];
+    51→
+    52→export const DEFAULT_INPUTS: DTIInputs = {
+    53→  income: 5000,
+    54→  debts: DEFAULT_DEBTS,
+    55→};
+    56→
+    57→export const DEFAULT_RESULT: DTIResult = {
+    58→  frontEnd: 30,
+    59→  backEnd: 45,
+    60→  frontEndVerdict: { label: "Good", text: "Meets most lender requirements" },
+    61→  backEndVerdict: { label: "Acceptable", text: "At or near QM cap" },
+    62→  maxHousing28: 1400,
+    63→  maxHousing36: 1100,
+    64→  totalDebts: 2250,
+    65→  nonHousingDebts: 750,
+    66→};
+    67→
+    68→/* ─── Formatters ─── */
+    69→
+    70→const fmtCurrency = (v: number) =>
+    71→  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
+    72→
+    73→const fmtPercent = (v: number) => `${v.toFixed(1)}%`;
+    74→
+    75→/* ─── Verdict Logic ─── */
+    76→
+    77→function getVerdict(dti: number): { label: string; text: string } {
+    78→  if (dti <= 28) return { label: "Excellent", text: "Well within all lender limits" };
+    79→  if (dti <= 36) return { label: "Good", text: "Meets most lender requirements" };
+    80→  if (dti <= 43) return { label: "Acceptable", text: "At or near QM cap" };
+    81→  if (dti <= 50) return { label: "Caution", text: "May need compensating factors" };
+    82→  return { label: "High Risk", text: "Difficult to qualify" };
+    83→}
+    84→
+    85→function getVerdictColor(label: string): string {
+    86→  switch (label) {
+    87→    case "Excellent": return "text-green-600 dark:text-green-400";
+    88→    case "Good": return "text-yellow-600 dark:text-yellow-400";
+    89→    case "Acceptable": return "text-orange-500 dark:text-orange-400";
+    90→    case "Caution": return "text-orange-600 dark:text-orange-500";
+    91→    case "High Risk": return "text-red-600 dark:text-red-500";
+    92→    default: return "text-foreground";
+    93→  }
+    94→}
+    95→
+    96→/* ─── Calculation Engine ─── */
+    97→
+    98→function calculateDTI(inputs: DTIInputs): DTIResult {
+    99→  const { income, debts } = inputs;
+   100→
+   101→  if (income <= 0) {
+   102→    const zeroVerdict = getVerdict(0);
+   103→    return {
+   104→      frontEnd: 0,
+   105→      backEnd: 0,
+   106→      frontEndVerdict: zeroVerdict,
+   107→      backEndVerdict: zeroVerdict,
+   108→      maxHousing28: 0,
+   109→      maxHousing36: 0,
+   110→      totalDebts: 0,
+   111→      nonHousingDebts: 0,
+   112→    };
+   113→  }
+   114→
+   115→  const housingDebt = debts[0]?.amount ?? 0;
+   116→  const totalDebts = debts.reduce((sum, d) => sum + d.amount, 0);
+   117→  const nonHousingDebts = totalDebts - housingDebt;
+   118→
+   119→  const frontEnd = (housingDebt / income) * 100;
+   120→  const backEnd = (totalDebts / income) * 100;
+   121→
+   122→  return {
+   123→    frontEnd,
+   124→    backEnd,
+   125→    frontEndVerdict: getVerdict(frontEnd),
+   126→    backEndVerdict: getVerdict(backEnd),
+   127→    maxHousing28: income * 0.28,
+   128→    maxHousing36: income * 0.36 - nonHousingDebts,
+   129→    totalDebts,
+   130→    nonHousingDebts,
+   131→  };
+   132→}
+   133→
+   134→/* ─── DTI Zones ─── */
+   135→
+   136→const DTI_ZONES = [
+   137→  { max: 28, color: "bg-green-500", label: "Ideal", textColor: "text-green-700 dark:text-green-400" },
+   138→  { max: 36, color: "bg-yellow-400", label: "Good", textColor: "text-yellow-700 dark:text-yellow-400" },
+   139→  { max: 43, color: "bg-orange-400", label: "Acceptable", textColor: "text-orange-700 dark:text-orange-400" },
+   140→  { max: 50, color: "bg-orange-500", label: "Caution", textColor: "text-orange-700 dark:text-orange-400" },
+   141→  { max: 100, color: "bg-red-500", label: "High Risk", textColor: "text-red-700 dark:text-red-400" },
+   142→];
+   143→
+   144→/* ─── Component ─── */
+   145→
+   146→export default function DTICalculator() {
+   147→  const [inputs, setInputs] = useState<DTIInputs>(() => {
+   148→    if (typeof window === "undefined") return DEFAULT_INPUTS;
+   149→    const params = new URLSearchParams(window.location.search);
+   150→
+   151→    const hasParams = params.get("income");
+   152→    if (!hasParams) return DEFAULT_INPUTS;
+   153→
+   154→    const income = params.get("income") ? parseFloat(params.get("income")!) : DEFAULT_INPUTS.income;
+   155→
+   156→    const debts: DebtRow[] = [];
+   157→
+   158→    const defaultNames = ["Rent / Mortgage Payment", "Car Loan / Lease", "Student Loan", "Credit Card Minimums", "Other Debts"];
+   159→    const paramKeys = ["housing", "auto", "student", "cards", "other"];
+   160→
+   161→    // Parse the 5 default debt rows
+   162→    for (let i = 0; i < 5; i++) {
+   163→      const amt = params.get(paramKeys[i]);
+   164→      const name = params.get(`${paramKeys[i]}name`) || defaultNames[i];
+   165→      debts.push({
+   166→        id: genId(),
+   167→        name,
+   168→        amount: amt ? parseFloat(amt) : 0,
+   169→        isDefault: true,
+   170→      });
+   171→    }
+   172→
+   173→    // Parse custom debt rows
+   174→    for (let i = 1; i <= 10; i++) {
+   175→      const cName = params.get(`custom${i}name`);
+   176→      const cAmt = params.get(`custom${i}amt`);
+   177→      if (!cName && !cAmt) break;
+   178→      debts.push({
+   179→        id: genId(),
+   180→        name: cName || `Custom Debt ${i}`,
+   181→        amount: cAmt ? parseFloat(cAmt) : 0,
+   182→        isDefault: false,
+   183→      });
+   184→    }
+   185→
+   186→    if (debts.length === 0) return DEFAULT_INPUTS;
+   187→    return { income, debts };
+   188→  });
+   189→
+   190→  const [copied, setCopied] = useState(false);
+   191→
+   192→  const result = useMemo(() => calculateDTI(inputs), [inputs]);
+   193→
+   194→  // Sync URL query string when inputs change (skip initial render)
+   195→  const isInitialMount = useRef(true);
+   196→  useEffect(() => {
+   197→    if (isInitialMount.current) {
+   198→      isInitialMount.current = false;
+   199→      return;
+   200→    }
+   201→    if (typeof window === "undefined") return;
+   202→    const params = new URLSearchParams();
+   203→    params.set("income", inputs.income.toString());
+   204→
+   205→    const paramKeys = ["housing", "auto", "student", "cards", "other"];
+   206→    for (let i = 0; i < Math.min(5, inputs.debts.length); i++) {
+   207→      params.set(paramKeys[i], inputs.debts[i].amount.toString());
+   208→    }
+   209→
+   210→    // Custom debts
+   211→    const customDebts = inputs.debts.filter((d) => !d.isDefault);
+   212→    customDebts.forEach((d, i) => {
+   213→      params.set(`custom${i + 1}name`, d.name);
+   214→      params.set(`custom${i + 1}amt`, d.amount.toString());
+   215→    });
+   216→
+   217→    const newUrl = `${window.location.pathname}?${params.toString()}`;
+   218→    window.history.replaceState(null, "", newUrl);
+   219→  }, [inputs]);
+   220→
+   221→  const handleCopyLink = useCallback(async () => {
+   222→    try {
+   223→      await navigator.clipboard.writeText(window.location.href);
+   224→      setCopied(true);
+   225→      toast.success("Link copied to clipboard");
+   226→      setTimeout(() => setCopied(false), 2000);
+   227→    } catch {
+   228→      toast.error("Failed to copy link");
+   229→    }
+   230→  }, []);
+   231→
+   232→  const handlePrint = useCallback(() => {
+   233→    window.print();
+   234→  }, []);
+   235→
+   236→  const handleReset = useCallback(() => {
+   237→    setInputs(DEFAULT_INPUTS);
+   238→    toast.success("Calculator reset to defaults");
+   239→  }, []);
+   240→
+   241→  const updateIncome = useCallback((value: string) => {
+   242→    const num = parseFloat(value);
+   243→    setInputs((prev) => ({
+   244→      ...prev,
+   245→      income: isNaN(num) ? 0 : num,
+   246→    }));
+   247→  }, []);
+   248→
+   249→  const updateDebtAmount = useCallback((id: string, value: string) => {
+   250→    const num = parseFloat(value);
+   251→    setInputs((prev) => ({
+   252→      ...prev,
+   253→      debts: prev.debts.map((d) =>
+   254→        d.id === id ? { ...d, amount: isNaN(num) ? 0 : num } : d,
+   255→      ),
+   256→    }));
+   257→  }, []);
+   258→
+   259→  const updateDebtName = useCallback((id: string, value: string) => {
+   260→    setInputs((prev) => ({
+   261→      ...prev,
+   262→      debts: prev.debts.map((d) =>
+   263→        d.id === id ? { ...d, name: value } : d,
+   264→      ),
+   265→    }));
+   266→  }, []);
+   267→
+   268→  const addDebt = useCallback(() => {
+   269→    setInputs((prev) => ({
+   270→      ...prev,
+   271→      debts: [
+   272→        ...prev.debts,
+   273→        { id: genId(), name: "", amount: 0, isDefault: false },
+   274→      ],
+   275→    }));
+   276→  }, []);
+   277→
+   278→  const removeDebt = useCallback((id: string) => {
+   279→    setInputs((prev) => ({
+   280→      ...prev,
+   281→      debts: prev.debts.filter((d) => d.id !== id),
+   282→    }));
+   283→  }, []);
+   284→
+   285→  const totalDebts = useMemo(
+   286→    () => inputs.debts.reduce((sum, d) => sum + d.amount, 0),
+   287→    [inputs.debts],
+   288→  );
+   289→
+   290→  const hasIncome = inputs.income > 0;
+   291→
+   292→  // Meter position: clamp DTI between 0 and 65 for display
+   293→  const meterMax = 65;
+   294→  const meterPosition = Math.min(Math.max(result.backEnd, 0), meterMax);
+   295→  const meterPercent = (meterPosition / meterMax) * 100;
+   296→
+   297→  // Threshold positions on the meter
+   298→  const threshold28 = (28 / meterMax) * 100;
+   299→  const threshold36 = (36 / meterMax) * 100;
+   300→  const threshold43 = (43 / meterMax) * 100;
+   301→  const threshold50 = (50 / meterMax) * 100;
+   302→
+   303→  // Zone widths
+   304→  const zoneWidths = [
+   305→    ((28 - 0) / meterMax) * 100,
+   306→    ((36 - 28) / meterMax) * 100,
+   307→    ((43 - 36) / meterMax) * 100,
+   308→    ((50 - 43) / meterMax) * 100,
+   309→    ((meterMax - 50) / meterMax) * 100,
+   310→  ];
+   311→
+   312→  return (
+   313→    <TooltipProvider delayDuration={300}>
+   314→      <div className="space-y-6">
+   315→        {/* ─── Calculator Card ─── */}
+   316→        <Card className="print-break-inside">
+   317→          <CardHeader className="pb-4">
+   318→            <CardTitle className="flex items-center gap-2 text-xl">
+   319→              <Home className="size-5 text-ember" />
+   320→              Debt-to-Income (DTI) Ratio Calculator
+   321→            </CardTitle>
+   322→            <p className="text-sm text-muted-foreground">
+   323→              Your DTI ratio compares your monthly debt payments to your gross
+   324→              monthly income. Lenders use this to evaluate your ability to manage
+   325→              monthly payments and repay borrowed money.
+   326→            </p>
+   327→          </CardHeader>
+   328→          <CardContent>
+   329→            <div className="grid gap-6 lg:grid-cols-2">
+   330→              {/* ─── Inputs ─── */}
+   331→              <div className="space-y-5">
+   332→                {/* Gross Monthly Income */}
+   333→                <div className="space-y-2">
+   334→                  <div className="flex items-center gap-1.5">
+   335→                    <Label htmlFor="gross-income" className="text-sm font-medium">
+   336→                      Gross Monthly Income
+   337→                    </Label>
+   338→                    <Tooltip>
+   339→                      <TooltipTrigger asChild>
+   340→                        <Info className="size-3.5 text-muted-foreground cursor-help no-print" />
+   341→                      </TooltipTrigger>
+   342→                      <TooltipContent side="top" className="max-w-[280px] text-xs">
+   343→                        Your total pre-tax income before any deductions. Include
+   344→                        salary, wages, tips, bonuses, commissions, and any other
+   345→                        regular income sources.
+   346→                      </TooltipContent>
+   347→                    </Tooltip>
+   348→                  </div>
+   349→                  <div className="relative no-print">
+   350→                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+   351→                      $
+   352→                    </span>
+   353→                    <Input
+   354→                      id="gross-income"
+   355→                      type="number"
+   356→                      min={0}
+   357→                      step={100}
+   358→                      value={inputs.income || ""}
+   359→                      onChange={(e) => updateIncome(e.target.value)}
+   360→                      placeholder="5,000"
+   361→                      className="h-9 pl-7 text-sm"
+   362→                      aria-label="Gross monthly income"
+   363→                    />
+   364→                  </div>
+   365→                  <p className="hidden print:block text-sm font-medium">
+   366→                    Gross Monthly Income: {fmtCurrency(inputs.income)}
+   367→                  </p>
+   368→                </div>
+   369→
+   370→                {/* Monthly Debts */}
+   371→                <div className="space-y-3">
+   372→                  <div className="flex items-center justify-between">
+   373→                    <Label className="text-sm font-medium">Monthly Debts</Label>
+   374→                    <span className="text-xs text-muted-foreground">
+   375→                      Total: {fmtCurrency(totalDebts)}
+   376→                    </span>
+   377→                  </div>
+   378→
+   379→                  {inputs.debts.map((debt, idx) => (
+   380→                    <div
+   381→                      key={debt.id}
+   382→                      className="rounded-lg border bg-card p-3 sm:p-4"
+   383→                    >
+   384→                      <div className="flex items-center gap-2">
+   385→                        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-ember/10 text-xs font-semibold text-ember">
+   386→                          {idx + 1}
+   387→                        </span>
+   388→                        <Input
+   389→                          type="text"
+   390→                          value={debt.name}
+   391→                          onChange={(e) => updateDebtName(debt.id, e.target.value)}
+   392→                          placeholder="Debt name"
+   393→                          className="flex-1 h-8 text-sm no-print"
+   394→                          aria-label={`Debt ${idx + 1} name`}
+   395→                        />
+   396→                        <span className="hidden sm:inline text-sm font-medium min-w-0 truncate max-w-[180px] print:inline">
+   397→                          {debt.name || `Debt ${idx + 1}`}
+   398→                        </span>
+   399→                        <div className="relative shrink-0 w-28 sm:w-32 no-print">
+   400→                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+   401→                            $
+   402→                          </span>
+   403→                          <Input
+   404→                            type="number"
+   405→                            min={0}
+   406→                            step={25}
+   407→                            value={debt.amount || ""}
+   408→                            onChange={(e) => updateDebtAmount(debt.id, e.target.value)}
+   409→                            placeholder="0"
+   410→                            className="h-8 pl-6 text-sm text-right"
+   411→                            aria-label={`Debt ${idx + 1} amount`}
+   412→                          />
+   413→                        </div>
+   414→                        <span className="hidden print:inline text-sm font-medium ml-auto">
+   415→                          {fmtCurrency(debt.amount)}
+   416→                        </span>
+   417→                        {!debt.isDefault && (
+   418→                          <Button
+   419→                            variant="ghost"
+   420→                            size="sm"
+   421→                            className="size-7 p-0 text-muted-foreground hover:text-destructive no-print shrink-0"
+   422→                            onClick={() => removeDebt(debt.id)}
+   423→                            aria-label={`Remove ${debt.name || `debt ${idx + 1}`}`}
+   424→                          >
+   425→                            <X className="size-4" />
+   426→                          </Button>
+   427→                        )}
+   428→                      </div>
+   429→                    </div>
+   430→                  ))}
+   431→
+   432→                  {/* Add Debt Button */}
+   433→                  <Button
+   434→                    variant="outline"
+   435→                    size="sm"
+   436→                    onClick={addDebt}
+   437→                    className="w-full border-dashed text-muted-foreground hover:border-ember/40 hover:text-ember no-print"
+   438→                  >
+   439→                    <Plus className="mr-1.5 size-4" />
+   440→                    Add Debt
+   441→                  </Button>
+   442→                </div>
+   443→              </div>
+   444→
+   445→              {/* ─── Results ─── */}
+   446→              <div className="space-y-4">
+   447→                {hasIncome ? (
+   448→                  <>
+   449→                    {/* Print-only title */}
+   450→                    <h2 className="hidden print:block text-lg font-bold print:mb-3">
+   451→                      DTI Ratio Results
+   452→                    </h2>
+   453→
+   454→                    {/* Result Cards - 2 column grid */}
+   455→                    <div className="grid grid-cols-2 gap-3">
+   456→                      <ResultCard
+   457→                        label="Front-End DTI"
+   458→                        value={fmtPercent(result.frontEnd)}
+   459→                        subtext={result.frontEndVerdict.label}
+   460→                        valueClassName={getVerdictColor(result.frontEndVerdict.label)}
+   461→                      />
+   462→                      <ResultCard
+   463→                        label="Back-End DTI"
+   464→                        value={fmtPercent(result.backEnd)}
+   465→                        subtext={result.backEndVerdict.label}
+   466→                        valueClassName={getVerdictColor(result.backEndVerdict.label)}
+   467→                      />
+   468→                    </div>
+   469→
+   470→                    {/* Verdict Text */}
+   471→                    <div className="rounded-lg bg-muted/30 p-4 space-y-2">
+   472→                      <p className="text-sm">
+   473→                        <span className="font-medium">Front-End:</span>{" "}
+   474→                        <span className={getVerdictColor(result.frontEndVerdict.label)}>
+   475→                          {result.frontEndVerdict.text}
+   476→                        </span>
+   477→                      </p>
+   478→                      <p className="text-sm">
+   479→                        <span className="font-medium">Back-End:</span>{" "}
+   480→                        <span className={getVerdictColor(result.backEndVerdict.label)}>
+   481→                          {result.backEndVerdict.text}
+   482→                        </span>
+   483→                      </p>
+   484→                    </div>
+   485→
+   486→                    {/* Visual DTI Meter */}
+   487→                    <div className="space-y-2">
+   488→                      <p className="text-sm font-medium">DTI Ratio Meter</p>
+   489→                      <div className="relative">
+   490→                        {/* Bar */}
+   491→                        <div className="flex h-6 w-full overflow-hidden rounded-md border">
+   492→                          {DTI_ZONES.map((zone, i) => (
+   493→                            <div
+   494→                              key={zone.label}
+   495→                              className={zone.color}
+   496→                              style={{ width: `${zoneWidths[i]}%` }}
+   497→                            />
+   498→                          ))}
+   499→                        </div>
+   500→
+   501→                        {/* Threshold markers */}
+   502→                        {[28, 36, 43, 50].map((threshold) => {
+   503→                          const pos = (threshold / meterMax) * 100;
+   504→                          return (
+   505→                            <div
+   506→                              key={threshold}
+   507→                              className="absolute top-0 h-full flex flex-col items-center"
+   508→                              style={{ left: `${pos}%`, transform: "translateX(-50%)" }}
+   509→                            >
+   510→                              <div className="h-full w-px bg-black/20 dark:bg-white/30" />
+   511→                              <span className="mt-0.5 text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+   512→                                {threshold}%
+   513→                              </span>
+   514→                            </div>
+   515→                          );
+   516→                        })}
+   517→
+   518→                        {/* User's DTI marker */}
+   519→                        <div
+   520→                          className="absolute -top-2 transition-all duration-300 ease-out"
+   521→                          style={{ left: `${meterPercent}%`, transform: "translateX(-50%)" }}
+   522→                        >
+   523→                          <div className="flex flex-col items-center">
+   524→                            <div className="size-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-foreground" />
+   525→                            <span className="mt-0.5 rounded bg-foreground px-1 py-px text-[10px] font-bold text-background whitespace-nowrap">
+   526→                              {fmtPercent(result.backEnd)}
+   527→                            </span>
+   528→                          </div>
+   529→                        </div>
+   530→                      </div>
+   531→
+   532→                      {/* Zone legend */}
+   533→                      <div className="flex flex-wrap gap-x-4 gap-y-1">
+   534→                        {DTI_ZONES.map((zone) => (
+   535→                          <span key={zone.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+   536→                            <span className={`inline-block size-2.5 rounded-sm ${zone.color}`} />
+   537→                            {zone.label}
+   538→                          </span>
+   539→                        ))}
+   540→                      </div>
+   541→                    </div>
+   542→
+   543→                    {/* Lender Threshold Reference Card */}
+   544→                    <div className="rounded-lg bg-muted/30 p-4 space-y-3">
+   545→                      <p className="text-sm font-medium">Lender DTI Thresholds</p>
+   546→                      <div className="grid gap-2 text-xs">
+   547→                        <div className="flex items-start gap-2">
+   548→                          <span className="shrink-0 font-semibold text-foreground w-28">FHA Loans</span>
+   549→                          <span className="text-muted-foreground">
+   550→                            Typically up to 43% (automated) or 50% with compensating factors
+   551→                          </span>
+   552→                        </div>
+   553→                        <div className="flex items-start gap-2">
+   554→                          <span className="shrink-0 font-semibold text-foreground w-28">VA Loans</span>
+   555→                          <span className="text-muted-foreground">
+   556→                            ~41% guideline (discretionary overrides possible)
+   557→                          </span>
+   558→                        </div>
+   559→                        <div className="flex items-start gap-2">
+   560→                          <span className="shrink-0 font-semibold text-foreground w-28">Conventional</span>
+   561→                          <span className="text-muted-foreground">
+   562→                            Up to 45% (some lenders allow higher)
+   563→                          </span>
+   564→                        </div>
+   565→                        <div className="flex items-start gap-2">
+   566→                          <span className="shrink-0 font-semibold text-foreground w-28">QM Cap</span>
+   567→                          <span className="text-muted-foreground">
+   568→                            43% maximum for Qualified Mortgage status
+   569→                          </span>
+   570→                        </div>
+   571→                      </div>
+   572→                    </div>
+   573→
+   574→                    {/* How Much House Can I Afford */}
+   575→                    <div className="rounded-lg border bg-card p-4 space-y-2">
+   576→                      <p className="text-sm font-medium flex items-center gap-1.5">
+   577→                        <Home className="size-4 text-ember" />
+   578→                        How Much House Can I Afford?
+   579→                      </p>
+   580→                      <div className="grid gap-2 text-sm">
+   581→                        <div className="flex items-center justify-between">
+   582→                          <span className="text-muted-foreground">At 28% front-end DTI</span>
+   583→                          <span className="font-bold text-ember">
+   584→                            {fmtCurrency(result.maxHousing28)}/mo
+   585→                          </span>
+   586→                        </div>
+   587→                        <p className="text-[11px] text-muted-foreground">
+   588→                          Maximum housing payment based on gross income alone
+   589→                        </p>
+   590→                        <div className="border-t pt-2" />
+   591→                        <div className="flex items-center justify-between">
+   592→                          <span className="text-muted-foreground">At 36% back-end DTI</span>
+   593→                          <span className="font-bold text-ember">
+   594→                            {result.maxHousing36 > 0
+   595→                              ? `${fmtCurrency(result.maxHousing36)}/mo`
+   596→                              : "N/A"}
+   597→                          </span>
+   598→                        </div>
+   599→                        <p className="text-[11px] text-muted-foreground">
+   600→                          {result.maxHousing36 > 0
+   601→                            ? `After subtracting ${fmtCurrency(result.nonHousingDebts)} in non-housing debts from the 36% income limit`
+   602→                            : "Non-housing debts exceed the 36% income limit"}
+   603→                        </p>
+   604→                      </div>
+   605→                    </div>
+   606→
+   607→                    {/* Actions */}
+   608→                    <div className="flex flex-wrap items-center gap-3 no-print">
+   609→                      <div className="flex flex-wrap gap-2">
+   610→                        <Button
+   611→                          variant="outline"
+   612→                          size="sm"
+   613→                          onClick={handleCopyLink}
+   614→                          className="text-xs"
+   615→                        >
+   616→                          {copied ? (
+   617→                            <Check className="mr-1.5 size-3.5" />
+   618→                          ) : (
+   619→                            <Copy className="mr-1.5 size-3.5" />
+   620→                          )}
+   621→                          {copied ? "Copied" : "Copy Link"}
+   622→                        </Button>
+   623→                        <Button
+   624→                          variant="outline"
+   625→                          size="sm"
+   626→                          onClick={handlePrint}
+   627→                          className="text-xs"
+   628→                        >
+   629→                          <Printer className="mr-1.5 size-3.5" />
+   630→                          Print
+   631→                        </Button>
+   632→                        <Button
+   633→                          variant="outline"
+   634→                          size="sm"
+   635→                          onClick={handleReset}
+   636→                          className="text-xs"
+   637→                        >
+   638→                          <RotateCcw className="mr-1.5 size-3.5" />
+   639→                          Reset
+   640→                        </Button>
+   641→                      </div>
+   642→                      <ShareButtons
+   643→                        summaryText={`Back-end DTI: ${fmtPercent(result.backEnd)}. Calculate yours:`}
+   644→                      />
+   645→                    </div>
+   646→
+   647→                    {/* Disclaimer */}
+   648→                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+   649→                      This calculator provides estimates for informational purposes
+   650→                      only. Actual DTI calculations may vary by lender. Some
+   651→                      lenders include additional obligations like child support or
+   652→                      alimony. Always consult with a mortgage professional for
+   653→                      accurate qualification details.
+   654→                    </p>
+   655→                  </>
+   656→                ) : (
+   657→                  <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+   658→                    Enter your gross monthly income to see results.
+   659→                  </div>
+   660→                )}
+   661→              </div>
+   662→            </div>
+   663→          </CardContent>
+   664→        </Card>
+   665→
+   666→        {/* ─── Print-only footer ─── */}
+   667→        <PrintFooter />
+   668→      </div>
+   669→    </TooltipProvider>
+   670→  );
+   671→}
+   672→
+   673→/* ─── Sub-components ─── */
+   674→
+   675→function ResultCard({
+   676→  label,
+   677→  value,
+   678→  subtext,
+   679→  valueClassName,
+   680→}: {
+   681→  label: string;
+   682→  value: string;
+   683→  subtext: string;
+   684→  valueClassName?: string;
+   685→}) {
+   686→  return (
+   687→    <div className="rounded-md border bg-card p-3 print-break-inside">
+   688→      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+   689→      <p className={`mt-0.5 text-lg font-bold tracking-tight ${valueClassName ?? ""}`}>
+   690→        {value}
+   691→      </p>
+   692→      <p className="text-[11px] text-muted-foreground">{subtext}</p>
+   693→    </div>
+   694→  );
+   695→}
+   696→
+   697→function PrintFooter() {
+   698→  return (
+   699→    <div className="hidden print:block print:mt-6 print:pt-3 print:border-t print:border-gray-300 print:text-[8pt] print:text-gray-500 print:flex print:justify-between">
+   700→      <span>CalcForge - thecalcforge.com</span>
+   701→      <PrintDateAndUrl />
+   702→    </div>
+   703→  );
+   704→}
+   705→
+   706→function PrintDateAndUrl() {
+   707→  const text = useMemo(() => {
+   708→    if (typeof window === "undefined") return "";
+   709→    const d = new Date().toLocaleDateString("en-US", {
+   710→      year: "numeric",
+   711→      month: "long",
+   712→      day: "numeric",
+   713→    });
+   714→    return `${window.location.host}${window.location.pathname} - Printed ${d}`;
+   715→  }, []);
+   716→  return <span>{text}</span>;
+   717→}
