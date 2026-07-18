@@ -72,6 +72,18 @@ export const calculatorPages = [
     primaryKeyword: "boat loan calculator",
     category: "loans",
   },
+  {
+    label: "Personal Loan Calculator",
+    href: "/loans/personal-loan-calculator",
+    description:
+      "Calculate personal loan payments with amortization, origination fee, and extra payments.",
+    longDescription:
+      "Estimate monthly payments, total interest, effective APR, and full amortization for personal loans. This tool factors in an optional origination fee to show the net amount you receive and the true borrowing cost, plus extra monthly payments for early payoff planning.",
+    typesCopy:
+      "calculates monthly payments for personal loans with origination fee, effective APR, and extra payment support",
+    primaryKeyword: "personal loan calculator",
+    category: "loans",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────

@@ -652,6 +652,42 @@ export function calculateMCA(inputs: MCAInputs): MCAResult {
   };
 }
 
+// ── Effective APR (when net proceeds differ from loan amount) ─────────
+
+/**
+ * Computes the effective APR given net proceeds, the monthly payment,
+ * and the term. Uses bisection to solve for the monthly rate r where:
+ *   netProceeds = payment * [1 - (1+r)^(-n)] / r
+ * then annualizes to a percentage.
+ */
+export function calculateEffectiveAPR(
+  netProceeds: number,
+  monthlyPayment: number,
+  termMonths: number,
+): number {
+  if (netProceeds <= 0 || monthlyPayment <= 0 || termMonths <= 0) return 0;
+
+  // Edge case: zero rate
+  if (monthlyPayment * termMonths <= netProceeds) return 0;
+
+  let lo = 0;
+  let hi = 1; // 100% monthly = 1200% APR, well above any real loan
+
+  for (let i = 0; i < 100; i++) {
+    const mid = (lo + hi) / 2;
+    const factor = Math.pow(1 + mid, -termMonths);
+    const pv = monthlyPayment * (1 - factor) / mid;
+    if (pv > netProceeds) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+
+  const monthlyRate = (lo + hi) / 2;
+  return r2(monthlyRate * 12 * 100);
+}
+
 // ── Formatters ───────────────────────────────────────────────────────────────
 
 export function formatCurrency(value: number): string {

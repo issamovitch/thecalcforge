@@ -68,8 +68,8 @@ export default function LoansPage() {
     <HubPage
       breadcrumbLabel="Loan Calculators"
       path="/loans"
-      collectionDescription="Free loan calculators to estimate payments, APR, and total cost for title loans, payday loans, and other loan types."
-      intro="Loan calculators let you estimate monthly payments, total interest, and the true cost of borrowing before you sign. CalcForge's free loan calculators cover title loans, payday loans, and other high-cost lending products. Each tool produces a full amortization schedule so you can compare lenders, test different terms, and avoid overpaying. Whether you are evaluating a title loan offer, checking a payday loan APR, or planning an early payoff, these calculators give you the numbers you need."
+      collectionDescription="Free loan calculators to estimate payments, APR, and total cost for personal, business, vehicle, and specialty loans."
+      intro="Loan calculators let you estimate monthly payments, total interest, and the true cost of borrowing before you sign. CalcForge's free loan calculators cover personal loans, business loans, vehicle loans, and specialized products like title and payday loans. Each tool produces a full amortization schedule so you can compare lenders, test different terms, and avoid overpaying. Whether you are evaluating a personal loan with an origination fee, comparing vehicle financing offers, or planning an early payoff, these calculators give you the numbers you need."
       calculators={loansCalculators}
       howToTitle="How to Calculate Loan Payments"
       howToContent={

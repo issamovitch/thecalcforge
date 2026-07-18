@@ -424,3 +424,24 @@ Stage Summary:
 - Page: src/app/loans/boat-rv-motorcycle-loan-calculator/page.tsx
 - Config: updated site.config.ts calculatorPages array
 - All 5 H2 sections render, no em dashes, no hardcoded currency, engine-computed numbers
+
+---
+Task ID: 10
+Agent: Main Agent
+Task: Build /loans/personal-loan-calculator page + 3 carried-over fixes
+
+Work Log:
+- Added calculateEffectiveAPR() to src/lib/loan-math.ts using bisection method to solve for the rate where PV of payments equals net proceeds
+- Created PersonalLoanCalculator.tsx with: loan amount, APR, term months, origination fee %, extra monthly payment, extra start month inputs; URL params; result tiles (Amount You Receive, Effective APR when fee > 0); collapsible amortization table; print footer
+- Created /loans/personal-loan-calculator/page.tsx with: H1, 5 H2 sections, engine-computed prose, 2 data tables, FAQ, JSON-LD (BreadcrumbList, FAQPage, WebApplication), Related Calculators links
+- Added personal loan entry to calculatorPages in site.config.ts (label, href, description, longDescription, typesCopy, primaryKeyword, category)
+- Verified RV 20 Year worked example on boat page already includes "at 7% APR" (was already correct)
+- Rewrote /loans hub intro from "title loans, payday loans, and other high-cost lending products" to "personal loans, business loans, vehicle loans, and specialized products like title and payday loans"
+- Updated hub collectionDescription similarly
+- Confirmed title loan extra-payments feature exists in TitleLoanCalculator.tsx (extraMonthly, extraStartMonth in inputs, state, URL sync, calculateLoanWithExtra, UI with collapsible section, early payoff savings display)
+- Browser-verified: page loads, all inputs work, origination fee shows $19,000 received and 14.3% effective APR, hub page shows new card and intro, header dropdown includes new entry, footer includes new entry, no runtime errors
+
+Stage Summary:
+- New files: src/components/calculators/PersonalLoanCalculator.tsx, src/app/loans/personal-loan-calculator/page.tsx
+- Modified: src/lib/loan-math.ts (added calculateEffectiveAPR), src/config/site.config.ts (added personal loan entry), src/app/loans/page.tsx (updated intro + collectionDescription)
+- Key computed values: $20K at 12% APR 60mo = $444.89/mo, $6,693.31 interest; with 5% fee: $19,000 received, effective APR 14.3%; $100/mo extra saves 12 months and $1,382.85 interest
