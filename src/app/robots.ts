@@ -21,6 +21,7 @@ const loanPaths = [
   "/home-buying/down-payment-calculator",
   "/home-buying/home-affordability-calculator",
   "/insurance/disability-insurance-calculator",
+  "/insurance/life-insurance-calculator",
 ];
 
 const departmentPaths = ["/debt", "/auto", "/home-buying", "/insurance"];

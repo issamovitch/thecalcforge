@@ -276,6 +276,18 @@ export const calculatorPages = [
     primaryKeyword: "disability insurance calculator",
     category: "insurance",
   },
+  {
+    label: "Life Insurance Calculator",
+    href: "/insurance/life-insurance-calculator",
+    description:
+      "Estimate how much life insurance you need using the DIME method: debts, income replacement, mortgage, education, and final expenses.",
+    longDescription:
+      "Enter your income, debts, mortgage, children, and education costs to calculate your total coverage need using the DIME method. Subtracts existing coverage and savings to find the gap, rounds up to the nearest $50,000 policy band. Includes stay-at-home parent mode with replacement-services costing, 10x income comparison, and full DIME breakdown.",
+    typesCopy:
+      "calculates life insurance coverage needs using the DIME method with stay-at-home parent mode, 10x income comparison, and $50K band rounding",
+    primaryKeyword: "life insurance calculator",
+    category: "insurance",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────

@@ -115,9 +115,9 @@ export default function InsurancePage() {
       {/* Coming soon note for remaining calculators */}
       <div className="mt-10 rounded-lg border bg-muted/30 p-5">
         <p className="text-sm text-muted-foreground">
-          <strong>Coming soon:</strong> Life Insurance Calculator and Annuity
-          Payout Calculator. Each tool will follow the same accurate,
-          shareable, print-ready format you see above.
+          <strong>Coming soon:</strong> Annuity Payout Calculator. Each tool
+          follows the same accurate, shareable, print-ready format you see
+          above.
         </p>
       </div>
     </div>

@@ -1214,3 +1214,47 @@ Stage Summary:
 - Footer "Calculators" section automatically includes Disability Insurance Calculator
 - All config files (site.config, sitemap, robots) updated
 - 2 remaining Insurance calculators: Life Insurance ($55/lead affiliate), Annuity Payout
+---
+Task ID: 2
+Agent: Main Agent
+Task: Build Life Insurance Calculator at /insurance/life-insurance-calculator
+
+Work Log:
+- Read reference files: DisabilityInsuranceCalculator.tsx (component pattern), insurance hub page, site.config.ts
+- Created LifeInsuranceCalculator.tsx component with:
+  - Inputs: annual income ($0-$500K slider), years to replace (1-30 slider), stay-at-home parent toggle (switch), replacement services cost ($5K-$100K slider, shown conditionally), outstanding debts ($ input), mortgage balance ($ input), number of children (0-8 slider), education cost per child ($ input), final expenses ($ input), existing coverage ($ input), savings and investments ($ input)
+  - DollarInput sub-component for consistent dollar field rendering with tooltips
+  - DIME computation: debt + income replacement + mortgage + education + final expenses
+  - Stay-at-home parent mode: when toggle on OR income is $0, replaces income line with replacement services (default $30K/yr * years)
+  - 10x income rule of thumb shown alongside DIME total
+  - Three result cards: Total Need (DIME + 10x comparison), What You Already Have (coverage + savings), Recommended Additional Coverage
+  - DIME breakdown table with all line items
+  - Rounding up to nearest $50K band with explanation
+  - YMYL disclaimer about premiums/insurability
+  - Actions: Copy Link, Print, Reset, ShareButtons
+  - URL params: income, years, sah, svc, debts, mortgage, kids, edu, final, existing, savings
+  - useState initializer pattern for URL param reading (no useEffect)
+- Created /insurance/life-insurance-calculator/page.tsx with:
+  - SEO: title, meta, canonical, OG, Twitter
+  - 3 JSON-LD: BreadcrumbList, FAQPage (5 FAQs), WebApplication
+  - Breadcrumbs: Home > Insurance Calculators > Life Insurance Calculator
+  - Intro paragraph targeting "life insurance calculator"
+  - 5 H2 content sections: How Much Life Insurance Do I Need Calculator, Life Insurance Calculator DIME Method, Term Life Insurance Coverage Calculator by Age, How Much Life Insurance Do I Need at 40, Life Insurance Needs Calculator for Stay at Home Parent
+  - Worked example card: $75K income, 10yr, $20K debts, $250K mortgage, 2 kids at $50K each, $15K final = $1,135,000 total, $1,000,000 recommended
+  - 5 FAQs: how much needed, DIME method explained, stay-at-home parent need, age effect, 10x accuracy
+  - Related calculators: Insurance hub, DTI Calculator, Debt Payoff Calculator, Disability Insurance Calculator
+  - ONE ad slot only (mid-content)
+- Updated site.config.ts: added Life Insurance Calculator entry (category: "insurance")
+- Updated sitemap.ts: added /insurance/life-insurance-calculator
+- Updated robots.ts: added /insurance/life-insurance-calculator to allowed paths
+- Updated insurance hub page: removed Life Insurance from "coming soon" note, now only mentions Annuity
+- Fixed disability page: removed second (footer) ad slot, now has exactly 1 AdSlot
+- Lint: clean (no new errors)
+- Browser verified: all default values produce $1,135,000 DIME total and $1,000,000 recommended; SAH mode produces $685,000 and $550,000; hub shows 2 live cards; disability page has 1 ad slot; all 5 H2 sections present; 200 status on all routes
+
+Stage Summary:
+- Life Insurance Calculator fully built and verified at /insurance/life-insurance-calculator
+- DIME method with stay-at-home parent mode, $50K band rounding, 10x comparison
+- Disability page ad slot fix applied (2 -> 1)
+- Insurance hub updated (2 live, 1 coming soon)
+- 1 remaining Insurance calculator: Annuity Payout
