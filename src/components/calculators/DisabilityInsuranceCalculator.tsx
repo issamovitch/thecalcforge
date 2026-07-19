@@ -119,7 +119,8 @@ export default function DisabilityInsuranceCalculator() {
     const employerBenefit = monthlyGross * (inputs.employerLtdPct / 100);
     const totalExisting = employerBenefit + inputs.otherBenefits;
     const coverageGap = Math.max(inputs.monthlyExpenses - totalExisting, 0);
-    const recommendedBenefit = Math.min(coverageGap, sixtyPctRule);
+    const remaining60PctCapacity = Math.max(0, sixtyPctRule - totalExisting);
+    const recommendedBenefit = Math.min(coverageGap, remaining60PctCapacity);
     const benefitPctOfIncome = monthlyGross > 0
       ? (recommendedBenefit / monthlyGross) * 100
       : 0;
@@ -144,7 +145,7 @@ export default function DisabilityInsuranceCalculator() {
       bpMonths,
       premiumEstimates,
       hasGap: coverageGap > 0,
-      benefitExceedsCap: coverageGap > sixtyPctRule,
+      benefitExceedsCap: coverageGap > remaining60PctCapacity,
     };
   }, [inputs]);
 
@@ -398,7 +399,7 @@ export default function DisabilityInsuranceCalculator() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                This is the lesser of your coverage gap and the standard 60% policy cap.
+                This is the lesser of your coverage gap and your remaining 60% capacity (60% of gross income minus existing coverage).
                 Benefit period: {benefitPeriodLabel(inputs.benefitPeriod, inputs.currentAge)}.
               </p>
               {results.benefitExceedsCap && (
