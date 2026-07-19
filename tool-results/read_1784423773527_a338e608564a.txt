@@ -1,0 +1,1025 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+     4→     4→import { Copy, Check, Printer, RotateCcw, CreditCard, ChevronDown, ChevronUp, Info, Plus, X, AlertTriangle } from "lucide-react";
+     5→     5→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+     6→     6→import { Input } from "@/components/ui/input";
+     7→     7→import { Label } from "@/components/ui/label";
+     8→     8→import { Button } from "@/components/ui/button";
+     9→     9→import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+    10→    10→import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+    11→    11→import { Alert, AlertDescription } from "@/components/ui/alert";
+    12→    12→import { toast } from "sonner";
+    13→    13→import ShareButtons from "@/components/calculators/ShareButtons";
+    14→    14→
+    15→    15→/* ─── Types ─── */
+    16→    16→
+    17→    17→interface CardEntry {
+    18→    18→  id: string;
+    19→    19→  name: string;
+    20→    20→  balance: number;
+    21→    21→  apr: number;
+    22→    22→  minimumPayment: number;
+    23→    23→}
+    24→    24→
+    25→    25→interface CCInputs {
+    26→    26→  cards: CardEntry[];
+    27→    27→  mode: "fixed" | "target";
+    28→    28→  fixedPayment: number;
+    29→    29→  targetMonths: number;
+    30→    30→  snowball: boolean;
+    31→    31→}
+    32→    32→
+    33→    33→interface PayoffResult {
+    34→    34→  months: number;
+    35→    35→  payoffDate: string;
+    36→    36→  totalInterest: number;
+    37→    37→  totalPaid: number;
+    38→    38→  schedule: ScheduleRow[];
+    39→    39→  warnings: string[];
+    40→    40→}
+    41→    41→
+    42→    42→interface ScheduleRow {
+    43→    43→  month: number;
+    44→    44→  cards: {
+    45→    45→    id: string;
+    46→    46→    name: string;
+    47→    47→    payment: number;
+    48→    48→    interest: number;
+    49→    49→    principal: number;
+    50→    50→    balance: number;
+    51→    51→  }[];
+    52→    52→}
+    53→    53→
+    54→    54→/* ─── Defaults ─── */
+    55→    55→
+    56→    56→const genId = () => Math.random().toString(36).slice(2, 9);
+    57→    57→
+    58→    58→export const DEFAULT_CARDS: CardEntry[] = [
+    59→    59→  { id: genId(), name: "Visa Card", balance: 5000, apr: 22.9, minimumPayment: 150 },
+    60→    60→  { id: genId(), name: "Mastercard", balance: 3000, apr: 18.99, minimumPayment: 90 },
+    61→    61→  { id: genId(), name: "Store Card", balance: 1200, apr: 27.99, minimumPayment: 48 },
+    62→    62→];
+    63→    63→
+    64→    64→export const DEFAULT_INPUTS: CCInputs = {
+    65→    65→  cards: DEFAULT_CARDS,
+    66→    66→  mode: "fixed",
+    67→    67→  fixedPayment: 200,
+    68→    68→  targetMonths: 24,
+    69→    69→  snowball: true,
+    70→    70→};
+    71→    71→
+    72→    72→/* ─── Formatters ─── */
+    73→    73→
+    74→    74→const fmtCurrency = (v: number) =>
+    75→    75→  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
+    76→    76→const fmtPercent = (v: number) => `${v.toFixed(2)}%`;
+    77→    77→
+    78→    78→/* ─── Calculation Engine ─── */
+    79→    79→
+    80→    80→function runSchedule(cards: CardEntry[], monthlyBudget: number, snowball: boolean): PayoffResult {
+    81→    81→  const active = cards.filter((c) => c.balance > 0);
+    82→    82→  if (active.length === 0) {
+    83→    83→    return { months: 0, payoffDate: "", totalInterest: 0, totalPaid: 0, schedule: [], warnings: [] };
+    84→    84→  }
+    85→    85→
+    86→    86→  const warnings: string[] = [];
+    87→    87→  for (const c of active) {
+    88→    88→    const monthlyInterest = c.balance * (c.apr / 100) / 12;
+    89→    89→    if (c.minimumPayment <= monthlyInterest && c.minimumPayment < c.balance) {
+    90→    90→      warnings.push(
+    91→    91→        `"${c.name}" minimum payment (${fmtCurrency(c.minimumPayment)}/mo) may not cover monthly interest (${fmtCurrency(monthlyInterest)}/mo). This debt may never be paid off.`
+    92→    92→      );
+    93→    93→    }
+    94→    94→  }
+    95→    95→
+    96→    96→  const sorted = [...active].sort((a, b) =>
+    97→    97→    snowball ? a.balance - b.balance : b.apr - a.apr,
+    98→    98→  );
+    99→    99→
+   100→   100→  const balances = sorted.map((c) => c.balance);
+   101→   101→  const aprs = sorted.map((c) => c.apr);
+   102→   102→  const mins = sorted.map((c) => c.minimumPayment);
+   103→   103→  const names = sorted.map((c) => c.name);
+   104→   104→  const ids = sorted.map((c) => c.id);
+   105→   105→
+   106→   106→  const schedule: ScheduleRow[] = [];
+   107→   107→  let totalInterest = 0;
+   108→   108→  let totalPaid = 0;
+   109→   109→  let month = 0;
+   110→   110→  const maxMonths = 1200;
+   111→   111→  let freedMinimums = 0;
+   112→   112→
+   113→   113→  while (month < maxMonths) {
+   114→   114→    if (balances.every((b) => b < 0.005)) break;
+   115→   115→
+   116→   116→    month++;
+   117→   117→    const totalMins = mins.reduce((s, m, i) => (balances[i] >= 0.005 ? s + m : s), 0);
+   118→   118→    let extra = monthlyBudget - totalMins + freedMinimums;
+   119→   119→    let appliedExtra = false;
+   120→   120→
+   121→   121→    const row: ScheduleRow = { month, cards: [] };
+   122→   122→
+   123→   123→    for (let i = 0; i < sorted.length; i++) {
+   124→   124→      const bal = balances[i];
+   125→   125→      if (bal < 0.005) {
+   126→   126→        row.cards.push({ id: ids[i], name: names[i], payment: 0, interest: 0, principal: 0, balance: 0 });
+   127→   127→        continue;
+   128→   128→      }
+   129→   129→
+   130→   130→      const interest = bal * (aprs[i] / 100) / 12;
+   131→   131→      const owed = bal + interest;
+   132→   132→      const minPay = Math.min(mins[i], owed);
+   133→   133→
+   134→   134→      let payment = minPay;
+   135→   135→
+   136→   136→      if (!appliedExtra && extra > 0) {
+   137→   137→        const remaining = owed - payment;
+   138→   138→        const extraToApply = Math.min(extra, Math.max(0, remaining));
+   139→   139→        payment += extraToApply;
+   140→   140→        extra -= extraToApply;
+   141→   141→        appliedExtra = true;
+   142→   142→      }
+   143→   143→
+   144→   144→      const principal = payment - interest;
+   145→   145→      const newBal = Math.max(0, bal - principal);
+   146→   146→
+   147→   147→      totalInterest += interest;
+   148→   148→      totalPaid += payment;
+   149→   149→      balances[i] = newBal;
+   150→   150→
+   151→   151→      row.cards.push({
+   152→   152→        id: ids[i],
+   153→   153→        name: names[i],
+   154→   154→        payment,
+   155→   155→        interest,
+   156→   156→        principal: Math.max(0, principal),
+   157→   157→        balance: newBal,
+   158→   158→      });
+   159→   159→
+   160→   160→      if (newBal < 0.005) {
+   161→   161→        freedMinimums += mins[i];
+   162→   162→        appliedExtra = false;
+   163→   163→      }
+   164→   164→    }
+   165→   165→
+   166→   166→    schedule.push(row);
+   167→   167→  }
+   168→   168→
+   169→   169→  const now = new Date();
+   170→   170→  const debtFree = new Date(now.getFullYear(), now.getMonth() + month, 1);
+   171→   171→  const payoffDate = debtFree.toLocaleDateString("en-US", { year: "numeric", month: "long" });
+   172→   172→
+   173→   173→  return { months: month, payoffDate, totalInterest, totalPaid, schedule, warnings };
+   174→   174→}
+   175→   175→
+   176→   176→function calculateResults(inputs: CCInputs): { minOnly: PayoffResult; active: PayoffResult } {
+   177→   177→  const { cards, mode, fixedPayment, targetMonths, snowball } = inputs;
+   178→   178→  const active = cards.filter((c) => c.balance > 0);
+   179→   179→
+   180→   180→  const empty: PayoffResult = { months: 0, payoffDate: "", totalInterest: 0, totalPaid: 0, schedule: [], warnings: [] };
+   181→   181→  if (active.length === 0) return { minOnly: empty, active: empty };
+   182→   182→
+   183→   183→  const totalMins = active.reduce((s, c) => s + c.minimumPayment, 0);
+   184→   184→
+   185→   185→  // Min-only result: budget = sum of minimums only
+   186→   186→  const minOnly = runSchedule(cards, totalMins, snowball);
+   187→   187→
+   188→   188→  if (mode === "fixed") {
+   189→   189→    const budget = totalMins + fixedPayment;
+   190→   190→    const activeResult = runSchedule(cards, budget, snowball);
+   191→   191→    return { minOnly, active: activeResult };
+   192→   192→  }
+   193→   193→
+   194→   194→  // Target mode: binary search for the monthly budget
+   195→   195→  let lo = totalMins;
+   196→   196→  let hi = totalMins + active.reduce((s, c) => s + c.balance, 0);
+   197→   197→  let result = lo;
+   198→   198→
+   199→   199→  for (let i = 0; i < 100; i++) {
+   200→   200→    const mid = (lo + hi) / 2;
+   201→   201→    const r = runSchedule(cards, mid, snowball);
+   202→   202→    if (r.months <= targetMonths) {
+   203→   203→      result = mid;
+   204→   204→      hi = mid;
+   205→   205→    } else {
+   206→   206→      lo = mid;
+   207→   207→    }
+   208→   208→  }
+   209→   209→
+   210→   210→  const activeResult = runSchedule(cards, result, snowball);
+   211→   211→  return { minOnly, active: activeResult };
+   212→   212→}
+   213→   213→
+   214→   214→/* ─── Component ─── */
+   215→   215→
+   216→   216→export default function CreditCardPayoffCalculator() {
+   217→   217→  const [inputs, setInputs] = useState<CCInputs>(() => {
+   218→   218→    if (typeof window === "undefined") return DEFAULT_INPUTS;
+   219→   219→    const params = new URLSearchParams(window.location.search);
+   220→   220→    const hasParams = params.get("c1name") || params.get("c1bal");
+   221→   221→    if (!hasParams) return DEFAULT_INPUTS;
+   222→   222→
+   223→   223→    const cards: CardEntry[] = [];
+   224→   224→    for (let i = 1; i <= 10; i++) {
+   225→   225→      const name = params.get(`c${i}name`);
+   226→   226→      const bal = params.get(`c${i}bal`);
+   227→   227→      if (!name && !bal) break;
+   228→   228→      cards.push({
+   229→   229→        id: genId(),
+   230→   230→        name: name || `Card ${i}`,
+   231→   231→        balance: bal ? parseFloat(bal) : 0,
+   232→   232→        apr: params.get(`c${i}apr`) ? parseFloat(params.get(`c${i}apr`)!) : 0,
+   233→   233→        minimumPayment: params.get(`c${i}min`) ? parseFloat(params.get(`c${i}min`)!) : 0,
+   234→   234→      });
+   235→   235→    }
+   236→   236→    if (cards.length === 0) return DEFAULT_INPUTS;
+   237→   237→
+   238→   238→    const mode = params.get("mode") === "target" ? "target" : "fixed";
+   239→   239→    const fixedPayment = params.get("extra") ? parseFloat(params.get("extra")!) : DEFAULT_INPUTS.fixedPayment;
+   240→   240→    const targetMonths = params.get("months") ? parseInt(params.get("months")!, 10) : DEFAULT_INPUTS.targetMonths;
+   241→   241→    const snowball = params.get("snowball") !== "false";
+   242→   242→
+   243→   243→    return { cards, mode, fixedPayment, targetMonths, snowball };
+   244→   244→  });
+   245→   245→
+   246→   246→  const [copied, setCopied] = useState(false);
+   247→   247→  const [showSchedule, setShowSchedule] = useState(true);
+   248→   248→
+   249→   249→  const { minOnlyResult, activeResult } = useMemo(() => {
+   250→   250→    const { minOnly, active } = calculateResults(inputs);
+   251→   251→    return { minOnlyResult: minOnly, activeResult: active };
+   252→   252→  }, [inputs]);
+   253→   253→
+   254→   254→  const isInitialMount = useRef(true);
+   255→   255→  useEffect(() => {
+   256→   256→    if (isInitialMount.current) {
+   257→   257→      isInitialMount.current = false;
+   258→   258→      return;
+   259→   259→    }
+   260→   260→    if (typeof window === "undefined") return;
+   261→   261→    const params = new URLSearchParams();
+   262→   262→    inputs.cards.forEach((c, i) => {
+   263→   263→      if (c.name) params.set(`c${i + 1}name`, c.name);
+   264→   264→      params.set(`c${i + 1}bal`, c.balance.toString());
+   265→   265→      params.set(`c${i + 1}apr`, c.apr.toString());
+   266→   266→      params.set(`c${i + 1}min`, c.minimumPayment.toString());
+   267→   267→    });
+   268→   268→    params.set("mode", inputs.mode);
+   269→   269→    params.set("extra", inputs.fixedPayment.toString());
+   270→   270→    params.set("months", inputs.targetMonths.toString());
+   271→   271→    params.set("snowball", inputs.snowball.toString());
+   272→   272→    const newUrl = `${window.location.pathname}?${params.toString()}`;
+   273→   273→    window.history.replaceState(null, "", newUrl);
+   274→   274→  }, [inputs]);
+   275→   275→
+   276→   276→  const handleCopyLink = useCallback(async () => {
+   277→   277→    try {
+   278→   278→      await navigator.clipboard.writeText(window.location.href);
+   279→   279→      setCopied(true);
+   280→   280→      toast.success("Link copied to clipboard");
+   281→   281→      setTimeout(() => setCopied(false), 2000);
+   282→   282→    } catch {
+   283→   283→      toast.error("Failed to copy link");
+   284→   284→    }
+   285→   285→  }, []);
+   286→   286→
+   287→   287→  const handlePrint = useCallback(() => {
+   288→   288→    window.print();
+   289→   289→  }, []);
+   290→   290→
+   291→   291→  const handleReset = useCallback(() => {
+   292→   292→    setInputs(DEFAULT_INPUTS);
+   293→   293→    toast.success("Calculator reset to defaults");
+   294→   294→  }, []);
+   295→   295→
+   296→   296→  const updateCard = useCallback((id: string, field: keyof Omit<CardEntry, "id">, value: string) => {
+   297→   297→    setInputs((prev) => ({
+   298→   298→      ...prev,
+   299→   299→      cards: prev.cards.map((c) => {
+   300→   300→        if (c.id !== id) return c;
+   301→   301→        if (field === "name") return { ...c, name: value };
+   302→   302→        const num = parseFloat(value);
+   303→   303→        return { ...c, [field]: isNaN(num) ? 0 : num };
+   304→   304→      }),
+   305→   305→    }));
+   306→   306→  }, []);
+   307→   307→
+   308→   308→  const addCard = useCallback(() => {
+   309→   309→    setInputs((prev) => ({
+   310→   310→      ...prev,
+   311→   311→      cards: [
+   312→   312→        ...prev.cards,
+   313→   313→        { id: genId(), name: `Card ${prev.cards.length + 1}`, balance: 0, apr: 0, minimumPayment: 0 },
+   314→   314→      ],
+   315→   315→    }));
+   316→   316→  }, []);
+   317→   317→
+   318→   318→  const removeCard = useCallback((id: string) => {
+   319→   319→    setInputs((prev) => {
+   320→   320→      const next = prev.cards.filter((c) => c.id !== id);
+   321→   321→      if (next.length === 0) {
+   322→   322→        return { ...prev, cards: [{ id: genId(), name: "", balance: 0, apr: 0, minimumPayment: 0 }] };
+   323→   323→      }
+   324→   324→      return { ...prev, cards: next };
+   325→   325→    });
+   326→   326→  }, []);
+   327→   327→
+   328→   328→  const totalBalance = useMemo(
+   329→   329→    () => inputs.cards.reduce((sum, c) => sum + c.balance, 0),
+   330→   330→    [inputs.cards],
+   331→   331→  );
+   332→   332→
+   333→   333→  const hasValidCards = inputs.cards.some((c) => c.balance > 0);
+   334→   334→
+   335→   335→  const activeCards = inputs.cards.filter((c) => c.balance > 0);
+   336→   336→  const totalMinPayments = activeCards.reduce((s, c) => s + c.minimumPayment, 0);
+   337→   337→  const monthlyBudget = inputs.mode === "fixed"
+   338→   338→    ? totalMinPayments + inputs.fixedPayment
+   339→   339→    : activeResult.totalPaid > 0
+   340→   340→      ? activeResult.totalPaid / activeResult.months
+   341→   341→      : totalMinPayments;
+   342→   342→
+   343→   343→  const monthsSaved = minOnlyResult.months - activeResult.months;
+   344→   344→  const interestSaved = minOnlyResult.totalInterest - activeResult.totalInterest;
+   345→   345→
+   346→   346→  return (
+   347→   347→    <TooltipProvider delayDuration={300}>
+   348→   348→      <div className="space-y-6">
+   349→   349→        {/* ─── Main Calculator Card ─── */}
+   350→   350→        <Card className="print-break-inside">
+   351→   351→          <CardHeader className="pb-4">
+   352→   352→            <CardTitle className="flex items-center gap-2 text-xl">
+   353→   353→              <CreditCard className="size-5 text-ember" />
+   354→   354→              Credit Card Payoff Calculator
+   355→   355→            </CardTitle>
+   356→   356→            <p className="text-sm text-muted-foreground">
+   357→   357→              See how extra payments can help you become credit card debt-free faster.
+   358→   358→              Compare minimum-only payments against an accelerated payoff plan using
+   359→   359→              the Snowball or Avalanche strategy.
+   360→   360→            </p>
+   361→   361→          </CardHeader>
+   362→   362→          <CardContent>
+   363→   363→            <div className="grid gap-6 lg:grid-cols-2">
+   364→   364→              {/* ─── Inputs ─── */}
+   365→   365→              <div className="space-y-5">
+   366→   366→                {/* Card Rows */}
+   367→   367→                <div className="space-y-3">
+   368→   368→                  <div className="flex items-center justify-between">
+   369→   369→                    <Label className="text-sm font-medium">Your Credit Cards</Label>
+   370→   370→                    <span className="text-xs text-muted-foreground">
+   371→   371→                      Total: {fmtCurrency(totalBalance)}
+   372→   372→                    </span>
+   373→   373→                  </div>
+   374→   374→
+   375→   375→                  {inputs.cards.map((card, idx) => (
+   376→   376→                    <div
+   377→   377→                      key={card.id}
+   378→   378→                      className="rounded-lg border bg-card p-3 sm:p-4 space-y-2"
+   379→   379→                    >
+   380→   380→                      {/* Row 1: Number badge + name (full width) + remove */}
+   381→   381→                      <div className="flex items-center gap-2">
+   382→   382→                        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-ember/10 text-xs font-semibold text-ember">
+   383→   383→                          {idx + 1}
+   384→   384→                        </span>
+   385→   385→                        <Input
+   386→   386→                          type="text"
+   387→   387→                          value={card.name}
+   388→   388→                          onChange={(e) => updateCard(card.id, "name", e.target.value)}
+   389→   389→                          placeholder="Card name"
+   390→   390→                          className="w-full h-8 text-sm no-print"
+   391→   391→                          aria-label={`Card ${idx + 1} name`}
+   392→   392→                        />
+   393→   393→                        <Button
+   394→   394→                          variant="ghost"
+   395→   395→                          size="sm"
+   396→   396→                          className="size-7 p-0 text-muted-foreground hover:text-destructive shrink-0 no-print"
+   397→   397→                          onClick={() => removeCard(card.id)}
+   398→   398→                          aria-label={`Remove ${card.name || `card ${idx + 1}`}`}
+   399→   399→                        >
+   400→   400→                          <X className="size-4" />
+   401→   401→                        </Button>
+   402→   402→                      </div>
+   403→   403→
+   404→   404→                      {/* Row 2: Fields (3 cols on sm+) */}
+   405→   405→                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 no-print">
+   406→   406→                        <div className="space-y-1">
+   407→   407→                          <Label className="text-[11px] text-muted-foreground">Balance ($)</Label>
+   408→   408→                          <Input
+   409→   409→                            type="number"
+   410→   410→                            min={0}
+   411→   411→                            step={100}
+   412→   412→                            value={card.balance || ""}
+   413→   413→                            onChange={(e) => updateCard(card.id, "balance", e.target.value)}
+   414→   414→                            placeholder="0"
+   415→   415→                            className="h-8 text-sm"
+   416→   416→                            aria-label={`Card ${idx + 1} balance`}
+   417→   417→                          />
+   418→   418→                        </div>
+   419→   419→                        <div className="space-y-1">
+   420→   420→                          <div className="flex items-center gap-1">
+   421→   421→                            <Label className="text-[11px] text-muted-foreground">APR (%)</Label>
+   422→   422→                            <Tooltip>
+   423→   423→                              <TooltipTrigger asChild>
+   424→   424→                                <Info className="size-3 text-muted-foreground cursor-help" />
+   425→   425→                              </TooltipTrigger>
+   426→   426→                              <TooltipContent side="top" className="max-w-[200px] text-xs">
+   427→   427→                                Annual Percentage Rate on this credit card.
+   428→   428→                              </TooltipContent>
+   429→   429→                            </Tooltip>
+   430→   430→                          </div>
+   431→   431→                          <Input
+   432→   432→                            type="number"
+   433→   433→                            min={0}
+   434→   434→                            step={0.1}
+   435→   435→                            value={card.apr || ""}
+   436→   436→                            onChange={(e) => updateCard(card.id, "apr", e.target.value)}
+   437→   437→                            placeholder="0"
+   438→   438→                            className="h-8 text-sm"
+   439→   439→                            aria-label={`Card ${idx + 1} APR`}
+   440→   440→                          />
+   441→   441→                        </div>
+   442→   442→                        <div className="space-y-1 sm:col-span-1 col-span-2">
+   443→   443→                          <div className="flex items-center gap-1">
+   444→   444→                            <Label className="text-[11px] text-muted-foreground">Min. Pay ($/mo)</Label>
+   445→   445→                            <Tooltip>
+   446→   446→                              <TooltipTrigger asChild>
+   447→   447→                                <Info className="size-3 text-muted-foreground cursor-help" />
+   448→   448→                              </TooltipTrigger>
+   449→   449→                              <TooltipContent side="top" className="max-w-[220px] text-xs">
+   450→   450→                                The minimum required monthly payment. When this card is
+   451→   451→                                paid off, its minimum rolls to the next priority card.
+   452→   452→                              </TooltipContent>
+   453→   453→                            </Tooltip>
+   454→   454→                          </div>
+   455→   455→                          <Input
+   456→   456→                            type="number"
+   457→   457→                            min={0}
+   458→   458→                            step={10}
+   459→   459→                            value={card.minimumPayment || ""}
+   460→   460→                            onChange={(e) => updateCard(card.id, "minimumPayment", e.target.value)}
+   461→   461→                            placeholder="0"
+   462→   462→                            className="h-8 text-sm"
+   463→   463→                            aria-label={`Card ${idx + 1} minimum payment`}
+   464→   464→                          />
+   465→   465→                        </div>
+   466→   466→                      </div>
+   467→   467→                    </div>
+   468→   468→                  ))}
+   469→   469→
+   470→   470→                  {/* Add Card Button */}
+   471→   471→                  <Button
+   472→   472→                    variant="outline"
+   473→   473→                    size="sm"
+   474→   474→                    onClick={addCard}
+   475→   475→                    className="w-full border-dashed text-muted-foreground hover:border-ember/40 hover:text-ember no-print"
+   476→   476→                  >
+   477→   477→                    <Plus className="mr-1.5 size-4" />
+   478→   478→                    Add Card
+   479→   479→                  </Button>
+   480→   480→                </div>
+   481→   481→
+   482→   482→                {/* Mode Toggle */}
+   483→   483→                <div className="space-y-2">
+   484→   484→                  <Label className="text-sm font-medium">Calculation Mode</Label>
+   485→   485→                  <div className="grid grid-cols-2 gap-2 no-print">
+   486→   486→                    <button
+   487→   487→                      type="button"
+   488→   488→                      onClick={() => setInputs((p) => ({ ...p, mode: "fixed" }))}
+   489→   489→                      className={`flex items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors ${
+   490→   490→                        inputs.mode === "fixed"
+   491→   491→                          ? "border-ember bg-ember/10 text-ember"
+   492→   492→                          : "border-border bg-background text-muted-foreground hover:border-ember/30 hover:text-ember"
+   493→   493→                      }`}
+   494→   494→                      aria-pressed={inputs.mode === "fixed"}
+   495→   495→                    >
+   496→   496→                      <CreditCard className="size-4" />
+   497→   497→                      Fixed Payment
+   498→   498→                    </button>
+   499→   499→                    <button
+   500→   500→                      type="button"
+   501→   501→                      onClick={() => setInputs((p) => ({ ...p, mode: "target" }))}
+   502→   502→                      className={`flex items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors ${
+   503→   503→                        inputs.mode === "target"
+   504→   504→                          ? "border-ember bg-ember/10 text-ember"
+   505→   505→                          : "border-border bg-background text-muted-foreground hover:border-ember/30 hover:text-ember"
+   506→   506→                      }`}
+   507→   507→                      aria-pressed={inputs.mode === "target"}
+   508→   508→                    >
+   509→   509→                      <CreditCard className="size-4" />
+   510→   510→                      Target Months
+   511→   511→                    </button>
+   512→   512→                  </div>
+   513→   513→                  <p className="hidden print:block text-sm font-medium">
+   514→   514→                    Mode: {inputs.mode === "fixed" ? "Fixed Payment" : "Target Months"}
+   515→   515→                  </p>
+   516→   516→                  <p className="text-[11px] text-muted-foreground">
+   517→   517→                    {inputs.mode === "fixed"
+   518→   518→                      ? "Set an extra monthly payment to see how long it takes to become debt-free."
+   519→   519→                      : "Set a target timeframe to find out how much you need to pay each month."}
+   520→   520→                  </p>
+   521→   521→                </div>
+   522→   522→
+   523→   523→                {/* Fixed Payment Input */}
+   524→   524→                {inputs.mode === "fixed" && (
+   525→   525→                  <div className="space-y-2">
+   526→   526→                    <div className="flex items-center justify-between">
+   527→   527→                      <div className="flex items-center gap-1.5">
+   528→   528→                        <Label htmlFor="cc-extra-payment" className="text-sm font-medium">
+   529→   529→                          Extra Monthly Payment
+   530→   530→                        </Label>
+   531→   531→                        <Tooltip>
+   532→   532→                          <TooltipTrigger asChild>
+   533→   533→                            <Info className="size-3.5 text-muted-foreground cursor-help no-print" />
+   534→   534→                          </TooltipTrigger>
+   535→   535→                          <TooltipContent side="top" className="max-w-[280px] text-xs">
+   536→   536→                            An additional amount you can pay each month on top of
+   537→   537→                            all minimum payments. This is applied to the priority
+   538→   538→                            card first. As cards are paid off, their minimums also
+   539→   539→                            roll over to the next card.
+   540→   540→                          </TooltipContent>
+   541→   541→                        </Tooltip>
+   542→   542→                      </div>
+   543→   543→                      <span className="text-sm font-semibold text-foreground">
+   544→   544→                        {fmtCurrency(inputs.fixedPayment)}
+   545→   545→                      </span>
+   546→   546→                    </div>
+   547→   547→                    <div className="no-print">
+   548→   548→                      <div className="relative">
+   549→   549→                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+   550→   550→                          $
+   551→   551→                        </span>
+   552→   552→                        <Input
+   553→   553→                          id="cc-extra-payment"
+   554→   554→                          type="number"
+   555→   555→                          min={0}
+   556→   556→                          step={25}
+   557→   557→                          value={inputs.fixedPayment || ""}
+   558→   558→                          onChange={(e) => {
+   559→   559→                            const num = parseFloat(e.target.value);
+   560→   560→                            setInputs((p) => ({
+   561→   561→                              ...p,
+   562→   562→                              fixedPayment: isNaN(num) ? 0 : num,
+   563→   563→                            }));
+   564→   564→                          }}
+   565→   565→                          placeholder="0"
+   566→   566→                          className="pl-6"
+   567→   567→                          aria-label="Extra monthly payment"
+   568→   568→                        />
+   569→   569→                      </div>
+   570→   570→                    </div>
+   571→   571→                    <p className="hidden print:block text-sm">
+   572→   572→                      Extra monthly payment: {fmtCurrency(inputs.fixedPayment)}
+   573→   573→                    </p>
+   574→   574→                  </div>
+   575→   575→                )}
+   576→   576→
+   577→   577→                {/* Target Months Input */}
+   578→   578→                {inputs.mode === "target" && (
+   579→   579→                  <div className="space-y-2">
+   580→   580→                    <div className="flex items-center gap-1.5">
+   581→   581→                      <Label htmlFor="cc-target-months" className="text-sm font-medium">
+   582→   582→                        Target Months to Be Debt-Free
+   583→   583→                      </Label>
+   584→   584→                      <Tooltip>
+   585→   585→                        <TooltipTrigger asChild>
+   586→   586→                          <Info className="size-3.5 text-muted-foreground cursor-help no-print" />
+   587→   587→                        </TooltipTrigger>
+   588→   588→                        <TooltipContent side="top" className="max-w-[250px] text-xs">
+   589→   589→                          The number of months within which you want to pay off all
+   590→   590→                          credit card debt. The calculator will find the required
+   591→   591→                          monthly payment.
+   592→   592→                        </TooltipContent>
+   593→   593→                      </Tooltip>
+   594→   594→                    </div>
+   595→   595→                    <div className="no-print">
+   596→   596→                      <Input
+   597→   597→                        id="cc-target-months"
+   598→   598→                        type="number"
+   599→   599→                        min={1}
+   600→   600→                        max={600}
+   601→   601→                        step={1}
+   602→   602→                        value={inputs.targetMonths || ""}
+   603→   603→                        onChange={(e) => {
+   604→   604→                          const num = parseInt(e.target.value, 10);
+   605→   605→                          setInputs((p) => ({
+   606→   606→                            ...p,
+   607→   607→                            targetMonths: isNaN(num) || num < 1 ? 1 : num,
+   608→   608→                          }));
+   609→   609→                        }}
+   610→   610→                        placeholder="24"
+   611→   611→                        aria-label="Target months to be debt-free"
+   612→   612→                      />
+   613→   613→                    </div>
+   614→   614→                    <p className="hidden print:block text-sm">
+   615→   615→                      Target months to be debt-free: {inputs.targetMonths}
+   616→   616→                    </p>
+   617→   617→                  </div>
+   618→   618→                )}
+   619→   619→
+   620→   620→                {/* Snowball / Avalanche Toggle */}
+   621→   621→                <div className="space-y-2">
+   622→   622→                  <Label className="text-sm font-medium">Payoff Strategy</Label>
+   623→   623→                  <div className="grid grid-cols-2 gap-2 no-print">
+   624→   624→                    <button
+   625→   625→                      type="button"
+   626→   626→                      onClick={() => setInputs((p) => ({ ...p, snowball: true }))}
+   627→   627→                      className={`flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+   628→   628→                        inputs.snowball
+   629→   629→                          ? "border-ember bg-ember/10 text-ember"
+   630→   630→                          : "border-border bg-background text-muted-foreground hover:border-ember/30 hover:text-ember"
+   631→   631→                      }`}
+   632→   632→                      aria-pressed={inputs.snowball}
+   633→   633→                    >
+   634→   634→                      Snowball
+   635→   635→                    </button>
+   636→   636→                    <button
+   637→   637→                      type="button"
+   638→   638→                      onClick={() => setInputs((p) => ({ ...p, snowball: false }))}
+   639→   639→                      className={`flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+   640→   640→                        !inputs.snowball
+   641→   641→                          ? "border-ember bg-ember/10 text-ember"
+   642→   642→                          : "border-border bg-background text-muted-foreground hover:border-ember/30 hover:text-ember"
+   643→   643→                      }`}
+   644→   644→                      aria-pressed={!inputs.snowball}
+   645→   645→                    >
+   646→   646→                      Avalanche
+   647→   647→                    </button>
+   648→   648→                  </div>
+   649→   649→                  <p className="hidden print:block text-sm font-medium">
+   650→   650→                    Strategy: {inputs.snowball ? "Snowball (smallest balance first)" : "Avalanche (highest APR first)"}
+   651→   651→                  </p>
+   652→   652→                  <p className="text-[11px] text-muted-foreground">
+   653→   653→                    {inputs.snowball
+   654→   654→                      ? "Pays off the smallest balance first for quick wins."
+   655→   655→                      : "Targets the highest interest rate first to minimize total interest."}
+   656→   656→                  </p>
+   657→   657→                </div>
+   658→   658→
+   659→   659→                {/* Warnings */}
+   660→   660→                {activeResult.warnings.length > 0 && (
+   661→   661→                  <div className="space-y-2">
+   662→   662→                    {activeResult.warnings.map((w, i) => (
+   663→   663→                      <Alert key={i} variant="destructive" className="py-2">
+   664→   664→                        <AlertTriangle className="size-4" />
+   665→   665→                        <AlertDescription className="text-xs">{w}</AlertDescription>
+   666→   666→                      </Alert>
+   667→   667→                    ))}
+   668→   668→                  </div>
+   669→   669→                )}
+   670→   670→              </div>
+   671→   671→
+   672→   672→              {/* ─── Results ─── */}
+   673→   673→              <div className="space-y-4">
+   674→   674→                {hasValidCards ? (
+   675→   675→                  <>
+   676→   676→                    {/* Debt-Free Date Highlight */}
+   677→   677→                    <div className="rounded-lg bg-ember/10 border border-ember/20 p-5 text-center">
+   678→   678→                      <p className="text-sm font-medium text-muted-foreground mb-1">
+   679→   679→                        Debt-Free Date
+   680→   680→                      </p>
+   681→   681→                      <p className="text-2xl sm:text-3xl font-bold tracking-tight text-ember">
+   682→   682→                        {activeResult.months > 0
+   683→   683→                          ? activeResult.payoffDate
+   684→   684→                          : "Already debt-free!"}
+   685→   685→                      </p>
+   686→   686→                      <p className="text-xs text-muted-foreground mt-1">
+   687→   687→                        {activeResult.months > 0
+   688→   688→                          ? `${activeResult.months} month${activeResult.months !== 1 ? "s" : ""} from now`
+   689→   689→                          : "No active card balances"}
+   690→   690→                      </p>
+   691→   691→                    </div>
+   692→   692→
+   693→   693→                    {/* Savings Callout */}
+   694→   694→                    {monthsSaved > 0.5 && (
+   695→   695→                      <div className="rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/30 p-4 space-y-1">
+   696→   696→                        <p className="text-sm font-medium text-green-700 dark:text-green-400">
+   697→   697→                          Extra payments save you{" "}
+   698→   698→                          <span className="font-bold">
+   699→   699→                            {fmtCurrency(interestSaved)}
+   700→   700→                          </span>{" "}
+   701→   701→                          in interest
+   702→   702→                        </p>
+   703→   703→                        {monthsSaved >= 1 && (
+   704→   704→                          <p className="text-xs text-green-600 dark:text-green-500">
+   705→   705→                            and{" "}
+   706→   706→                            {Math.round(monthsSaved)} month{Math.round(monthsSaved) !== 1 ? "s" : ""}{" "}
+   707→   707→                            faster than paying minimums only.
+   708→   708→                          </p>
+   709→   709→                        )}
+   710→   710→                      </div>
+   711→   711→                    )}
+   712→   712→
+   713→   713→                    {/* Breakdown Grid */}
+   714→   714→                    <div className="grid grid-cols-2 gap-3">
+   715→   715→                      <ResultCard
+   716→   716→                        label="Months to Payoff"
+   717→   717→                        value={activeResult.months.toString()}
+   718→   718→                        subtext={
+   719→   719→                          activeResult.months > 12
+   720→   720→                            ? `\u2248 ${(activeResult.months / 12).toFixed(1)} years`
+   721→   721→                            : activeResult.months <= 1
+   722→   722→                              ? "Less than 1 month"
+   723→   723→                              : `${activeResult.months} months`
+   724→   724→                        }
+   725→   725→                      />
+   726→   726→                      <ResultCard
+   727→   727→                        label="Total Interest"
+   728→   728→                        value={fmtCurrency(activeResult.totalInterest)}
+   729→   729→                        subtext={`${fmtPercent(activeResult.totalPaid > 0 ? (activeResult.totalInterest / activeResult.totalPaid) * 100 : 0)} of total paid`}
+   730→   730→                      />
+   731→   731→                      <ResultCard
+   732→   732→                        label="Total Paid"
+   733→   733→                        value={fmtCurrency(activeResult.totalPaid)}
+   734→   734→                        subtext={`Principal ${fmtCurrency(totalBalance)} + interest`}
+   735→   735→                      />
+   736→   736→                      <ResultCard
+   737→   737→                        label="Monthly Payment"
+   738→   738→                        value={fmtCurrency(monthlyBudget)}
+   739→   739→                        subtext={
+   740→   740→                          inputs.mode === "fixed"
+   741→   741→                            ? `All minimums + ${fmtCurrency(inputs.fixedPayment)} extra`
+   742→   742→                            : "Computed for target months"
+   743→   743→                        }
+   744→   744→                      />
+   745→   745→                    </div>
+   746→   746→
+   747→   747→                    {/* Actions */}
+   748→   748→                    <div className="flex flex-wrap items-center gap-3 no-print">
+   749→   749→                      <div className="flex flex-wrap gap-2">
+   750→   750→                        <Button
+   751→   751→                          variant="outline"
+   752→   752→                          size="sm"
+   753→   753→                          onClick={handleCopyLink}
+   754→   754→                          className="text-xs"
+   755→   755→                        >
+   756→   756→                          {copied ? (
+   757→   757→                            <Check className="mr-1.5 size-3.5" />
+   758→   758→                          ) : (
+   759→   759→                            <Copy className="mr-1.5 size-3.5" />
+   760→   760→                          )}
+   761→   761→                          {copied ? "Copied" : "Copy Link"}
+   762→   762→                        </Button>
+   763→   763→                        <Button
+   764→   764→                          variant="outline"
+   765→   765→                          size="sm"
+   766→   766→                          onClick={handlePrint}
+   767→   767→                          className="text-xs"
+   768→   768→                        >
+   769→   769→                          <Printer className="mr-1.5 size-3.5" />
+   770→   770→                          Print
+   771→   771→                        </Button>
+   772→   772→                        <Button
+   773→   773→                          variant="outline"
+   774→   774→                          size="sm"
+   775→   775→                          onClick={handleReset}
+   776→   776→                          className="text-xs"
+   777→   777→                        >
+   778→   778→                          <RotateCcw className="mr-1.5 size-3.5" />
+   779→   779→                          Reset
+   780→   780→                        </Button>
+   781→   781→                      </div>
+   782→   782→                      <ShareButtons
+   783→   783→                        summaryText={`Credit card debt-free in ${activeResult.months} months. Total interest: ${fmtCurrency(activeResult.totalInterest)}. Calculate yours:`}
+   784→   784→                      />
+   785→   785→                    </div>
+   786→   786→
+   787→   787→                    {/* Disclaimer */}
+   788→   788→                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+   789→   789→                      This calculator provides estimates for informational purposes
+   790→   790→                      only. Actual payoff timelines depend on payment processing,
+   791→   791→                      fees, and changes to your APR. Always check your statements
+   792→   792→                      for accurate balances and rates.
+   793→   793→                    </p>
+   794→   794→                  </>
+   795→   795→                ) : (
+   796→   796→                  <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+   797→   797→                    Enter at least one card with a balance to see results.
+   798→   798→                  </div>
+   799→   799→                )}
+   800→   800→              </div>
+   801→   801→            </div>
+   802→   802→          </CardContent>
+   803→   803→        </Card>
+   804→   804→
+   805→   805→        {/* ─── Comparison Card ─── */}
+   806→   806→        {hasValidCards && activeResult.months > 0 && (
+   807→   807→          <Card className="print-break-inside">
+   808→   808→            <CardHeader className="pb-3">
+   809→   809→              <CardTitle className="text-lg flex items-center gap-2">
+   810→   810→                <CreditCard className="size-4 text-ember" />
+   811→   811→                Minimum Only vs. Extra Payment Comparison
+   812→   812→              </CardTitle>
+   813→   813→            </CardHeader>
+   814→   814→            <CardContent>
+   815→   815→              <div className="overflow-x-auto">
+   816→   816→                <Table>
+   817→   817→                  <TableHeader>
+   818→   818→                    <TableRow>
+   819→   819→                      <TableHead>Metric</TableHead>
+   820→   820→                      <TableHead className="text-center">Minimum Only</TableHead>
+   821→   821→                      <TableHead className="text-center">With Extra Payment</TableHead>
+   822→   822→                    </TableRow>
+   823→   823→                  </TableHeader>
+   824→   824→                  <TableBody>
+   825→   825→                    <TableRow>
+   826→   826→                      <TableCell className="font-medium">Months to Payoff</TableCell>
+   827→   827→                      <TableCell className="text-center">
+   828→   828→                        {minOnlyResult.months}
+   829→   829→                      </TableCell>
+   830→   830→                      <TableCell className="text-center font-medium text-ember">
+   831→   831→                        {activeResult.months}
+   832→   832→                      </TableCell>
+   833→   833→                    </TableRow>
+   834→   834→                    <TableRow>
+   835→   835→                      <TableCell className="font-medium">Total Interest</TableCell>
+   836→   836→                      <TableCell className="text-center">
+   837→   837→                        {fmtCurrency(minOnlyResult.totalInterest)}
+   838→   838→                      </TableCell>
+   839→   839→                      <TableCell className="text-center font-medium text-ember">
+   840→   840→                        {fmtCurrency(activeResult.totalInterest)}
+   841→   841→                      </TableCell>
+   842→   842→                    </TableRow>
+   843→   843→                    <TableRow>
+   844→   844→                      <TableCell className="font-medium">Total Paid</TableCell>
+   845→   845→                      <TableCell className="text-center">
+   846→   846→                        {fmtCurrency(minOnlyResult.totalPaid)}
+   847→   847→                      </TableCell>
+   848→   848→                      <TableCell className="text-center font-medium text-ember">
+   849→   849→                        {fmtCurrency(activeResult.totalPaid)}
+   850→   850→                      </TableCell>
+   851→   851→                    </TableRow>
+   852→   852→                    <TableRow>
+   853→   853→                      <TableCell className="font-medium">Debt-Free Date</TableCell>
+   854→   854→                      <TableCell className="text-center text-sm">
+   855→   855→                        {minOnlyResult.payoffDate}
+   856→   856→                      </TableCell>
+   857→   857→                      <TableCell className="text-center text-sm font-medium text-ember">
+   858→   858→                        {activeResult.payoffDate}
+   859→   859→                      </TableCell>
+   860→   860→                    </TableRow>
+   861→   861→                  </TableBody>
+   862→   862→                </Table>
+   863→   863→              </div>
+   864→   864→
+   865→   865→              {/* Summary Box */}
+   866→   866→              <div className="mt-4 rounded-lg bg-muted/30 p-4 space-y-1.5">
+   867→   867→                {interestSaved > 0.005 ? (
+   868→   868→                  <>
+   869→   869→                    <p className="text-sm font-medium">
+   870→   870→                      Paying an extra{" "}
+   871→   871→                      <span className="font-bold text-ember">
+   872→   872→                        {inputs.mode === "fixed"
+   873→   873→                          ? fmtCurrency(inputs.fixedPayment)
+   874→   874→                          : fmtCurrency(monthlyBudget - totalMinPayments)}
+   875→   875→                        /mo
+   876→   876→                      </span>{" "}
+   877→   877→                      saves you{" "}
+   878→   878→                      <span className="font-bold text-green-600 dark:text-green-400">
+   879→   879→                        {fmtCurrency(interestSaved)}
+   880→   880→                      </span>{" "}
+   881→   881→                      in interest
+   882→   882→                    </p>
+   883→   883→                    {monthsSaved >= 1 && (
+   884→   884→                      <p className="text-xs text-muted-foreground">
+   885→   885→                        and{" "}
+   886→   886→                        {Math.round(monthsSaved)} month{Math.round(monthsSaved) !== 1 ? "s" : ""}{" "}
+   887→   887→                        faster than paying minimums only.
+   888→   888→                      </p>
+   889→   889→                    )}
+   890→   890→                  </>
+   891→   891→                ) : (
+   892→   892→                  <p className="text-sm font-medium">
+   893→   893→                    No additional savings from extra payments with current settings.
+   894→   894→                  </p>
+   895→   895→                )}
+   896→   896→              </div>
+   897→   897→            </CardContent>
+   898→   898→          </Card>
+   899→   899→        )}
+   900→   900→
+   901→   901→        {/* ─── Month-by-Month Schedule ─── */}
+   902→   902→        {hasValidCards && activeResult.schedule.length > 0 && (
+   903→   903→          <Card className="print-break-inside">
+   904→   904→            <CardHeader className="pb-3">
+   905→   905→              <button
+   906→   906→                type="button"
+   907→   907→                onClick={() => setShowSchedule(!showSchedule)}
+   908→   908→                className="no-print flex w-full items-center justify-between text-left"
+   909→   909→                aria-expanded={showSchedule}
+   910→   910→              >
+   911→   911→                <CardTitle className="text-lg">
+   912→   912→                  Month-by-Month Payoff Schedule
+   913→   913→                </CardTitle>
+   914→   914→                {showSchedule ? (
+   915→   915→                  <ChevronUp className="size-5 text-muted-foreground" />
+   916→   916→                ) : (
+   917→   917→                  <ChevronDown className="size-5 text-muted-foreground" />
+   918→   918→                )}
+   919→   919→              </button>
+   920→   920→              <CardTitle className="hidden print:block text-lg">
+   921→   921→                Month-by-Month Payoff Schedule
+   922→   922→              </CardTitle>
+   923→   923→            </CardHeader>
+   924→   924→            <CardContent className={showSchedule ? "" : "hidden print:block"}>
+   925→   925→              <div className="max-h-96 overflow-y-auto custom-scrollbar rounded-md border">
+   926→   926→                <Table>
+   927→   927→                  <TableHeader>
+   928→   928→                    <TableRow>
+   929→   929→                      <TableHead className="w-20">Month</TableHead>
+   930→   930→                      <TableHead>Card</TableHead>
+   931→   931→                      <TableHead className="text-right">Payment</TableHead>
+   932→   932→                      <TableHead className="text-right">Interest</TableHead>
+   933→   933→                      <TableHead className="text-right">Principal</TableHead>
+   934→   934→                      <TableHead className="text-right">Balance</TableHead>
+   935→   935→                    </TableRow>
+   936→   936→                  </TableHeader>
+   937→   937→                  <TableBody>
+   938→   938→                    {activeResult.schedule.map((m) =>
+   939→   939→                      m.cards
+   940→   940→                        .filter((d) => d.payment > 0 || m.month <= 1 || m.month === activeResult.months)
+   941→   941→                        .map((d, di, arr) => (
+   942→   942→                          <TableRow key={`${m.month}-${d.id}`}>
+   943→   943→                            {di === 0 ? (
+   944→   944→                              <TableCell
+   945→   945→                                className="font-medium align-top"
+   946→   946→                                rowSpan={arr.length}
+   947→   947→                              >
+   948→   948→                                {m.month}
+   949→   949→                              </TableCell>
+   950→   950→                            ) : null}
+   951→   951→                            <TableCell className="text-sm align-top">
+   952→   952→                              {d.name}
+   953→   953→                            </TableCell>
+   954→   954→                            <TableCell className="text-right align-top">
+   955→   955→                              {d.payment > 0 ? fmtCurrency(d.payment) : "-"}
+   956→   956→                            </TableCell>
+   957→   957→                            <TableCell className="text-right align-top text-muted-foreground">
+   958→   958→                              {d.interest > 0 ? fmtCurrency(d.interest) : "-"}
+   959→   959→                            </TableCell>
+   960→   960→                            <TableCell className="text-right align-top">
+   961→   961→                              {d.principal > 0 ? fmtCurrency(d.principal) : "-"}
+   962→   962→                            </TableCell>
+   963→   963→                            <TableCell className="text-right align-top font-medium">
+   964→   964→                              {fmtCurrency(d.balance)}
+   965→   965→                            </TableCell>
+   966→   966→                          </TableRow>
+   967→   967→                        )),
+   968→   968→                    )}
+   969→   969→                  </TableBody>
+   970→   970→                </Table>
+   971→   971→              </div>
+   972→   972→              <div className="mt-3 flex flex-wrap justify-end gap-x-6 gap-y-1 text-sm font-medium">
+   973→   973→                <span>
+   974→   974→                  Total Paid:{" "}
+   975→   975→                  <span className="text-ember">{fmtCurrency(activeResult.totalPaid)}</span>
+   976→   976→                </span>
+   977→   977→                <span>
+   978→   978→                  Total Interest:{" "}
+   979→   979→                  <span className="text-destructive">{fmtCurrency(activeResult.totalInterest)}</span>
+   980→   980→                </span>
+   981→   981→              </div>
+   982→   982→            </CardContent>
+   983→   983→          </Card>
+   984→   984→        )}
+   985→   985→
+   986→   986→        {/* ─── Print-only footer ─── */}
+   987→   987→        <PrintFooter />
+   988→   988→      </div>
+   989→   989→    </TooltipProvider>
+   990→   990→  );
+   991→   991→}
+   992→   992→
+   993→   993→/* ─── Sub-components ─── */
+   994→   994→
+   995→   995→function ResultCard({ label, value, subtext }: { label: string; value: string; subtext: string }) {
+   996→   996→  return (
+   997→   997→    <div className="rounded-md border bg-card p-3">
+   998→   998→      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+   999→   999→      <p className="mt-0.5 text-lg font-bold tracking-tight">{value}</p>
+  1000→  1000→      <p className="text-[11px] text-muted-foreground">{subtext}</p>
+  1001→  1001→    </div>
+  1002→  1002→  );
+  1003→  1003→}
+  1004→  1004→
+  1005→  1005→function PrintFooter() {
+  1006→  1006→  return (
+  1007→  1007→    <div className="hidden print:block print:mt-6 print:pt-3 print:border-t print:border-gray-300 print:text-[8pt] print:text-gray-500 print:flex print:justify-between">
+  1008→  1008→      <span>CalcForge - thecalcforge.com</span>
+  1009→  1009→      <PrintDateAndUrl />
+  1010→  1010→    </div>
+  1011→  1011→  );
+  1012→  1012→}
+  1013→  1013→
+  1014→  1014→function PrintDateAndUrl() {
+  1015→  1015→  const text = useMemo(() => {
+  1016→  1016→    if (typeof window === "undefined") return "";
+  1017→  1017→    const d = new Date().toLocaleDateString("en-US", {
+  1018→  1018→      year: "numeric",
+  1019→  1019→      month: "long",
+  1020→  1020→      day: "numeric",
+  1021→  1021→    });
+  1022→  1022→    return `${window.location.host}${window.location.pathname} - Printed ${d}`;
+  1023→  1023→  }, []);
+  1024→  1024→  return <span>{text}</span>;
+  1025→  1025→}

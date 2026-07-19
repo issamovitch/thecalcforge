@@ -23,6 +23,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/debt/debt-payoff-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/debt/dti-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/debt/credit-card-payoff-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
+    { url: `${base}/debt/credit-card-minimum-payment-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     // Department stubs
     { url: `${base}/auto`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
     { url: `${base}/home-buying`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },

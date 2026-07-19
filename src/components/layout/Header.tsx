@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState, useCallback } from "react";
 import { Menu, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +38,36 @@ const footerLinks = [
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = useCallback((menu: string) => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+    setOpenMenu(menu);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    closeTimer.current = setTimeout(() => {
+      setOpenMenu(null);
+    }, 150);
+  }, []);
+
+  const handleOpenChange = useCallback((open: boolean, menu: string) => {
+    if (open) {
+      if (closeTimer.current) {
+        clearTimeout(closeTimer.current);
+        closeTimer.current = null;
+      }
+      setOpenMenu(menu);
+    } else {
+      closeTimer.current = setTimeout(() => {
+        setOpenMenu(null);
+      }, 150);
+    }
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -63,46 +93,56 @@ export function Header() {
         {/* Desktop Navigation */}
         <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
           {/* Loans dropdown (populated from calculatorPages) */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors">
-                Loans
-                <ChevronDown className="size-3.5" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-72">
-              {calculatorPages.map((p) => (
-                <DropdownMenuItem key={p.href} asChild className="whitespace-nowrap">
-                  <Link href={p.href}>{p.label}</Link>
+          <div
+            onMouseEnter={() => handleMouseEnter("loans")}
+            onMouseLeave={handleMouseLeave}
+          >
+            <DropdownMenu open={openMenu === "loans"} onOpenChange={(open) => handleOpenChange(open, "loans")}>
+              <DropdownMenuTrigger asChild>
+                <button className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors">
+                  Loans
+                  <ChevronDown className="size-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[298px]" onMouseEnter={() => handleMouseEnter("loans")} onMouseLeave={handleMouseLeave}>
+                {calculatorPages.map((p) => (
+                  <DropdownMenuItem key={p.href} asChild className="whitespace-nowrap">
+                    <Link href={p.href}>{p.label}</Link>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/loans">All Loan Calculators</Link>
                 </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/loans">All Loan Calculators</Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
           {/* Debt dropdown (populated from calculatorPages) */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors">
-                Debt
-                <ChevronDown className="size-3.5" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-72">
-              {debtCalculators.map((p) => (
-                <DropdownMenuItem key={p.href} asChild className="whitespace-nowrap">
-                  <Link href={p.href}>{p.label}</Link>
+          <div
+            onMouseEnter={() => handleMouseEnter("debt")}
+            onMouseLeave={handleMouseLeave}
+          >
+            <DropdownMenu open={openMenu === "debt"} onOpenChange={(open) => handleOpenChange(open, "debt")}>
+              <DropdownMenuTrigger asChild>
+                <button className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors">
+                  Debt
+                  <ChevronDown className="size-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[298px]" onMouseEnter={() => handleMouseEnter("debt")} onMouseLeave={handleMouseLeave}>
+                {debtCalculators.map((p) => (
+                  <DropdownMenuItem key={p.href} asChild className="whitespace-nowrap">
+                    <Link href={p.href}>{p.label}</Link>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/debt">All Debt Calculators</Link>
                 </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/debt">All Debt Calculators</Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
           {/* Static department links */}
           {otherNavLinks.map((link) => (

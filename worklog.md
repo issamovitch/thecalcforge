@@ -752,3 +752,22 @@ Stage Summary:
 - Updated: /src/config/site.config.ts (added Credit Card Payoff Calculator entry)
 - Updated: /src/app/sitemap.ts (added /debt/credit-card-payoff-calculator)
 - Build verified clean, browser-rendered header/intro/calculator card confirmed
+
+---
+Task ID: 2
+Agent: main
+Task: Build Credit Card Minimum Payment Calculator at /debt/credit-card-minimum-payment-calculator
+
+Work Log:
+- Built CreditCardMinimumPaymentCalculator.tsx (877 lines) with: 3 minimum formula modes (% of balance, % + interest, 1% + interest), declining minimum schedule, min-only vs fixed payment comparison, collapsible schedule, URL params, print, share
+- Built page.tsx (490 lines) with: full SEO, 3 JSON-LD, 5 H2 sections with worked examples, 5 FAQs, related calculators
+- Added to site.config.ts (category: "debt") and sitemap.ts (priority 0.9)
+- Hub page already had the entry
+- Build verified clean, browser-rendered and confirmed calculator shows inputs + results
+- Verified: no em-dashes, correct FAQ bg-white dark:bg-card
+
+Stage Summary:
+- Created: /src/components/calculators/CreditCardMinimumPaymentCalculator.tsx
+- Created: /src/app/debt/credit-card-minimum-payment-calculator/page.tsx
+- Updated: /src/config/site.config.ts
+- Updated: /src/app/sitemap.ts

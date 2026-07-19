@@ -203,7 +203,7 @@ export function HubPage({
         {faq.map((item) => (
           <details
             key={item.question}
-            className="group rounded-lg border border-border bg-muted/20"
+            className="group rounded-lg border border-border bg-white dark:bg-card"
           >
             <summary className="cursor-pointer select-none px-5 py-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/40">
               {item.question}

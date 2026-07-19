@@ -156,6 +156,18 @@ export const calculatorPages = [
     primaryKeyword: "credit card payoff calculator",
     category: "debt",
   },
+  {
+    label: "Credit Card Minimum Payment Calculator",
+    href: "/debt/credit-card-minimum-payment-calculator",
+    description:
+      "See how minimum payments are calculated and the true cost of paying only minimums on credit cards.",
+    longDescription:
+      "Understand how credit card issuers calculate your minimum payment using common formulas like percentage of balance, percentage plus interest, or the CFPB 1% plus interest method. See the declining minimum schedule, total interest paid, and compare minimum-only repayment against a fixed monthly payment.",
+    typesCopy:
+      "shows how credit card minimum payments are calculated, total interest and payoff timeline at minimums only, and compares against fixed monthly payments",
+    primaryKeyword: "credit card minimum payment calculator",
+    category: "debt",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────
