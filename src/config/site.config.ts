@@ -264,6 +264,18 @@ export const calculatorPages = [
     primaryKeyword: "home affordability calculator",
     category: "home-buying",
   },
+  {
+    label: "Disability Insurance Calculator",
+    href: "/insurance/disability-insurance-calculator",
+    description:
+      "Estimate how much disability insurance coverage you need based on salary, essential expenses, and existing employer LTD coverage.",
+    longDescription:
+      "Enter your gross annual income, monthly essential expenses, employer LTD coverage percentage, and other benefits to find your coverage gap. The calculator compares your actual expense needs against the standard 60% of gross income policy cap and shows the recommended supplemental benefit. Includes estimated premium ranges and own-occupation vs any-occupation guidance.",
+    typesCopy:
+      "estimates disability insurance coverage needs based on salary, essential expenses, and existing employer LTD, with premium ranges and coverage gap analysis",
+    primaryKeyword: "disability insurance calculator",
+    category: "insurance",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────

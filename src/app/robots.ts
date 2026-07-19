@@ -20,6 +20,7 @@ const loanPaths = [
   "/home-buying/heloc-calculator",
   "/home-buying/down-payment-calculator",
   "/home-buying/home-affordability-calculator",
+  "/insurance/disability-insurance-calculator",
 ];
 
 const departmentPaths = ["/debt", "/auto", "/home-buying", "/insurance"];

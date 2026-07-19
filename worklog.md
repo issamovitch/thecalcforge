@@ -1175,3 +1175,42 @@ Stage Summary:
 - Home Buying department is COMPLETE with 5 calculators: PMI, Refinance Break-Even, HELOC, Down Payment, Home Affordability
 - Hub page "coming soon" section removed - department fully launched
 - All lint errors are pre-existing (title-loan em-dash), new files pass clean
+---
+Task ID: 1
+Agent: Main Agent
+Task: Build Disability Insurance Calculator at /insurance/disability-insurance-calculator
+
+Work Log:
+- Read reference files: DownPaymentCalculator.tsx (component pattern), HELOC page (template), site.config.ts, Header.tsx, sitemap.ts, robots.ts
+- Created DisabilityInsuranceCalculator.tsx component with:
+  - Inputs: gross annual income ($10K-$500K slider), monthly essential expenses ($500-$15K slider), employer LTD % (0-60% slider), other monthly benefits ($ input), benefit period (Select: 2yr/5yr/10yr/to65/to67), current age (conditional slider for to-age periods)
+  - Computation: 60% rule, employer benefit, total existing coverage, coverage gap, recommended benefit (min of gap and 60% cap), benefit as % of income, premium estimates at 1%/2%/3% of salary
+  - Results: monthly gross, 60% rule, existing coverage, coverage gap (amber if gap exists, green if covered), recommended benefit, premium estimates grid, own-occupation vs any-occupation info box
+  - Actions: Copy Link, Print, Reset, ShareButtons (X/Facebook/WhatsApp/Reddit/Email)
+  - URL params: income, expenses, employer, other, period, age
+  - useState initializer pattern for URL param reading (no useEffect)
+- Created /insurance/disability-insurance-calculator/page.tsx with:
+  - SEO: title, meta description, canonical, OG, Twitter
+  - 3 JSON-LD: BreadcrumbList, FAQPage (5 FAQs), WebApplication
+  - Breadcrumbs: Home > Insurance Calculators > Disability Insurance Calculator
+  - Intro paragraph targeting "disability insurance calculator"
+  - 5 H2 content sections: Disability Insurance Needs Calculator, How Much Disability Insurance Do I Need Calculator, Long Term Disability Benefit Calculator, Own Occupation Disability Insurance Calculator, Disability Insurance Cost Calculator by Salary
+  - Worked example card: $80K salary, $4K/mo expenses, 40% employer LTD
+  - 5 FAQs: how much needed, own-occ vs any-occ, premium calculation, elimination period, employer LTD sufficiency
+  - Related calculators: Insurance hub, DTI Calculator, Home Affordability Calculator
+  - One AdSlot mid-content, one lazy footer AdSlot
+- Created /insurance hub page with Disability Insurance card, "Coming soon" note for Life and Annuity
+- Updated site.config.ts: added Disability Insurance Calculator entry (category: "insurance")
+- Updated sitemap.ts: added /insurance/disability-insurance-calculator
+- Updated robots.ts: added /insurance/disability-insurance-calculator to allowed paths
+- Updated Header.tsx: replaced static Insurance link with full dropdown (desktop + mobile), matching Loans/Debt/Auto/Home Buying pattern
+- Lint: clean (no new errors, only pre-existing title-loan em-dash issues)
+- Browser verified: both /insurance/disability-insurance-calculator and /insurance hub render correctly, all interactive elements present, 200 status
+
+Stage Summary:
+- Disability Insurance Calculator fully built and verified at /insurance/disability-insurance-calculator
+- Insurance department hub page created at /insurance
+- Insurance dropdown added to header navigation (desktop + mobile)
+- Footer "Calculators" section automatically includes Disability Insurance Calculator
+- All config files (site.config, sitemap, robots) updated
+- 2 remaining Insurance calculators: Life Insurance ($55/lead affiliate), Annuity Payout

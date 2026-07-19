@@ -36,6 +36,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/home-buying/down-payment-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/home-buying/home-affordability-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/insurance`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
+    { url: `${base}/insurance/disability-insurance-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     // Info pages
     { url: `${base}/about`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.3 },
     { url: `${base}/contact`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },

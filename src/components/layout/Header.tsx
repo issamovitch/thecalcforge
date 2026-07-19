@@ -21,10 +21,9 @@ const autoCalculators = [
   ...calculatorPages.filter((p) => p.category === "auto"),
 ];
 const homeBuyingCalculators = calculatorPages.filter((p) => p.category === "home-buying");
+const insuranceCalculators = calculatorPages.filter((p) => p.category === "insurance");
 
-const otherNavLinks = [
-  { label: "Insurance", href: "/insurance" },
-];
+const otherNavLinks: { label: string; href: string }[] = [];
 
 const footerLinks = [
   { label: "Privacy Policy", href: "/privacy-policy" },
@@ -171,16 +170,33 @@ export function Header() {
             </div>
           </div>
 
-          {/* Static department links */}
-          {otherNavLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors"
-            >
-              {link.label}
-            </a>
-          ))}
+          {/* Insurance dropdown */}
+          <div className="group relative">
+            <button className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors">
+              Insurance
+              <ChevronDown className="size-3.5 transition-transform duration-200 group-hover:rotate-180" />
+            </button>
+            <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 absolute top-full left-0 z-50 pt-1 transition-[opacity,visibility] duration-150">
+              <div className="w-[298px] overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                {insuranceCalculators.map((p) => (
+                  <Link
+                    key={p.href}
+                    href={p.href}
+                    className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden whitespace-nowrap transition-colors hover:bg-accent hover:text-accent-foreground"
+                  >
+                    {p.label}
+                  </Link>
+                ))}
+                <div className="-mx-1 my-1 h-px bg-border" />
+                <Link
+                  href="/insurance"
+                  className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  All Insurance Calculators
+                </Link>
+              </div>
+            </div>
+          </div>
           <div className="mx-2 h-5 w-px bg-border" />
           <Button variant="ghost" asChild>
             <Link href="/about" className="text-sm font-medium">
@@ -321,17 +337,31 @@ export function Header() {
                 All Home Buying Calculators
               </Link>
 
-              {/* Other departments */}
-              {otherNavLinks.map((link) => (
+              {/* Insurance section */}
+              <Link
+                href="/insurance"
+                onClick={() => setMobileOpen(false)}
+                className="cursor-pointer rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+              >
+                Insurance
+              </Link>
+              {insuranceCalculators.map((p) => (
                 <Link
-                  key={link.href}
-                  href={link.href}
+                  key={p.href}
+                  href={p.href}
                   onClick={() => setMobileOpen(false)}
-                  className="cursor-pointer rounded-md px-3 py-2 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
+                  className="block cursor-pointer rounded-md pl-6 pr-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
                 >
-                  {link.label}
+                  {p.label}
                 </Link>
               ))}
+              <Link
+                href="/insurance"
+                onClick={() => setMobileOpen(false)}
+                className="block cursor-pointer rounded-md pl-6 pr-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
+              >
+                All Insurance Calculators
+              </Link>
 
               <div className="my-3 h-px bg-border" />
 
