@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import {
   Calculator, Copy, Check, Printer, RotateCcw, Info,
 } from "lucide-react";
@@ -53,32 +53,32 @@ function fmt(n: number): string {
 /* ─── Component ─── */
 
 export default function HELOCCalculator() {
-  const [inputs, setInputs] = useState<HELOCInputs>(DEFAULT_INPUTS);
-  const [copied, setCopied] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  /* ─── URL param sync ─── */
-  useEffect(() => {
+  const [inputs, setInputs] = useState<HELOCInputs>(() => {
+    if (typeof window === "undefined") return DEFAULT_INPUTS;
     const params = new URLSearchParams(window.location.search);
     const p = (key: string, fallback: number): number => {
       const v = params.get(key);
       return v ? parseFloat(v) : fallback;
     };
     const extraDuringVal = params.get("extraDuring") as HELOCInputs["extraDuring"] | null;
-    setInputs((prev) => ({
-      homeValue: p("home", prev.homeValue),
-      mortgageBalance: p("mortgage", prev.mortgageBalance),
-      maxCLTV: p("cltv", prev.maxCLTV),
-      helocDraw: p("draw", prev.helocDraw),
-      apr: p("rate", prev.apr),
-      drawYears: p("drawYr", prev.drawYears),
-      repaymentYears: p("repayYr", prev.repaymentYears),
-      extraMonthly: p("extra", prev.extraMonthly),
-      extraDuring: extraDuringVal && ["draw", "repayment", "none"].includes(extraDuringVal)
-        ? extraDuringVal
-        : prev.extraDuring,
-    }));
-  }, []);
+    if (!params.get("home") && !params.get("draw")) return DEFAULT_INPUTS;
+    return {
+      homeValue: p("home", DEFAULT_INPUTS.homeValue),
+      mortgageBalance: p("mortgage", DEFAULT_INPUTS.mortgageBalance),
+      maxCLTV: p("cltv", DEFAULT_INPUTS.maxCLTV),
+      helocDraw: p("draw", DEFAULT_INPUTS.helocDraw),
+      apr: p("rate", DEFAULT_INPUTS.apr),
+      drawYears: p("drawYr", DEFAULT_INPUTS.drawYears),
+      repaymentYears: p("repayYr", DEFAULT_INPUTS.repaymentYears),
+      extraMonthly: p("extra", DEFAULT_INPUTS.extraMonthly),
+      extraDuring:
+        extraDuringVal && ["draw", "repayment", "none"].includes(extraDuringVal)
+          ? extraDuringVal
+          : DEFAULT_INPUTS.extraDuring,
+    };
+  });
+  const [copied, setCopied] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   /* ─── Update a single input ─── */
   const update = useCallback(

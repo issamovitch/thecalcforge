@@ -240,6 +240,18 @@ export const calculatorPages = [
     primaryKeyword: "HELOC calculator",
     category: "home-buying",
   },
+  {
+    label: "Down Payment Calculator",
+    href: "/home-buying/down-payment-calculator",
+    description:
+      "See how much to put down on a house, your loan amount, LTV, PMI status, and total cash needed at closing with loan-program presets.",
+    longDescription:
+      "Enter a home price and adjust the down payment by percentage or dollar amount to see the loan amount, loan-to-value ratio, and whether you avoid PMI at 20%. Includes closing costs for total cash-to-close calculation and loan-program presets (VA 0%, FHA 3.5%, Conventional 3%/5%/20%) for instant minimum comparison.",
+    typesCopy:
+      "calculates down payment, loan amount, LTV, PMI status, and total cash to close with loan-program presets for VA, FHA, and conventional loans",
+    primaryKeyword: "down payment calculator",
+    category: "home-buying",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────

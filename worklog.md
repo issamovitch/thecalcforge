@@ -1106,3 +1106,37 @@ Stage Summary:
 - Refinance Break-Even Calculator fully built at /home-buying/refinance-break-even-calculator
 - All navigation, footer, sitemap, and robots updated automatically
 - Build passes cleanly: 27 sitemap URLs, 0 duplicates, 0 new lint errors
+---
+Task ID: 1
+Agent: Main Agent
+Task: Build Down Payment Calculator at /home-buying/down-payment-calculator
+
+Work Log:
+- Read reference files (site.config, hub page, sitemap, robots, HELOC component, PMI page pattern)
+- Created DownPaymentCalculator.tsx component with:
+  - Home price slider ($50K-$2M)
+  - Down payment input (% or $ toggle, synced)
+  - Closing costs input (% or $ toggle, synced)
+  - 5 loan-program presets (VA 0%, Conventional 3%, FHA 3.5%, Conventional 5%, 20% No PMI)
+  - Results: down payment, loan amount, LTV, PMI status (green/amber badges)
+  - Total cash to close = down payment + closing costs
+  - Comparison table of all presets
+  - URL param encoding, copy link, print, reset, ShareButtons
+- Created page at /home-buying/down-payment-calculator/page.tsx with:
+  - Full SEO metadata, OG, Twitter, canonical, robots
+  - 3 JSON-LD: BreadcrumbList, FAQPage, WebApplication
+  - Breadcrumbs: Home > Home Buying Calculators > Down Payment Calculator
+  - 5 H2 sections: by home price, $400k house, FHA, 3% conventional, down + closing costs
+  - 5 FAQs (gift funds, down vs closing costs, rate impact, DPA programs)
+  - Related calculators with keyword-rich anchors (PMI, Refinance, HELOC, DTI, Debt Payoff)
+- Fixed HELOC calculator lint error: moved URL param reading from useEffect to useState initializer (matching PMI pattern)
+- Updated site.config.ts: added Down Payment Calculator entry
+- Updated sitemap.ts: added /home-buying/down-payment-calculator
+- Updated robots.ts: added /home-buying/down-payment-calculator to allowed paths
+- Updated hub page: removed Down Payment from "coming soon" note
+- Verified with agent-browser: presets work, all sections render, hub shows 4 live cards, header dropdown has all 4, no console errors
+
+Stage Summary:
+- Down Payment Calculator live at /home-buying/down-payment-calculator
+- Home Buying department now has 4 live calculators: PMI, Refinance Break-Even, HELOC, Down Payment
+- Also fixed pre-existing lint issue in HELOC calculator

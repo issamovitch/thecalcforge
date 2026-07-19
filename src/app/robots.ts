@@ -18,6 +18,7 @@ const loanPaths = [
   "/home-buying/pmi-calculator",
   "/home-buying/refinance-break-even-calculator",
   "/home-buying/heloc-calculator",
+  "/home-buying/down-payment-calculator",
 ];
 
 const departmentPaths = ["/debt", "/auto", "/home-buying", "/insurance"];

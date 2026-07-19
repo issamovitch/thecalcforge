@@ -1,0 +1,819 @@
+     1→"use client";
+     2→
+     3→import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+     4→import {
+     5→  Calculator, Copy, Check, Printer, RotateCcw, Info,
+     6→} from "lucide-react";
+     7→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+     8→import { Input } from "@/components/ui/input";
+     9→import { Label } from "@/components/ui/label";
+    10→import { Button } from "@/components/ui/button";
+    11→import {
+    12→  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+    13→} from "@/components/ui/tooltip";
+    14→import { Slider } from "@/components/ui/slider";
+    15→import { toast } from "sonner";
+    16→import { formatCurrency, calculateLoanWithExtra } from "@/lib/loan-math";
+    17→import ShareButtons from "@/components/calculators/ShareButtons";
+    18→
+    19→/* ─── Types ─── */
+    20→
+    21→interface HELOCInputs {
+    22→  homeValue: number;
+    23→  mortgageBalance: number;
+    24→  maxCLTV: number;
+    25→  helocDraw: number;
+    26→  apr: number;
+    27→  drawYears: number;
+    28→  repaymentYears: number;
+    29→  extraMonthly: number;
+    30→  extraDuring: "draw" | "repayment" | "none";
+    31→}
+    32→
+    33→/* ─── Defaults ─── */
+    34→
+    35→export const DEFAULT_INPUTS: HELOCInputs = {
+    36→  homeValue: 400000,
+    37→  mortgageBalance: 250000,
+    38→  maxCLTV: 80,
+    39→  helocDraw: 50000,
+    40→  apr: 8.5,
+    41→  drawYears: 10,
+    42→  repaymentYears: 20,
+    43→  extraMonthly: 0,
+    44→  extraDuring: "none",
+    45→};
+    46→
+    47→/* ─── Helper: format a number as currency for display ─── */
+    48→
+    49→function fmt(n: number): string {
+    50→  return formatCurrency(n);
+    51→}
+    52→
+    53→/* ─── Component ─── */
+    54→
+    55→export default function HELOCCalculator() {
+    56→  const [inputs, setInputs] = useState<HELOCInputs>(DEFAULT_INPUTS);
+    57→  const [copied, setCopied] = useState(false);
+    58→  const containerRef = useRef<HTMLDivElement>(null);
+    59→
+    60→  /* ─── URL param sync ─── */
+    61→  useEffect(() => {
+    62→    const params = new URLSearchParams(window.location.search);
+    63→    const p = (key: string, fallback: number): number => {
+    64→      const v = params.get(key);
+    65→      return v ? parseFloat(v) : fallback;
+    66→    };
+    67→    const extraDuringVal = params.get("extraDuring") as HELOCInputs["extraDuring"] | null;
+    68→    setInputs((prev) => ({
+    69→      homeValue: p("home", prev.homeValue),
+    70→      mortgageBalance: p("mortgage", prev.mortgageBalance),
+    71→      maxCLTV: p("cltv", prev.maxCLTV),
+    72→      helocDraw: p("draw", prev.helocDraw),
+    73→      apr: p("rate", prev.apr),
+    74→      drawYears: p("drawYr", prev.drawYears),
+    75→      repaymentYears: p("repayYr", prev.repaymentYears),
+    76→      extraMonthly: p("extra", prev.extraMonthly),
+    77→      extraDuring: extraDuringVal && ["draw", "repayment", "none"].includes(extraDuringVal)
+    78→        ? extraDuringVal
+    79→        : prev.extraDuring,
+    80→    }));
+    81→  }, []);
+    82→
+    83→  /* ─── Update a single input ─── */
+    84→  const update = useCallback(
+    85→    (key: keyof HELOCInputs, value: number | string) => {
+    86→      setInputs((prev) => ({ ...prev, [key]: value }));
+    87→    },
+    88→    [],
+    89→  );
+    90→
+    91→  /* ─── Reset ─── */
+    92→  const handleReset = useCallback(() => {
+    93→    setInputs(DEFAULT_INPUTS);
+    94→    window.history.replaceState({}, "", window.location.pathname);
+    95→    toast.success("Calculator reset to defaults");
+    96→  }, []);
+    97→
+    98→  /* ─── Copy link ─── */
+    99→  const handleCopy = useCallback(() => {
+   100→    const params = new URLSearchParams({
+   101→      home: String(inputs.homeValue),
+   102→      mortgage: String(inputs.mortgageBalance),
+   103→      cltv: String(inputs.maxCLTV),
+   104→      draw: String(inputs.helocDraw),
+   105→      rate: String(inputs.apr),
+   106→      drawYr: String(inputs.drawYears),
+   107→      repayYr: String(inputs.repaymentYears),
+   108→      extra: String(inputs.extraMonthly),
+   109→      extraDuring: inputs.extraDuring,
+   110→    });
+   111→    const url = `${window.location.pathname}?${params.toString()}`;
+   112→    navigator.clipboard.writeText(`${window.location.origin}${url}`);
+   113→    setCopied(true);
+   114→    toast.success("Link copied to clipboard");
+   115→    setTimeout(() => setCopied(false), 2000);
+   116→  }, [inputs]);
+   117→
+   118→  /* ─── Print ─── */
+   119→  const handlePrint = useCallback(() => {
+   120→    window.print();
+   121→  }, []);
+   122→
+   123→  /* ─── Core calculations ─── */
+   124→  const results = useMemo(() => {
+   125→    const {
+   126→      homeValue, mortgageBalance, maxCLTV, helocDraw,
+   127→      apr, drawYears, repaymentYears, extraMonthly, extraDuring,
+   128→    } = inputs;
+   129→
+   130→    const cltvDecimal = maxCLTV / 100;
+   131→    const maxAvailable = Math.max(0, homeValue * cltvDecimal - mortgageBalance);
+   132→    const effectiveDraw = Math.min(helocDraw, maxAvailable);
+   133→    const monthlyRate = apr / 100 / 12;
+   134→    const drawMonths = drawYears * 12;
+   135→    const repaymentMonths = repaymentYears * 12;
+   136→
+   137→    // Interest-only payment during draw period
+   138→    const ioPayment = monthlyRate > 0 ? r2(effectiveDraw * monthlyRate) : 0;
+   139→
+   140→    // Repayment period: fully amortizing payment over repaymentMonths
+   141→    let repaymentPayment = 0;
+   142→    if (repaymentMonths > 0 && effectiveDraw > 0) {
+   143→      if (monthlyRate === 0) {
+   144→        repaymentPayment = r2(effectiveDraw / repaymentMonths);
+   145→      } else {
+   146→        const factor = Math.pow(1 + monthlyRate, repaymentMonths);
+   147→        repaymentPayment = r2(
+   148→          (effectiveDraw * monthlyRate * factor) / (factor - 1),
+   149→        );
+   150→      }
+   151→    }
+   152→
+   153→    const paymentJump = r2(repaymentPayment - ioPayment);
+   154→
+   155→    // Total interest without extra payments
+   156→    const baseTotalInterest = r2(ioPayment * drawMonths + repaymentPayment * repaymentMonths - effectiveDraw);
+   157→
+   158→    // Extra payments
+   159→    let extraResult = null;
+   160→    if (extraMonthly > 0 && extraDuring !== "none" && effectiveDraw > 0) {
+   161→      if (extraDuring === "repayment") {
+   162→        const res = calculateLoanWithExtra({
+   163→          loanAmount: effectiveDraw,
+   164→          apr,
+   165→          termMonths: repaymentMonths,
+   166→          extraMonthly,
+   167→          extraStartMonth: 1,
+   168→        });
+   169→        extraResult = {
+   170→          period: "repayment" as const,
+   171→          newRepaymentPayment: res.result.monthlyPayment,
+   172→          newTotalInterest: r2(ioPayment * drawMonths + res.result.totalInterest),
+   173→          monthsSaved: res.monthsSaved,
+   174→          interestSaved: r2(
+   175→            repaymentPayment * repaymentMonths - res.result.totalCost,
+   176→          ),
+   177→          actualPayoffMonths: res.actualPayoffMonth,
+   178→        };
+   179→      } else {
+   180→        // Extra during draw period: interest-only + extra reduces the balance each month
+   181→        // Then the remaining balance amortizes over repaymentMonths
+   182→        let remaining = effectiveDraw;
+   183→        for (let m = 1; m <= drawMonths; m++) {
+   184→          const interest = remaining * monthlyRate;
+   185→          const totalPayment = ioPayment + extraMonthly;
+   186→          const principal = totalPayment - interest;
+   187→          if (principal >= remaining) {
+   188→            remaining = 0;
+   189→            break;
+   190→          }
+   191→          remaining -= principal;
+   192→        }
+   193→        remaining = Math.max(0, remaining);
+   194→
+   195→        if (remaining > 0 && repaymentMonths > 0) {
+   196→          let newRepayment = 0;
+   197→          if (monthlyRate === 0) {
+   198→            newRepayment = r2(remaining / repaymentMonths);
+   199→          } else {
+   200→            const factor = Math.pow(1 + monthlyRate, repaymentMonths);
+   201→            newRepayment = r2((remaining * monthlyRate * factor) / (factor - 1));
+   202→          }
+   203→
+   204→          const drawInterest = r2(effectiveDraw - remaining); // rough: total principal paid down in draw
+   205→          const repaymentInterest = r2(newRepayment * repaymentMonths - remaining);
+   206→          const newTotalInterest = r2(
+   207→            (ioPayment * drawMonths - (effectiveDraw - remaining)) + repaymentInterest,
+   208→          );
+   209→
+   210→          extraResult = {
+   211→            period: "draw" as const,
+   212→            newRepaymentPayment: newRepayment,
+   213→            newTotalInterest,
+   214→            monthsSaved: 0,
+   215→            interestSaved: r2(baseTotalInterest - newTotalInterest),
+   216→            actualPayoffMonths: repaymentMonths,
+   217→            balanceAtEndOfDraw: remaining,
+   218→          };
+   219→        } else {
+   220→          // Paid off during draw period
+   221→          let totalMonthsDraw = 0;
+   222→          let bal = effectiveDraw;
+   223→          for (let m = 1; m <= drawMonths; m++) {
+   224→            const interest = bal * monthlyRate;
+   225→            const principal = ioPayment + extraMonthly - interest;
+   226→            if (principal >= bal) {
+   227→              totalMonthsDraw = m;
+   228→              bal = 0;
+   229→              break;
+   230→            }
+   231→            bal -= principal;
+   232→            totalMonthsDraw = m;
+   233→          }
+   234→          extraResult = {
+   235→            period: "draw" as const,
+   236→            newRepaymentPayment: 0,
+   237→            newTotalInterest: r2(effectiveDraw - bal + (effectiveDraw - bal)), // approximate
+   238→            monthsSaved: drawMonths + repaymentMonths - totalMonthsDraw,
+   239→            interestSaved: r2(baseTotalInterest - effectiveDraw + bal),
+   240→            actualPayoffMonths: totalMonthsDraw,
+   241→            balanceAtEndOfDraw: 0,
+   242→          };
+   243→        }
+   244→      }
+   245→    }
+   246→
+   247→    return {
+   248→      maxAvailable,
+   249→      effectiveDraw,
+   250→      ioPayment,
+   251→      repaymentPayment,
+   252→      paymentJump,
+   253→      drawMonths,
+   254→      repaymentMonths,
+   255→      baseTotalInterest,
+   256→      totalCostNoExtra: r2(effectiveDraw + baseTotalInterest),
+   257→      extraResult,
+   258→    };
+   259→  }, [inputs]);
+   260→
+   261→  /* ─── Share text ─── */
+   262→  const shareText = useMemo(() => {
+   263→    return `$${results.effectiveDraw.toLocaleString()} HELOC at ${inputs.apr}%: $${results.ioPayment}/mo interest-only, then $${results.repaymentPayment}/mo repayment. Calculate yours:`;
+   264→  }, [results, inputs.apr]);
+   265→
+   266→  return (
+   267→    <TooltipProvider>
+   268→      <div ref={containerRef}>
+   269→        <Card className="border-border shadow-sm">
+   270→          <CardHeader className="pb-4">
+   271→            <CardTitle className="flex items-center gap-2 text-lg">
+   272→              <Calculator className="h-5 w-5 text-ember" />
+   273→              HELOC Calculator
+   274→            </CardTitle>
+   275→          </CardHeader>
+   276→          <CardContent className="space-y-6">
+   277→            {/* ── Section: How much can I borrow ── */}
+   278→            <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
+   279→              <h3 className="text-sm font-semibold text-foreground">
+   280→                How Much Can I Borrow?
+   281→              </h3>
+   282→              <p className="text-xs text-muted-foreground">
+   283→                Your maximum HELOC credit line depends on your home value,
+   284→                current mortgage balance, and the lender&apos;s maximum
+   285→                combined loan-to-value (CLTV) ratio.
+   286→              </p>
+   287→
+   288→              {/* Home Value */}
+   289→              <div className="space-y-2">
+   290→                <div className="flex items-center justify-between">
+   291→                  <Label htmlFor="homeValue" className="text-sm">
+   292→                    Home Value
+   293→                  </Label>
+   294→                  <span className="text-sm font-medium text-muted-foreground">
+   295→                    {fmt(inputs.homeValue)}
+   296→                  </span>
+   297→                </div>
+   298→                <Slider
+   299→                  id="homeValue"
+   300→                  min={50000}
+   301→                  max={2000000}
+   302→                  step={5000}
+   303→                  value={[inputs.homeValue]}
+   304→                  onValueChange={([v]) => update("homeValue", v)}
+   305→                  aria-label="Home value"
+   306→                />
+   307→                <div className="flex justify-between text-xs text-muted-foreground">
+   308→                  <span>$50K</span>
+   309→                  <span>$2M</span>
+   310→                </div>
+   311→              </div>
+   312→
+   313→              {/* Mortgage Balance */}
+   314→              <div className="space-y-2">
+   315→                <div className="flex items-center justify-between">
+   316→                  <Label htmlFor="mortgageBalance" className="text-sm">
+   317→                    Current Mortgage Balance
+   318→                  </Label>
+   319→                  <span className="text-sm font-medium text-muted-foreground">
+   320→                    {fmt(inputs.mortgageBalance)}
+   321→                  </span>
+   322→                </div>
+   323→                <Slider
+   324→                  id="mortgageBalance"
+   325→                  min={0}
+   326→                  max={1500000}
+   327→                  step={5000}
+   328→                  value={[inputs.mortgageBalance]}
+   329→                  onValueChange={([v]) => update("mortgageBalance", v)}
+   330→                  aria-label="Current mortgage balance"
+   331→                />
+   332→                <div className="flex justify-between text-xs text-muted-foreground">
+   333→                  <span>$0</span>
+   334→                  <span>$1.5M</span>
+   335→                </div>
+   336→              </div>
+   337→
+   338→              {/* Max CLTV */}
+   339→              <div className="space-y-2">
+   340→                <div className="flex items-center gap-1.5">
+   341→                  <Label htmlFor="maxCLTV" className="text-sm">
+   342→                    Maximum CLTV
+   343→                  </Label>
+   344→                  <Tooltip>
+   345→                    <TooltipTrigger asChild>
+   346→                      <Info className="size-3.5 text-muted-foreground cursor-help" />
+   347→                    </TooltipTrigger>
+   348→                    <TooltipContent className="max-w-xs text-xs">
+   349→                      Combined Loan-to-Value. Most lenders cap CLTV at 80% for
+   350→                      HELOCs, though some go up to 85% or 90%. Lower CLTV means
+   351→                      a smaller credit line.
+   352→                    </TooltipContent>
+   353→                  </Tooltip>
+   354→                </div>
+   355→                <div className="flex items-center gap-3">
+   356→                  <Slider
+   357→                    id="maxCLTV"
+   358→                    min={50}
+   359→                    max={95}
+   360→                    step={1}
+   361→                    value={[inputs.maxCLTV]}
+   362→                    onValueChange={([v]) => update("maxCLTV", v)}
+   363→                    className="flex-1"
+   364→                    aria-label="Maximum CLTV percentage"
+   365→                  />
+   366→                  <Input
+   367→                    type="number"
+   368→                    min={50}
+   369→                    max={95}
+   370→                    step={1}
+   371→                    value={inputs.maxCLTV}
+   372→                    onChange={(e) =>
+   373→                      update("maxCLTV", Math.max(50, Math.min(95, Number(e.target.value) || 0)))
+   374→                    }
+   375→                    className="w-20 h-8 text-sm text-right"
+   376→                    aria-label="CLTV percentage input"
+   377→                  />
+   378→                  <span className="text-sm text-muted-foreground">%</span>
+   379→                </div>
+   380→              </div>
+   381→
+   382→              {/* Max Available Result */}
+   383→              <div className="rounded-md bg-ember/5 border border-ember/20 p-3">
+   384→                <p className="text-xs text-muted-foreground">Maximum Available Credit Line</p>
+   385→                <p className="text-xl font-bold text-ember">{fmt(results.maxAvailable)}</p>
+   386→                <p className="text-xs text-muted-foreground mt-1">
+   387→                  (Home value &times; {inputs.maxCLTV}% &minus; mortgage balance)
+   388→                </p>
+   389→              </div>
+   390→            </div>
+   391→
+   392→            {/* ── Section: Payment Calculator ── */}
+   393→            <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
+   394→              <h3 className="text-sm font-semibold text-foreground">
+   395→                Payment Calculator
+   396→              </h3>
+   397→              <p className="text-xs text-muted-foreground">
+   398→                Enter your drawn amount and terms to see interest-only draw
+   399→                payments and the repayment-period payment. HELOC rates are
+   400→                variable and may change over time; this calculator uses a fixed
+   401→                rate for estimation purposes.
+   402→              </p>
+   403→
+   404→              {/* HELOC Amount Drawn */}
+   405→              <div className="space-y-2">
+   406→                <div className="flex items-center justify-between">
+   407→                  <Label htmlFor="helocDraw" className="text-sm">
+   408→                    HELOC Amount Drawn
+   409→                  </Label>
+   410→                  <span className="text-sm font-medium text-muted-foreground">
+   411→                    {fmt(inputs.helocDraw)}
+   412→                  </span>
+   413→                </div>
+   414→                <Slider
+   415→                  id="helocDraw"
+   416→                  min={0}
+   417→                  max={Math.max(results.maxAvailable, 1000)}
+   418→                  step={1000}
+   419→                  value={[Math.min(inputs.helocDraw, Math.max(results.maxAvailable, 1000))]}
+   420→                  onValueChange={([v]) => update("helocDraw", v)}
+   421→                  aria-label="HELOC amount drawn"
+   422→                />
+   423→                <div className="flex justify-between text-xs text-muted-foreground">
+   424→                  <span>$0</span>
+   425→                  <span>{fmt(Math.max(results.maxAvailable, 1000))}</span>
+   426→                </div>
+   427→                {inputs.helocDraw > results.maxAvailable && (
+   428→                  <p className="text-xs text-amber-600 dark:text-amber-400">
+   429→                    Draw exceeds maximum available credit line. Results use the
+   430→                    capped amount of {fmt(results.effectiveDraw)}.
+   431→                  </p>
+   432→                )}
+   433→              </div>
+   434→
+   435→              {/* Interest Rate */}
+   436→              <div className="space-y-2">
+   437→                <div className="flex items-center gap-1.5">
+   438→                  <Label htmlFor="apr" className="text-sm">
+   439→                    Interest Rate (Variable)
+   440→                  </Label>
+   441→                  <Tooltip>
+   442→                    <TooltipTrigger asChild>
+   443→                      <Info className="size-3.5 text-muted-foreground cursor-help" />
+   444→                    </TooltipTrigger>
+   445→                    <TooltipContent className="max-w-xs text-xs">
+   446→                      HELOCs use variable rates tied to the prime rate. Enter
+   447→                      your current rate for this estimate. Actual payments will
+   448→                      change as the rate adjusts.
+   449→                    </TooltipContent>
+   450→                  </Tooltip>
+   451→                </div>
+   452→                <div className="flex items-center gap-3">
+   453→                  <Slider
+   454→                    id="apr"
+   455→                    min={3}
+   456→                    max={18}
+   457→                    step={0.1}
+   458→                    value={[inputs.apr]}
+   459→                    onValueChange={([v]) => update("apr", v)}
+   460→                    className="flex-1"
+   461→                    aria-label="HELOC interest rate"
+   462→                  />
+   463→                  <Input
+   464→                    type="number"
+   465→                    min={3}
+   466→                    max={18}
+   467→                    step={0.1}
+   468→                    value={inputs.apr}
+   469→                    onChange={(e) =>
+   470→                      update("apr", Math.max(3, Math.min(18, Number(e.target.value) || 0)))
+   471→                    }
+   472→                    className="w-20 h-8 text-sm text-right"
+   473→                    aria-label="Interest rate input"
+   474→                  />
+   475→                  <span className="text-sm text-muted-foreground">%</span>
+   476→                </div>
+   477→              </div>
+   478→
+   479→              {/* Draw Period */}
+   480→              <div className="space-y-2">
+   481→                <div className="flex items-center gap-1.5">
+   482→                  <Label htmlFor="drawYears" className="text-sm">
+   483→                    Draw Period
+   484→                  </Label>
+   485→                  <Tooltip>
+   486→                    <TooltipTrigger asChild>
+   487→                      <Info className="size-3.5 text-muted-foreground cursor-help" />
+   488→                    </TooltipTrigger>
+   489→                    <TooltipContent className="max-w-xs text-xs">
+   490→                      The period (typically 5-10 years) when you can borrow from
+   491→                      the line. During this time, you typically pay only the
+   492→                      interest on the amount drawn.
+   493→                    </TooltipContent>
+   494→                  </Tooltip>
+   495→                </div>
+   496→                <div className="flex items-center gap-3">
+   497→                  <Slider
+   498→                    id="drawYears"
+   499→                    min={1}
+   500→                    max={15}
+   501→                    step={1}
+   502→                    value={[inputs.drawYears]}
+   503→                    onValueChange={([v]) => update("drawYears", v)}
+   504→                    className="flex-1"
+   505→                    aria-label="Draw period in years"
+   506→                  />
+   507→                  <Input
+   508→                    type="number"
+   509→                    min={1}
+   510→                    max={15}
+   511→                    step={1}
+   512→                    value={inputs.drawYears}
+   513→                    onChange={(e) =>
+   514→                      update("drawYears", Math.max(1, Math.min(15, Number(e.target.value) || 0)))
+   515→                    }
+   516→                    className="w-20 h-8 text-sm text-right"
+   517→                    aria-label="Draw period years input"
+   518→                  />
+   519→                  <span className="text-sm text-muted-foreground">yrs</span>
+   520→                </div>
+   521→              </div>
+   522→
+   523→              {/* Repayment Period */}
+   524→              <div className="space-y-2">
+   525→                <div className="flex items-center gap-1.5">
+   526→                  <Label htmlFor="repaymentYears" className="text-sm">
+   527→                    Repayment Period
+   528→                  </Label>
+   529→                  <Tooltip>
+   530→                    <TooltipTrigger asChild>
+   531→                      <Info className="size-3.5 text-muted-foreground cursor-help" />
+   532→                    </TooltipTrigger>
+   533→                    <TooltipContent className="max-w-xs text-xs">
+   534→                      The period (typically 10-20 years) after the draw period
+   535→                      ends. You can no longer borrow and must repay the full
+   536→                      balance with principal and interest.
+   537→                    </TooltipContent>
+   538→                  </Tooltip>
+   539→                </div>
+   540→                <div className="flex items-center gap-3">
+   541→                  <Slider
+   542→                    id="repaymentYears"
+   543→                    min={5}
+   544→                    max={30}
+   545→                    step={1}
+   546→                    value={[inputs.repaymentYears]}
+   547→                    onValueChange={([v]) => update("repaymentYears", v)}
+   548→                    className="flex-1"
+   549→                    aria-label="Repayment period in years"
+   550→                  />
+   551→                  <Input
+   552→                    type="number"
+   553→                    min={5}
+   554→                    max={30}
+   555→                    step={1}
+   556→                    value={inputs.repaymentYears}
+   557→                    onChange={(e) =>
+   558→                      update("repaymentYears", Math.max(5, Math.min(30, Number(e.target.value) || 0)))
+   559→                    }
+   560→                    className="w-20 h-8 text-sm text-right"
+   561→                    aria-label="Repayment period years input"
+   562→                  />
+   563→                  <span className="text-sm text-muted-foreground">yrs</span>
+   564→                </div>
+   565→              </div>
+   566→            </div>
+   567→
+   568→            {/* ── Section: Extra Payments ── */}
+   569→            <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
+   570→              <h3 className="text-sm font-semibold text-foreground">
+   571→                Extra Payments (Optional)
+   572→              </h3>
+   573→              <p className="text-xs text-muted-foreground">
+   574→                Making extra payments toward principal during the draw or
+   575→                repayment period reduces your balance faster, lowering total
+   576→                interest and shortening the payoff timeline.
+   577→              </p>
+   578→
+   579→              {/* Extra Monthly */}
+   580→              <div className="space-y-2">
+   581→                <div className="flex items-center justify-between">
+   582→                  <Label htmlFor="extraMonthly" className="text-sm">
+   583→                    Extra Monthly Payment
+   584→                  </Label>
+   585→                  <span className="text-sm font-medium text-muted-foreground">
+   586→                    {fmt(inputs.extraMonthly)}
+   587→                  </span>
+   588→                </div>
+   589→                <Slider
+   590→                  id="extraMonthly"
+   591→                  min={0}
+   592→                  max={2000}
+   593→                  step={25}
+   594→                  value={[inputs.extraMonthly]}
+   595→                  onValueChange={([v]) => update("extraMonthly", v)}
+   596→                  aria-label="Extra monthly payment"
+   597→                />
+   598→                <div className="flex justify-between text-xs text-muted-foreground">
+   599→                  <span>$0</span>
+   600→                  <span>$2,000</span>
+   601→                </div>
+   602→              </div>
+   603→
+   604→              {/* Apply During */}
+   605→              {inputs.extraMonthly > 0 && (
+   606→                <div className="space-y-2">
+   607→                  <Label className="text-sm">Apply Extra Payments During</Label>
+   608→                  <div className="flex gap-2">
+   609→                    {(
+   610→                      [
+   611→                        { value: "draw", label: "Draw Period" },
+   612→                        { value: "repayment", label: "Repayment Period" },
+   613→                      ] as const
+   614→                    ).map((opt) => (
+   615→                      <Button
+   616→                        key={opt.value}
+   617→                        variant={inputs.extraDuring === opt.value ? "default" : "outline"}
+   618→                        size="sm"
+   619→                        onClick={() => update("extraDuring", opt.value)}
+   620→                        className="text-xs"
+   621→                      >
+   622→                        {opt.label}
+   623→                      </Button>
+   624→                    ))}
+   625→                  </div>
+   626→                </div>
+   627→              )}
+   628→            </div>
+   629→
+   630→            {/* ── Results ── */}
+   631→            {results.effectiveDraw > 0 && (
+   632→              <div className="space-y-4">
+   633→                <h3 className="text-sm font-semibold text-foreground">
+   634→                  Results for {fmt(results.effectiveDraw)} HELOC at {inputs.apr}%
+   635→                </h3>
+   636→
+   637→                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+   638→                  <div className="rounded-lg border p-4">
+   639→                    <p className="text-xs text-muted-foreground">
+   640→                      Interest-Only Payment (Draw Period)
+   641→                    </p>
+   642→                    <p className="text-2xl font-bold text-foreground mt-1">
+   643→                      {fmt(results.ioPayment)}
+   644→                      <span className="text-sm font-normal text-muted-foreground">/mo</span>
+   645→                    </p>
+   646→                    <p className="text-xs text-muted-foreground mt-1">
+   647→                      for {results.drawMonths} months ({inputs.drawYears} years)
+   648→                    </p>
+   649→                  </div>
+   650→                  <div className="rounded-lg border p-4">
+   651→                    <p className="text-xs text-muted-foreground">
+   652→                      Repayment Payment (Principal + Interest)
+   653→                    </p>
+   654→                    <p className="text-2xl font-bold text-foreground mt-1">
+   655→                      {fmt(results.repaymentPayment)}
+   656→                      <span className="text-sm font-normal text-muted-foreground">/mo</span>
+   657→                    </p>
+   658→                    <p className="text-xs text-muted-foreground mt-1">
+   659→                      for {results.repaymentMonths} months ({inputs.repaymentYears} years)
+   660→                    </p>
+   661→                  </div>
+   662→                </div>
+   663→
+   664→                {/* Payment Jump Warning */}
+   665→                <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3">
+   666→                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+   667→                    Payment Jump at End of Draw Period
+   668→                  </p>
+   669→                  <p className="text-sm text-amber-800 dark:text-amber-300 mt-1">
+   670→                    Your monthly payment increases from{" "}
+   671→                    <strong>{fmt(results.ioPayment)}</strong> to{" "}
+   672→                    <strong>{fmt(results.repaymentPayment)}</strong> (+
+   673→                    {fmt(results.paymentJump)}).
+   674→                    {results.paymentJump > 0 &&
+   675→                      ` This is a ${Math.round(
+   676→                        (results.paymentJump / results.ioPayment) * 100,
+   677→                      )}% increase.`}
+   678→                  </p>
+   679→                </div>
+   680→
+   681→                {/* Totals */}
+   682→                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+   683→                  <div className="rounded-lg bg-muted/40 p-3 text-center">
+   684→                    <p className="text-xs text-muted-foreground">Total Interest</p>
+   685→                    <p className="text-lg font-bold">{fmt(results.baseTotalInterest)}</p>
+   686→                  </div>
+   687→                  <div className="rounded-lg bg-muted/40 p-3 text-center">
+   688→                    <p className="text-xs text-muted-foreground">Total Cost</p>
+   689→                    <p className="text-lg font-bold">
+   690→                      {fmt(results.totalCostNoExtra)}
+   691→                    </p>
+   692→                  </div>
+   693→                  <div className="rounded-lg bg-muted/40 p-3 text-center col-span-2 sm:col-span-1">
+   694→                    <p className="text-xs text-muted-foreground">
+   695→                      Draw-Period Interest
+   696→                    </p>
+   697→                    <p className="text-lg font-bold">
+   698→                      {fmt(results.ioPayment * results.drawMonths)}
+   699→                    </p>
+   700→                  </div>
+   701→                </div>
+   702→
+   703→                {/* Extra Payment Results */}
+   704→                {results.extraResult && (
+   705→                  <div className="rounded-lg border border-ember/30 bg-ember/5 p-4 space-y-3">
+   706→                    <p className="text-sm font-semibold text-ember">
+   707→                      With Extra Payments (
+   708→                      {results.extraResult.period === "draw"
+   709→                        ? "during draw period"
+   710→                        : "during repayment period"}
+   711→                      )
+   712→                    </p>
+   713→                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+   714→                      <div className="text-center">
+   715→                        <p className="text-xs text-muted-foreground">
+   716→                          New Repayment Pmt
+   717→                        </p>
+   718→                        <p className="text-base font-bold">
+   719→                          {results.extraResult.period === "repayment"
+   720→                            ? fmt(results.extraResult.newRepaymentPayment + inputs.extraMonthly)
+   721→                            : results.extraResult.balanceAtEndOfDraw !== undefined
+   722→                              ? fmt(results.extraResult.newRepaymentPayment)
+   723→                              : "$0.00"}
+   724→                          <span className="text-xs font-normal text-muted-foreground">/mo</span>
+   725→                        </p>
+   726→                      </div>
+   727→                      <div className="text-center">
+   728→                        <p className="text-xs text-muted-foreground">
+   729→                          Interest Saved
+   730→                        </p>
+   731→                        <p className="text-base font-bold text-ember">
+   732→                          {fmt(results.extraResult.interestSaved)}
+   733→                        </p>
+   734→                      </div>
+   735→                      <div className="text-center">
+   736→                        <p className="text-xs text-muted-foreground">
+   737→                          Months Saved
+   738→                        </p>
+   739→                        <p className="text-base font-bold text-ember">
+   740→                          {results.extraResult.monthsSaved}
+   741→                        </p>
+   742→                      </div>
+   743→                      <div className="text-center">
+   744→                        <p className="text-xs text-muted-foreground">
+   745→                          New Total Interest
+   746→                        </p>
+   747→                        <p className="text-base font-bold">
+   748→                          {fmt(results.extraResult.newTotalInterest)}
+   749→                        </p>
+   750→                      </div>
+   751→                    </div>
+   752→                    {"balanceAtEndOfDraw" in results.extraResult &&
+   753→                      results.extraResult.balanceAtEndOfDraw !== undefined && (
+   754→                        <p className="text-xs text-muted-foreground">
+   755→                          Remaining balance at end of draw period with extra
+   756→                          payments: {fmt(results.extraResult.balanceAtEndOfDraw)}
+   757→                        </p>
+   758→                      )}
+   759→                  </div>
+   760→                )}
+   761→
+   762→                {/* Variable Rate Disclaimer */}
+   763→                <p className="text-xs text-muted-foreground">
+   764→                  <strong>Important:</strong> HELOCs use variable interest rates
+   765→                  tied to the prime rate. The calculations above assume a fixed
+   766→                  rate for the entire term. Actual payments will vary as the rate
+   767→                  adjusts. This estimate is for planning purposes only and does
+   768→                  not constitute a loan offer.
+   769→                </p>
+   770→              </div>
+   771→            )}
+   772→
+   773→            {/* ── Action Row ── */}
+   774→            <div className="flex flex-wrap items-center gap-2 no-print">
+   775→              <Button
+   776→                variant="outline"
+   777→                size="sm"
+   778→                onClick={handleCopy}
+   779→                className="text-xs"
+   780→              >
+   781→                {copied ? (
+   782→                  <Check className="mr-1.5 size-3.5" />
+   783→                ) : (
+   784→                  <Copy className="mr-1.5 size-3.5" />
+   785→                )}
+   786→                {copied ? "Copied" : "Copy Link"}
+   787→              </Button>
+   788→              <Button
+   789→                variant="outline"
+   790→                size="sm"
+   791→                onClick={handlePrint}
+   792→                className="text-xs"
+   793→              >
+   794→                <Printer className="mr-1.5 size-3.5" />
+   795→                Print
+   796→              </Button>
+   797→              <Button
+   798→                variant="outline"
+   799→                size="sm"
+   800→                onClick={handleReset}
+   801→                className="text-xs"
+   802→              >
+   803→                <RotateCcw className="mr-1.5 size-3.5" />
+   804→                Reset
+   805→              </Button>
+   806→              <div className="ml-auto">
+   807→                <ShareButtons summaryText={shareText} />
+   808→              </div>
+   809→            </div>
+   810→          </CardContent>
+   811→        </Card>
+   812→      </div>
+   813→    </TooltipProvider>
+   814→  );
+   815→}
+   816→
+   817→function r2(n: number): number {
+   818→  return Math.round(n * 100) / 100;
+   819→}
