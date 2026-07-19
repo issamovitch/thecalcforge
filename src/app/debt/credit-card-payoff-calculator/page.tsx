@@ -436,6 +436,10 @@ export default function CreditCardPayoffCalculatorPage() {
           </p>
         </section>
       </div>
+
+      <div className="print:hidden">
+        <AdSlot slot="footer" lazy />
+      </div>
     </div>
   );
 }

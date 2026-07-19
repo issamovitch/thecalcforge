@@ -168,6 +168,18 @@ export const calculatorPages = [
     primaryKeyword: "credit card minimum payment calculator",
     category: "debt",
   },
+  {
+    label: "Balance Transfer Calculator",
+    href: "/debt/balance-transfer-calculator",
+    description:
+      "See if a balance transfer saves money after the transfer fee, compare total cost, and find your break-even point.",
+    longDescription:
+      "Compare keeping your current card against transferring to a promotional APR card. Factors in the balance transfer fee, promotional period length, and post-promo rate to show net savings, break-even month, and whether the promo period is long enough to clear the balance.",
+    typesCopy:
+      "compares staying on your current card against a balance transfer with promo APR, transfer fee, and post-promo rate to show net savings and break-even point",
+    primaryKeyword: "balance transfer calculator",
+    category: "debt",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────

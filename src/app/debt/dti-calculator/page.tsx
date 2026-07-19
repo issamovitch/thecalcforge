@@ -477,6 +477,10 @@ export default function DTICalculatorPage() {
           </p>
         </section>
       </div>
+
+      <div className="print:hidden">
+        <AdSlot slot="footer" lazy />
+      </div>
     </div>
   );
 }

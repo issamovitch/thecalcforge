@@ -771,3 +771,24 @@ Stage Summary:
 - Created: /src/app/debt/credit-card-minimum-payment-calculator/page.tsx
 - Updated: /src/config/site.config.ts
 - Updated: /src/app/sitemap.ts
+---
+Task ID: 1
+Agent: main
+Task: Build Balance Transfer Calculator (Debt department, 5 of 5)
+
+Work Log:
+- Read existing debt calculator pages (CC Payoff, CC Min Payment) and component for conventions
+- Built BalanceTransferCalculator.tsx component with full calculation engine (stay-put vs new card comparison, transfer fee, promo period, post-promo APR, break-even month, collapsible schedule)
+- Built /debt/balance-transfer-calculator/page.tsx with 5 H2 content sections, 5 FAQs, 3 JSON-LD schemas, full SEO meta, ad slots
+- Added Balance Transfer Calculator to site.config.ts calculatorPages array (category: debt)
+- Added to sitemap.ts (priority 0.9)
+- Fixed promo APR and fee input value bug (|| "" converted 0 to empty, changed to ?? "")
+- Verified: page renders, calculator computes results ($1,334.52 savings verdict), hub page links, header dropdown links, footer ad, breadcrumbs, 7 H2s, 5 FAQs
+
+Stage Summary:
+- /src/components/calculators/BalanceTransferCalculator.tsx (854 lines)
+- /src/app/debt/balance-transfer-calculator/page.tsx (created)
+- /src/config/site.config.ts (updated with Balance Transfer entry)
+- /src/app/sitemap.ts (updated with balance-transfer-calculator entry)
+- Debt department is now complete (5/5 calculators: Payoff, DTI, CC Payoff, CC Min Payment, Balance Transfer)
+
