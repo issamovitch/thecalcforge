@@ -228,6 +228,18 @@ export const calculatorPages = [
     primaryKeyword: "refinance break-even calculator",
     category: "home-buying",
   },
+  {
+    label: "HELOC Calculator",
+    href: "/home-buying/heloc-calculator",
+    description:
+      "Estimate your maximum HELOC credit line, interest-only draw payments, and repayment-period payments with extra payment support.",
+    longDescription:
+      "Calculate how much you can borrow with a home equity line of credit based on your home value, mortgage balance, and lender CLTV limit. See interest-only payments during the draw period, the higher principal-and-interest payment during the repayment period, and the payment jump between them. Includes extra payment modeling for both draw and repayment phases.",
+    typesCopy:
+      "estimates your maximum HELOC credit line, interest-only draw payments, repayment-period payments, and the payment jump between phases with extra payment support",
+    primaryKeyword: "HELOC calculator",
+    category: "home-buying",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────
