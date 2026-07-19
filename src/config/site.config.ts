@@ -288,6 +288,18 @@ export const calculatorPages = [
     primaryKeyword: "life insurance calculator",
     category: "insurance",
   },
+  {
+    label: "Annuity Payout Calculator",
+    href: "/insurance/annuity-payout-calculator",
+    description:
+      "Estimate monthly and annual income from a fixed-period or immediate life annuity based on premium, age, sex, and payout option.",
+    longDescription:
+      "Enter your premium amount and select a payout option (life only, life with period certain, fixed period, or joint life) to see estimated monthly and annual income. Life annuities use a market-based SPIA payout rate table by age and sex with interpolation. Fixed-period annuities use exact amortization math with a configurable interest rate.",
+    typesCopy:
+      "estimates annuity payout amounts for life and fixed-period options using SPIA rate tables and amortization math, with break-even age and total interest calculations",
+    primaryKeyword: "annuity payout calculator",
+    category: "insurance",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────

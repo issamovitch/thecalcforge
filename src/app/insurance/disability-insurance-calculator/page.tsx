@@ -457,7 +457,22 @@ export default function DisabilityInsuranceCalculatorPage() {
             </a>{" "}
             to understand the income level required to support your mortgage
             payment, which is a key input when determining how much disability
-            coverage you need.
+            coverage you need. The{" "}
+            <a
+              href="/insurance/life-insurance-calculator"
+              className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+            >
+              Life Insurance Calculator
+            </a>{" "}
+            and{" "}
+            <a
+              href="/insurance/annuity-payout-calculator"
+              className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+            >
+              Annuity Payout Calculator
+            </a>{" "}
+            address the related questions of survivor income protection and
+            retirement income planning.
           </p>
         </section>
       </div>

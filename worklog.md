@@ -1258,3 +1258,49 @@ Stage Summary:
 - Disability page ad slot fix applied (2 -> 1)
 - Insurance hub updated (2 live, 1 coming soon)
 - 1 remaining Insurance calculator: Annuity Payout
+---
+Task ID: 3
+Agent: Main Agent
+Task: Build Annuity Payout Calculator at /insurance/annuity-payout-calculator
+
+Work Log:
+- Created AnnuityPayoutCalculator.tsx component with:
+  - Inputs: premium ($10K-$2M slider), payout option (Select with grouped life/fixed options), age (50-85 slider, life mode only), sex (Male/Female buttons, life mode only), annual interest rate (1-10% slider, fixed-period only)
+  - Visible SPIA rate table constant (SPIA_RATES) with male/female rates at ages 50-85 for life_only, life_10yr, life_20yr, joint_life options. Linear interpolation between table ages.
+  - Life mode: monthly/annual income from rate table, break-even age calculation
+  - Fixed-period mode: exact amortization formula P*(r/12)/(1-(1+r/12)^(-12n)), total received, interest portion
+  - Results: big monthly number, annual income, payout rate %, break-even age (life) or total received + interest (fixed)
+  - YMYL disclaimer per mode
+  - Actions: Copy Link, Print, Reset, ShareButtons
+  - URL params: premium, option, age, sex, rate
+  - useState initializer pattern (no useEffect)
+- Created /insurance/annuity-payout-calculator/page.tsx with:
+  - SEO: title, meta, canonical, OG, Twitter
+  - 3 JSON-LD: BreadcrumbList, FAQPage (5 FAQs), WebApplication
+  - Breadcrumbs: Home > Insurance Calculators > Annuity Payout Calculator
+  - Intro paragraph: "$100,000 immediate annuity for 65-year-old male pays ~$600/mo"
+  - 5 H2 sections: Annuity Payout Calculator Monthly, Immediate Annuity Income Calculator, How Much Does a $100,000 Annuity Pay per Month, Annuity Payout Calculator by Age, Fixed Annuity Income Calculator
+  - Worked example card: $100K at 4.5% 20yr = $632.65/mo, $151,836 total, $51,836 interest (exact figures)
+  - $100K reference table by age (60/65/70/75, male/female life-only)
+  - 5 FAQs: $100K monthly amount, fixed vs life, why payouts increase with age, period-certain rider, tax treatment
+  - Related calculators: Insurance hub, Life Insurance Calculator, Disability Insurance Calculator
+  - One AdSlot (mid-content only)
+- Updated site.config.ts: added Annuity Payout Calculator entry (category: "insurance")
+- Updated sitemap.ts: added /insurance/annuity-payout-calculator
+- Updated robots.ts: added /insurance/annuity-payout-calculator to allowed paths
+- Removed "coming soon" note from /insurance hub (all 3 calculators now live)
+- Added Annuity Payout Calculator cross-link to Life Insurance page related calculators
+- Added Life Insurance + Annuity Payout cross-links to Disability Insurance page related calculators
+- Lint: clean (no new errors)
+- Browser verified:
+  - Life-only default: $600.00/mo, break-even 78.9 years (male 65)
+  - Fixed 20yr 4.5%: $632.65/mo, $151,836 total, $51,836 interest
+  - Hub shows 3 Live calculators, no coming soon
+  - All 5 H2 sections present, 200 status on all routes
+
+Stage Summary:
+- Annuity Payout Calculator fully built and verified at /insurance/annuity-payout-calculator
+- Insurance department complete: Disability, Life, Annuity all live
+- Hub page finalized (no coming soon items)
+- Cross-links added between all 3 insurance calculator pages
+- SPIA rate table is auditable (visible JS constant with documented source basis)

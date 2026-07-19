@@ -484,7 +484,14 @@ export default function LifeInsuranceCalculatorPage() {
               Disability Insurance Calculator
             </a>{" "}
             addresses the related but separate question of income protection
-            during your lifetime.
+            during your lifetime. If you are planning retirement income, the{" "}
+            <a
+              href="/insurance/annuity-payout-calculator"
+              className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+            >
+              Annuity Payout Calculator
+            </a>{" "}
+            estimates how much monthly income a lump sum could generate.
           </p>
         </section>
       </div>
