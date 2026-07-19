@@ -22,7 +22,7 @@ import { siteConfig } from "@/config/site.config";
 
 const departments = [
   { slug: "loans", name: "Loan Calculators", description: "Estimate monthly payments, total interest, and amortization schedules for any loan type.", icon: "Landmark", live: true, href: "/loans" },
-  { slug: "debt", name: "Debt Calculators", description: "Build payoff strategies, compare snowball vs. avalanche, and see your debt-free date.", icon: "CreditCard", live: false, href: "/debt" },
+  { slug: "debt", name: "Debt Calculators", description: "Build payoff strategies, compare snowball vs. avalanche, and see your debt-free date.", icon: "CreditCard", live: true, href: "/debt" },
   { slug: "auto", name: "Auto Calculators", description: "Factor in car payments, insurance, depreciation, and total cost of ownership.", icon: "Car", live: false, href: "/auto" },
   { slug: "home-buying", name: "Home Buying", description: "Crunch mortgage numbers, property taxes, PMI, and closing costs.", icon: "Home", live: false, href: "/home-buying" },
   { slug: "insurance", name: "Insurance", description: "Estimate coverage needs and premiums for health, life, auto, and homeowners insurance.", icon: "Shield", live: false, href: "/insurance" },
