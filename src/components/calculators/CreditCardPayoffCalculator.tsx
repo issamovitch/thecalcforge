@@ -390,9 +390,6 @@ export default function CreditCardPayoffCalculator() {
                           className="w-full h-8 text-sm no-print"
                           aria-label={`Card ${idx + 1} name`}
                         />
-                        <span className="hidden sm:inline text-sm font-medium min-w-0 truncate max-w-[120px] print:inline">
-                          {card.name || `Card ${idx + 1}`}
-                        </span>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -444,7 +441,7 @@ export default function CreditCardPayoffCalculator() {
                         </div>
                         <div className="space-y-1 sm:col-span-1 col-span-2">
                           <div className="flex items-center gap-1">
-                            <Label className="text-[11px] text-muted-foreground">Min. Payment ($/mo)</Label>
+                            <Label className="text-[11px] text-muted-foreground">Min. Pay ($/mo)</Label>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Info className="size-3 text-muted-foreground cursor-help" />
