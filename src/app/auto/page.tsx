@@ -24,23 +24,31 @@ const autoHubCalculators = [
     description:
       "Calculate monthly lease payments broken into depreciation, finance charge, and tax, with money factor conversion and buyout estimate.",
   },
+  {
+    label: "Lease vs Buy Calculator",
+    href: "/auto/lease-vs-buy-calculator",
+    description:
+      "Compare the total cost of leasing versus buying a car over the same period, including resale equity and break-even analysis.",
+  },
 ];
 
 /* ─── SEO Metadata ─── */
 export const metadata: Metadata = {
-  title: "Auto Calculators - Coming Soon",
-  description: "Auto calculators are coming soon to CalcForge. Factor in car payments, insurance, depreciation, and total cost of ownership.",
+  title: "Auto Calculators - Car Payments, Lease, Affordability | CalcForge",
+  description:
+    "Free auto calculators for car payments, lease comparisons, affordability, and lease vs buy analysis. Plan your next vehicle purchase with confidence.",
   alternates: { canonical: `${siteConfig.url}/auto` },
   openGraph: {
-    title: "Auto Calculators - Coming Soon",
-    description: "Auto calculators are coming soon to CalcForge.",
+    title: "Auto Calculators - Car Payments, Lease, Affordability | CalcForge",
+    description:
+      "Free auto calculators for car payments, lease comparisons, affordability, and lease vs buy analysis.",
     url: `${siteConfig.url}/auto`,
     siteName: siteConfig.name,
     locale: "en_US",
     type: "website",
     images: [{ url: siteConfig.ogImage, width: 1200, height: 630, alt: siteConfig.name }],
   },
-  robots: { index: false, follow: true, googleBot: { index: false, follow: true } },
+  robots: { index: true, follow: true },
 };
 
 export default function AutoPage() {
@@ -69,10 +77,6 @@ export default function AutoPage() {
             </p>
           </Link>
         ))}
-      </div>
-
-      <div className="mt-8 rounded-lg border border-border bg-muted/30 p-6">
-        <p className="text-sm text-muted-foreground">More auto calculators are on the way. <a href="/contact" className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors">Let us know</a> which auto tools matter most to you.</p>
       </div>
     </div>
   );

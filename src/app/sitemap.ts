@@ -28,6 +28,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/auto`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/auto/car-affordability-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/auto/auto-lease-payment-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
+    { url: `${base}/auto/lease-vs-buy-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/home-buying`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
     { url: `${base}/insurance`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
     // Info pages

@@ -833,3 +833,29 @@ Stage Summary:
 - Created /src/app/auto/auto-lease-payment-calculator/page.tsx (page with content, FAQ, SEO)
 - Updated site.config.ts, sitemap.ts, robots.ts, auto hub page
 - Fixed sitemap duplicate URL for car-affordability-calculator
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Build Lease vs Buy Calculator at /auto/lease-vs-buy-calculator
+
+Work Log:
+- Read existing Auto Lease Calculator component and page as template reference
+- Read site.config.ts, sitemap.ts, robots.ts, auto hub page
+- Created LeaseVsBuyCalculator.tsx component with dual lease/buy comparison math
+- Component includes: shared inputs (price, tax, comparison period), lease terms (down, residual %, MF with APR toggle, term), buy terms (down, APR, term, resale value)
+- Math computes: lease monthly payment breakdown, loan payment, remaining balance, equity, net cost, winner, break-even month
+- Handles multiple lease cycles when comparison period > lease term
+- URL parameter encoding for shareable results
+- Copy link, print, reset, full social share row (ShareButtons component)
+- Created /auto/lease-vs-buy-calculator/page.tsx with full content (5 H2 sections with computed examples), 5 FAQs, JSON-LD (BreadcrumbList + FAQPage + WebApplication), canonical/OG/Twitter meta
+- Added entry to site.config.ts with category "auto"
+- Added to sitemap.ts and robots.ts
+- Updated /auto/page.tsx hub: added Lease vs Buy card, removed "coming soon" language, proper SEO metadata
+- Verified: page compiles 200, all 5 H2s + FAQ + Related Calculators render, JSON-LD types correct, canonical URL correct, sitemap has 25 URLs with 0 duplicates, URL params work, no console errors
+
+Stage Summary:
+- Produced: /src/components/calculators/LeaseVsBuyCalculator.tsx, /src/app/auto/lease-vs-buy-calculator/page.tsx
+- Updated: site.config.ts, sitemap.ts, robots.ts, /src/app/auto/page.tsx
+- Default example: $35K vehicle, 36-month comparison, buying cheaper by $704.47, break-even at month 1
+- This completes the Auto department (4 calculators: Auto Loan, Car Affordability, Auto Lease, Lease vs Buy)

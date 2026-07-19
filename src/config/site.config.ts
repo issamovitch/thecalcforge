@@ -133,6 +133,18 @@ export const calculatorPages = [
     category: "auto",
   },
   {
+    label: "Lease vs Buy Calculator",
+    href: "/auto/lease-vs-buy-calculator",
+    description:
+      "Compare the total cost of leasing versus buying a car over the same period, including resale equity and break-even analysis.",
+    longDescription:
+      "Enter lease terms (down payment, residual, money factor) and purchase terms (down payment, loan APR, loan term, estimated resale value) for the same vehicle. The calculator compares total cost of leasing versus financing over your chosen comparison period, nets out resale equity on the buy side, and shows which option is cheaper and by how much, plus a break-even month estimate.",
+    typesCopy:
+      "compares total cost of leasing versus buying a car over the same period, including resale equity, loan balance, and break-even month",
+    primaryKeyword: "lease vs buy calculator",
+    category: "auto",
+  },
+  {
     label: "Debt Payoff Calculator",
     href: "/debt/debt-payoff-calculator",
     description:
