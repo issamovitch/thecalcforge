@@ -252,6 +252,18 @@ export const calculatorPages = [
     primaryKeyword: "down payment calculator",
     category: "home-buying",
   },
+  {
+    label: "Home Affordability Calculator",
+    href: "/home-buying/home-affordability-calculator",
+    description:
+      "See how much house you can afford based on income, debts, down payment, and rate, with 28/36 and FHA 31/43 DTI rule modes.",
+    longDescription:
+      "Enter your income, existing monthly debts, down payment savings, interest rate, loan term, and estimated property tax and insurance. The calculator applies the 28/36 conventional DTI rule (or 31/43 FHA) to find your maximum monthly housing payment, then back-solves the home price that payment supports. Includes a by-monthly-payment reverse mode and FHA comparison.",
+    typesCopy:
+      "calculates how much house you can afford based on income, debts, down payment, and rate with conventional 28/36 and FHA 31/43 DTI rule modes and a reverse monthly-payment mode",
+    primaryKeyword: "home affordability calculator",
+    category: "home-buying",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────

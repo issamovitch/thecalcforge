@@ -1140,3 +1140,38 @@ Stage Summary:
 - Down Payment Calculator live at /home-buying/down-payment-calculator
 - Home Buying department now has 4 live calculators: PMI, Refinance Break-Even, HELOC, Down Payment
 - Also fixed pre-existing lint issue in HELOC calculator
+---
+Task ID: 1
+Agent: Main Agent
+Task: Build Home Affordability Calculator at /home-buying/home-affordability-calculator (final Home Buying department calculator)
+
+Work Log:
+- Read reference files (site.config, hub page, sitemap, robots, DownPayment component pattern, loan-math reverseSolveMaxPrincipal)
+- Created HomeAffordabilityCalculator.tsx component with:
+  - Two modes: "By Income" (DTI-based) and "By Monthly Payment" (reverse-solve)
+  - Loan type toggle: Conventional (28/36 DTI) vs FHA (31/43 DTI)
+  - Income input (annual/monthly toggle), monthly debts, down payment, rate, term (15/30yr), tax+insurance
+  - 28/36 rule: front-end cap (housing <= 28% gross), back-end cap (total debt <= 36% gross)
+  - Identifies limiting factor (front-end vs back-end)
+  - FHA comparison banner when in conventional mode (shows FHA max price)
+  - Reverse-solves max home price from allowable PITI using reverseSolveMaxPrincipal
+  - Shows max home price, max PITI payment, max loan amount, P&I breakdown, both DTI ratios
+  - URL param encoding, copy link, print, reset, full social ShareButtons
+- Created page at /home-buying/home-affordability-calculator/page.tsx with:
+  - Full SEO metadata, OG, Twitter, canonical, robots
+  - 3 JSON-LD: BreadcrumbList, FAQPage, WebApplication
+  - Breadcrumbs: Home > Home Buying Calculators > Home Affordability Calculator
+  - 5 H2 sections: $100k salary, with debt impact, FHA calculator, by monthly payment, $80k salary
+  - 5 FAQs (28/36 rule, FHA DTI, PITI, debt impact, down payment effect)
+  - Related calculators: Down Payment, PMI, DTI, HELOC, Refinance Break-Even
+- Updated site.config.ts: added Home Affordability Calculator entry
+- Updated sitemap.ts: added /home-buying/home-affordability-calculator
+- Updated robots.ts: added to allowed paths
+- Updated hub page: REMOVED "coming soon" section (department now complete with 5 calculators)
+- Verified: all 5 calculators show on hub with Live badges, all in header dropdown, no console errors
+
+Stage Summary:
+- Home Affordability Calculator live at /home-buying/home-affordability-calculator
+- Home Buying department is COMPLETE with 5 calculators: PMI, Refinance Break-Even, HELOC, Down Payment, Home Affordability
+- Hub page "coming soon" section removed - department fully launched
+- All lint errors are pre-existing (title-loan em-dash), new files pass clean

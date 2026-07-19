@@ -110,20 +110,6 @@ export default function HomeBuyingPage() {
           </Link>
         ))}
       </div>
-
-      <div className="mt-10 rounded-lg border border-border bg-muted/30 p-6">
-        <p className="text-sm text-muted-foreground">
-          More home buying tools are in development, including a{" "}
-          <strong>Home Affordability Calculator</strong>.{" "}
-          <Link
-            href="/contact"
-            className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
-          >
-            Let us know
-          </Link>{" "}
-          which tools matter most to you.
-        </p>
-      </div>
     </div>
   );
 }
