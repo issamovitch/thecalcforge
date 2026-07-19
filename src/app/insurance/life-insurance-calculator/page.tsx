@@ -181,7 +181,7 @@ export default function LifeInsuranceCalculatorPage() {
                 <strong>Coverage gap:</strong> $1,135,000 minus $135,000
                 equals $1,000,000. Rounded to nearest $50,000 band:
                 $1,000,000 recommended additional coverage. The 10x income
-                rule would suggest $750,000, which is $250,000 less than the
+                rule would suggest $750,000, which is $385,000 less than the
                 DIME result in this case.
               </p>
             </CardContent>
@@ -402,7 +402,7 @@ export default function LifeInsuranceCalculatorPage() {
             same. A stay-at-home parent with $30,000 in annual replacement
             services, a $250,000 mortgage, $20,000 in debts, two children at
             $50,000 each for education, and $15,000 in final expenses would
-            need $545,000 over a 10-year horizon ($300,000 + $250,000 +
+            need $685,000 over a 10-year horizon ($300,000 + $250,000 +
             $20,000 + $100,000 + $15,000). This is not a small need, and
             it illustrates why life insurance for a non-working spouse is
             widely recommended by financial planners.
