@@ -106,6 +106,7 @@ interface BuyResult {
   monthly: number;
   totalPayments: number;
   totalInterest: number;
+  purchaseTax: number;
   remainingBalance: number;
   equity: number;
   netCost: number;
@@ -135,8 +136,9 @@ function computeComparison(inputs: LeaseInputs): ComparisonResult {
     remaining -= inputs.leaseTerm;
   }
 
-  // Buy side
-  const loanAmount = inputs.vehiclePrice - inputs.buyDown;
+  // Buy side: sales tax on full vehicle price, rolled into loan
+  const purchaseTax = r2(inputs.vehiclePrice * (inputs.salesTaxRate / 100));
+  const loanAmount = inputs.vehiclePrice - inputs.buyDown + purchaseTax;
   const buyMonthly = computeLoanPayment(loanAmount, inputs.loanApr, inputs.loanTerm);
   const totalBuyPayments = inputs.buyDown + buyMonthly * Math.min(comp, inputs.loanTerm);
   const totalInterest = r2(buyMonthly * Math.min(comp, inputs.loanTerm) - Math.min(loanAmount, loanAmount * Math.min(comp, inputs.loanTerm) / inputs.loanTerm));
@@ -187,6 +189,7 @@ function computeComparison(inputs: LeaseInputs): ComparisonResult {
       monthly: buyMonthly,
       totalPayments: r2(totalBuyPayments),
       totalInterest,
+      purchaseTax,
       remainingBalance: bal,
       equity,
       netCost: netBuyCost,
@@ -781,6 +784,12 @@ export default function LeaseVsBuyCalculator() {
                           <span className="text-muted-foreground">Down payment</span>
                           <span>{formatCurrency(inputs.buyDown)}</span>
                         </div>
+                        {result.buy.purchaseTax > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Sales tax ({inputs.salesTaxRate}% of {formatCurrency(inputs.vehiclePrice)})</span>
+                            <span>{formatCurrency(result.buy.purchaseTax)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">{Math.min(inputs.comparisonMonths, inputs.loanTerm)} monthly payments</span>
                           <span>{formatCurrency(r2(result.buy.monthly * Math.min(inputs.comparisonMonths, inputs.loanTerm)))}</span>

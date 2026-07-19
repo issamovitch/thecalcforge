@@ -71,7 +71,8 @@ function compare(
   }
   totalLease = r2(totalLease);
 
-  const loan = price - bDown;
+  const purchaseTax = r2(price * (tax / 100));
+  const loan = price - bDown + purchaseTax;
   const bm = loanMonthly(loan, apr, bTerm);
   const monthsPaid = Math.min(comp, bTerm);
   const totalBuy = r2(bDown + bm * monthsPaid);
@@ -100,9 +101,10 @@ const S3B = compare(35000, 10, 36, 2000, 55, 0.00125, 36, 3500, 6.5, 60, 21000);
 // S4: EV example - $45K EV, 60% residual, $7500 credit as cap reduction
 const S4_LEASE = leaseMonthly(45000, 7500, 60, 0.001, 36, 7);
 const S4_LEASE_TOTAL = r2(7500 + S4_LEASE.total * 36);
-const S4_LOAN = loanMonthly(37500, 5.9, 60);
-const S4_BUY_TOTAL = r2(37500 + S4_LOAN * 36);
-const S4_BAL = remBalance(37500, 5.9, 60, 36);
+const S4_PURCHASE_TAX = r2(45000 * 0.07); // tax on full vehicle price
+const S4_LOAN = loanMonthly(45000 - 7500 + S4_PURCHASE_TAX, 5.9, 60);
+const S4_BUY_TOTAL = r2(7500 + S4_LOAN * 36); // credit acts as down payment
+const S4_BAL = remBalance(45000 - 7500 + S4_PURCHASE_TAX, 5.9, 60, 36);
 const S4_EQUITY = Math.max(0, 27000 - S4_BAL);
 const S4_NET_BUY = r2(S4_BUY_TOTAL - S4_EQUITY);
 const S4_DIFF = r2(S4_LEASE_TOTAL - S4_NET_BUY);
