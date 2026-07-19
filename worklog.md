@@ -859,3 +859,125 @@ Stage Summary:
 - Updated: site.config.ts, sitemap.ts, robots.ts, /src/app/auto/page.tsx
 - Default example: $35K vehicle, 36-month comparison, buying cheaper by $704.47, break-even at month 1
 - This completes the Auto department (4 calculators: Auto Loan, Car Affordability, Auto Lease, Lease vs Buy)
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Create PMI Calculator client component at /src/components/calculators/PMICalculator.tsx
+
+Work Log:
+- Read reference files: AutoLeaseCalculator.tsx (structure/patterns), loan-math.ts (calculateLoan, formatCurrency, AmortizationRow), ShareButtons.tsx, slider.tsx, checkbox.tsx
+- Created comprehensive PMICalculator.tsx with full functionality:
+  - 6 inputs: Home Price ($50K-$2M, slider+input), Down Payment (toggle %/$), Mortgage APR (0-15%), Loan Term (15/30yr buttons), Credit Score Band (4 options), FHA comparison checkbox
+  - PMI Rate Table with 4 credit bands x 4 LTV tiers (16 rate combinations)
+  - LTV drop-off calculation using calculateLoan amortization schedule to find 80% and 78% LTV months
+  - Calendar date estimation for both LTV thresholds
+  - Total PMI cost until 78% LTV auto-termination
+  - FHA MIP comparison panel: upfront MIP (1.75%), annual MIP rates by term/LTV, monthly MIP, total FHA MIP over life of loan
+  - Side-by-side total cost comparison (conventional PMI vs FHA MIP)
+  - URL params: home, down, apr, term, credit, fha (encode/decode on mount)
+  - Action row: Copy Link, Print, Reset buttons + ShareButtons component
+  - Print CSS: @media print rule hiding .no-print elements
+  - PrintFooter with CalcForge branding and date/URL
+  - All calculations in useMemo, all handlers in useCallback
+  - Follows AutoLeaseCalculator patterns exactly: TooltipProvider, Card structure, ResultCard sub-component, PrintFooter sub-component
+  - No em-dashes, no Suspense wrapper, default export, shadcn/ui components throughout
+  - Lint passes cleanly (only pre-existing em-dash errors in title-loan-calculator page)
+- Dev log shows clean compilation with no errors
+
+Stage Summary:
+- Produced: /src/components/calculators/PMICalculator.tsx
+- Uses: calculateLoan from loan-math.ts for amortization schedule, Checkbox UI component for FHA toggle
+- Key feature: Iterates amortization month-by-month to compute exact LTV drop-off points and total PMI paid
+- Default example: $300K home, 10% down, Good credit, 30yr term = LTV 90%, PMI rate 0.55%, monthly PMI based on loan amount
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Build PMI Calculator page at /home-buying/pmi-calculator/
+
+Work Log:
+- Read worklog and all reference files (debt-payoff-calculator page, site.config, JsonLd, Breadcrumbs, AdSlot)
+- Created directory src/app/home-buying/pmi-calculator/
+- Created page at src/app/home-buying/pmi-calculator/page.tsx with:
+  - Full SEO metadata (title, description, canonical, OG, Twitter, robots with max-snippet: -1)
+  - JSON-LD: BreadcrumbList (Home > Home Buying Calculators > PMI Calculator), FAQPage, WebApplication
+  - Breadcrumb navigation matching debt-payoff-calculator pattern exactly
+  - H1: "PMI Calculator" with matching className
+  - Intro paragraph (~100 words) explaining PMI, LTV, credit score, drop-off at 78% LTV
+  - PMICalculator client component import from @/components/calculators/PMICalculator
+  - Single mid-content AdSlot
+  - 5 H2 content sections with Separators (my-12 first, my-10 between, my-12 before FAQ), all wrapped in print:hidden:
+    1. "PMI Calculator by Credit Score" - credit bands, rate ranges, Card with $300K/10% down example
+    2. "How Much Is PMI on a $300,000 Mortgage" - worked examples at 5%/10%/15% down, total PMI until 78% LTV
+    3. "When Does PMI Drop Off Calculator" - 80% vs 78% LTV thresholds, HPA requirements, month numbers, FHA exception
+    4. "FHA MIP vs PMI Calculator" - FHA structure (1.75% upfront + 0.15-0.75% annual), duration difference, Card with side-by-side comparison
+    5. "PMI Removal Calculator LTV" - 80% request process, 78% automatic, refinancing, extra payments, home appreciation
+  - 5 FAQ items with native <details> accordion matching exact pattern (ChevronIcon, rounded-lg border, group-open rotate)
+  - Related Calculators section with links to Home Buying hub, Down Payment (coming), Home Affordability (coming), DTI Calculator, Auto Loan Calculator
+  - Footer AdSlot with lazy prop
+  - ChevronIcon sub-component at bottom of file
+- Content rules followed: ~1100 words across sections, no em-dashes, no placeholder text, VERIFIED_DATE used, YMYL accuracy notes ("These are estimates"), semantic variants throughout
+- Lint passes (no errors from new file; pre-existing errors in title-loan-calculator unrelated)
+---
+Task ID: 2-a
+Agent: full-stack-developer (subagent)
+Task: Build PMICalculator.tsx client component
+
+Work Log:
+- Created /src/components/calculators/PMICalculator.tsx with "use client" pattern
+- Inputs: Home Price, Down Payment (%/$ toggle), Mortgage APR, Loan Term (15/30yr), Credit Score Band (4 bands), FHA comparison checkbox
+- PMI rate lookup table (4 credit bands x 4 LTV tiers)
+- Uses calculateLoan from loan-math.ts for amortization schedule
+- LTV drop-off calculation: finds month 80% LTV (borrower-request) and 78% LTV (auto-termination) with calendar dates
+- FHA MIP comparison: upfront 1.75%, annual 0.15-0.55%, total over full term
+- URL params: home, down, apr, term, credit, fha
+- Action row: Copy Link, Print, Reset + ShareButtons (X, Facebook, WhatsApp, Reddit, Email)
+- Print CSS, no-print classes, TooltipProvider wrapper
+
+Stage Summary:
+- Component created with full PMI calculation logic
+- Bug fix: schedule destructuring ({ schedule }) instead of full LoanResult object
+- All inputs, outputs, and FHA comparison working correctly
+---
+Task ID: 2-b
+Agent: full-stack-developer (subagent)
+Task: Build /home-buying/pmi-calculator/page.tsx
+
+Work Log:
+- Created page with full SEO metadata (title, description, canonical, OG, Twitter, robots)
+- 3 JSON-LD schemas: BreadcrumbJsonLd, FaqJsonLd, WebApplicationJsonLd
+- Breadcrumbs: Home > Home Buying Calculators > PMI Calculator
+- H1: "PMI Calculator"
+- Intro paragraph (~100 words, featured snippet optimized)
+- Calculator component integration
+- 5 H2 content sections: PMI by Credit Score, $300K Mortgage, Drop Off, FHA MIP vs PMI, PMI Removal LTV
+- 5 FAQs with native <details> accordion
+- Related Calculators with keyword-rich anchors
+- Single mid-content ad slot + footer ad slot
+- No em-dashes, uses VERIFIED_DATE, YMYL accuracy notes
+
+Stage Summary:
+- Page created matching exact debt-payoff-calculator template
+- ~1,100 words of unique content across sections
+- All SEO/JSON-LD/schema requirements met
+---
+Task ID: 2-c
+Agent: Main Agent
+Task: Config updates, homepage/hub enablement, and verification
+
+Work Log:
+- Added PMI Calculator entry to site.config.ts (category: "home-buying")
+- Added /home-buying/pmi-calculator to sitemap.ts (26 total URLs)
+- Added /home-buying/pmi-calculator to robots.ts allowed paths
+- Enabled Home Buying card on homepage (live: true)
+- Rewrote /home-buying/page.tsx hub page with PMI Calculator card (Live badge, proper description, "coming soon" note for future tools)
+- Fixed bug in PMICalculator.tsx: destructured { schedule } from calculateLoan() result
+- Verified: 0 em-dashes in new files, 0 new lint errors (pre-existing title-loan errors unchanged)
+- Browser verified: PMI page renders with all results, FHA toggle works, homepage shows 4 Live department cards, hub page shows PMI card
+
+Stage Summary:
+- PMI Calculator fully live at /home-buying/pmi-calculator
+- Home Buying department enabled on homepage and hub
+- All navigation, footer, sitemap, and robots updated
+- Total sitemap URLs: 26 (0 duplicates)

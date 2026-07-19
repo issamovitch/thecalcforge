@@ -204,6 +204,18 @@ export const calculatorPages = [
     primaryKeyword: "balance transfer calculator",
     category: "debt",
   },
+  {
+    label: "PMI Calculator",
+    href: "/home-buying/pmi-calculator",
+    description:
+      "Estimate monthly private mortgage insurance cost by credit score and down payment, and see when PMI drops off at 78-80% LTV.",
+    longDescription:
+      "Estimate your monthly private mortgage insurance cost based on home price, down payment, credit score band, and mortgage term. Shows the PMI rate, monthly and annual cost, the month and date when PMI drops off at 80% LTV (borrower-request) and 78% LTV (automatic termination), and total PMI paid. Includes an FHA MIP comparison mode showing upfront and annual MIP costs over the full loan term.",
+    typesCopy:
+      "estimates monthly PMI cost by credit score and down payment, shows when PMI drops off at 78-80% LTV, and compares conventional PMI vs FHA MIP",
+    primaryKeyword: "PMI calculator",
+    category: "home-buying",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────
