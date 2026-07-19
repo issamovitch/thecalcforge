@@ -12,7 +12,8 @@ const loanPaths = [
   "/loans/personal-loan-calculator",
   "/loans/auto-loan-calculator",
   "/loans/debt-consolidation-calculator",
-  "/loans/car-affordability-calculator",
+  "/auto/car-affordability-calculator",
+  "/auto/auto-lease-payment-calculator",
 ];
 
 const departmentPaths = ["/debt", "/auto", "/home-buying", "/insurance"];

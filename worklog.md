@@ -792,3 +792,44 @@ Stage Summary:
 - /src/app/sitemap.ts (updated with balance-transfer-calculator entry)
 - Debt department is now complete (5/5 calculators: Payoff, DTI, CC Payoff, CC Min Payment, Balance Transfer)
 
+---
+Task ID: 1
+Agent: main
+Task: Two structural changes - (1) Auto Loan Calculator show in both Loans and Auto, (2) Car Affordability Calculator move fully to Auto
+
+Work Log:
+- Read and analyzed all relevant files: site.config.ts, Header.tsx, auto hub page, loans hub page, sitemap.ts, robots.ts, car-affordability page, HubPage component, Footer component
+- Updated site.config.ts: Changed Car Affordability Calculator href from /loans/car-affordability-calculator to /auto/car-affordability-calculator, category from "loans" to "auto"
+- Updated Header.tsx: Added loanCalculators filter (category === "loans"), autoCalculators array (Auto Loan + auto category), created Auto dropdown with CSS hover pattern, fixed Loans dropdown to filter by category, updated mobile nav with Auto section, removed Auto from otherNavLinks
+- Updated sitemap.ts: Changed URL, updated comment from "8 calculators" to "7 calculators"
+- Updated robots.ts: Changed path in loanPaths allow list
+- Created /auto/car-affordability-calculator/page.tsx with updated canonical, breadcrumb (Home > Auto >), JSON-LD, and related links (Loan Calculators hub → Auto Calculators hub)
+- Updated Auto hub page: Replaced noindex stub with proper page showing both Auto Loan Calculator and Car Affordability Calculator cards
+- Deleted /loans/car-affordability-calculator/ directory
+- Verified via agent-browser: Loans dropdown has 7 items (no Car Affordability), Auto dropdown has both calculators, Auto hub shows both cards, moved page renders correctly at /auto/, canonical points to /auto/, breadcrumb is Home > Auto, old URL returns 404, sitemap has 0 duplicates with correct URL
+
+Stage Summary:
+- Task 1 (Auto Loan in both): Auto Loan Calculator stays at /loans/auto-loan-calculator with unchanged canonical/breadcrumb. Added to Auto dropdown and Auto hub page as a card linking to existing URL.
+- Task 2 (Car Affordability move): Fully moved to /auto/car-affordability-calculator. Updated canonical, breadcrumb (Home > Auto > Car Affordability Calculator), sitemap, robots.txt, all internal links (related calculators section now links to /auto hub). Removed from Loans dropdown (via category filter), Loans hub (via category filter). Old /loans/ URL returns 404.
+- Side fix: Loans dropdown was showing ALL calculatorPages (including debt calculators). Now correctly filters to category === "loans" only.
+---
+Task ID: 2
+Agent: main
+Task: Build Auto Lease Payment Calculator at /auto/auto-lease-payment-calculator
+
+Work Log:
+- Explored existing calculator template patterns (AutoLoanCalculator, CarAffordabilityCalculator, ShareButtons, page templates)
+- Built AutoLeaseCalculator.tsx: 7 inputs (vehicle price, down payment, residual %, money factor/APR toggle, term, tax rate, purchase fee), lease math (depreciation + finance + tax), formula breakdown display, buyout card, collapsible 36-row schedule, URL param sync, copy/print/reset/share actions
+- Built page.tsx: 5 H2 content sections (money factor, residual value, formula walkthrough, state tax, buyout), 5 FAQs, build-time computed examples ($35K/55%/0.00125/36mo = $478.56/mo), Related Calculators links to Auto Loan + Car Affordability + /auto hub
+- Fixed TooltipTrigger asChild error (removed duplicate children)
+- Fixed money factor floating point display (toFixed(5) on input value)
+- Added to site.config.ts (category: "auto"), sitemap.ts, robots.ts
+- Updated auto hub page with 3rd card
+- Fixed sitemap duplicate (car-affordability appeared twice after earlier move)
+- Verified: canonical correct, breadcrumb Home > Auto, all 5 H2s, 5 FAQs, results $478.56/$381.94/$65.31/$19,600/$17,228.16, schedule 36 rows, Auto dropdown has 3 calculators, sitemap 25 URLs 0 duplicates
+
+Stage Summary:
+- Created /src/components/calculators/AutoLeaseCalculator.tsx (full lease calculator component)
+- Created /src/app/auto/auto-lease-payment-calculator/page.tsx (page with content, FAQ, SEO)
+- Updated site.config.ts, sitemap.ts, robots.ts, auto hub page
+- Fixed sitemap duplicate URL for car-affordability-calculator

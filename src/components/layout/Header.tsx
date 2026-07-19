@@ -14,10 +14,14 @@ import {
 } from "@/components/ui/sheet";
 import { siteConfig, calculatorPages } from "@/config/site.config";
 
+const loanCalculators = calculatorPages.filter((p) => p.category === "loans");
 const debtCalculators = calculatorPages.filter((p) => p.category === "debt");
+const autoCalculators = [
+  calculatorPages.find((p) => p.href === "/loans/auto-loan-calculator")!,
+  ...calculatorPages.filter((p) => p.category === "auto"),
+];
 
 const otherNavLinks = [
-  { label: "Auto", href: "/auto" },
   { label: "Home Buying", href: "/home-buying" },
   { label: "Insurance", href: "/insurance" },
 ];
@@ -63,7 +67,7 @@ export function Header() {
             </button>
             <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 absolute top-full left-0 z-50 pt-1 transition-[opacity,visibility] duration-150">
               <div className="w-[298px] overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                {calculatorPages.map((p) => (
+                {loanCalculators.map((p) => (
                   <Link
                     key={p.href}
                     href={p.href}
@@ -106,6 +110,34 @@ export function Header() {
                   className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   All Debt Calculators
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Auto dropdown */}
+          <div className="group relative">
+            <button className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors">
+              Auto
+              <ChevronDown className="size-3.5 transition-transform duration-200 group-hover:rotate-180" />
+            </button>
+            <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 absolute top-full left-0 z-50 pt-1 transition-[opacity,visibility] duration-150">
+              <div className="w-[298px] overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                {autoCalculators.map((p) => (
+                  <Link
+                    key={p.href}
+                    href={p.href}
+                    className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden whitespace-nowrap transition-colors hover:bg-accent hover:text-accent-foreground"
+                  >
+                    {p.label}
+                  </Link>
+                ))}
+                <div className="-mx-1 my-1 h-px bg-border" />
+                <Link
+                  href="/auto"
+                  className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  All Auto Calculators
                 </Link>
               </div>
             </div>
@@ -165,7 +197,7 @@ export function Header() {
               >
                 Loans
               </Link>
-              {calculatorPages.map((p) => (
+              {loanCalculators.map((p) => (
                 <Link
                   key={p.href}
                   href={p.href}
@@ -207,6 +239,32 @@ export function Header() {
                 className="block cursor-pointer rounded-md pl-6 pr-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
               >
                 All Debt Calculators
+              </Link>
+
+              {/* Auto section */}
+              <Link
+                href="/auto"
+                onClick={() => setMobileOpen(false)}
+                className="cursor-pointer rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+              >
+                Auto
+              </Link>
+              {autoCalculators.map((p) => (
+                <Link
+                  key={p.href}
+                  href={p.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="block cursor-pointer rounded-md pl-6 pr-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  {p.label}
+                </Link>
+              ))}
+              <Link
+                href="/auto"
+                onClick={() => setMobileOpen(false)}
+                className="block cursor-pointer rounded-md pl-6 pr-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
+              >
+                All Auto Calculators
               </Link>
 
               {/* Other departments */}

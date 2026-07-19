@@ -110,7 +110,7 @@ export const calculatorPages = [
   },
   {
     label: "Car Affordability Calculator",
-    href: "/loans/car-affordability-calculator",
+    href: "/auto/car-affordability-calculator",
     description:
       "Find the maximum vehicle price you can afford based on income or target payment, with 20/4/10 rule analysis.",
     longDescription:
@@ -118,7 +118,19 @@ export const calculatorPages = [
     typesCopy:
       "finds the maximum vehicle price you can afford based on income, target payment, or the 20/4/10 rule with full constraint checking",
     primaryKeyword: "how much car can I afford calculator",
-    category: "loans",
+    category: "auto",
+  },
+  {
+    label: "Auto Lease Calculator",
+    href: "/auto/auto-lease-payment-calculator",
+    description:
+      "Calculate monthly lease payments broken into depreciation, finance charge, and tax, with money factor conversion and buyout estimate.",
+    longDescription:
+      "Calculate your monthly car lease payment by entering the vehicle price, down payment, residual value percentage, money factor (with APR conversion), lease term, and sales tax rate. Shows depreciation, finance charge, and tax portions separately, plus the end-of-lease buyout price including purchase option fee.",
+    typesCopy:
+      "calculates monthly lease payments broken into depreciation, finance charge, and tax, with money factor to APR conversion and end-of-lease buyout estimate",
+    primaryKeyword: "auto lease calculator",
+    category: "auto",
   },
   {
     label: "Debt Payoff Calculator",

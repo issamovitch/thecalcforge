@@ -8,7 +8,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const pages: MetadataRoute.Sitemap = [
     { url: base, lastModified: new Date(), changeFrequency: "weekly", priority: 1.0 },
-    // Loans hub + 8 calculators
+    // Loans hub + 7 calculators
     { url: `${base}/loans`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/loans/title-loan-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/loans/payday-loan-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
@@ -17,7 +17,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/loans/personal-loan-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/loans/auto-loan-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/loans/debt-consolidation-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
-    { url: `${base}/loans/car-affordability-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     // Debt hub + calculators
     { url: `${base}/debt`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/debt/debt-payoff-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
@@ -26,7 +25,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/debt/credit-card-minimum-payment-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/debt/balance-transfer-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     // Department stubs
-    { url: `${base}/auto`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
+    { url: `${base}/auto`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/auto/car-affordability-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
+    { url: `${base}/auto/auto-lease-payment-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/home-buying`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
     { url: `${base}/insurance`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
     // Info pages
