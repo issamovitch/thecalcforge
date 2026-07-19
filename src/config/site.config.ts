@@ -216,6 +216,18 @@ export const calculatorPages = [
     primaryKeyword: "PMI calculator",
     category: "home-buying",
   },
+  {
+    label: "Refinance Break-Even Calculator",
+    href: "/home-buying/refinance-break-even-calculator",
+    description:
+      "See how many months to recoup closing costs, your monthly savings, and whether refinancing your mortgage is worth it.",
+    longDescription:
+      "Compare your current mortgage against a refinance offer. Enter your balance, current rate, new rate, closing costs, and optional cash-out amount. The calculator shows your new monthly payment, monthly savings, break-even point in months, total interest saved or lost, and whether refinancing is worth it given how long you plan to stay in the home. Flags the term-reset trap when a longer new term increases total interest.",
+    typesCopy:
+      "compares current mortgage against a refinance offer, shows break-even months, monthly savings, total interest saved, and a worth-it verdict based on planned stay",
+    primaryKeyword: "refinance break-even calculator",
+    category: "home-buying",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────

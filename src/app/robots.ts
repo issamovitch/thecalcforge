@@ -16,6 +16,7 @@ const loanPaths = [
   "/auto/auto-lease-payment-calculator",
   "/auto/lease-vs-buy-calculator",
   "/home-buying/pmi-calculator",
+  "/home-buying/refinance-break-even-calculator",
 ];
 
 const departmentPaths = ["/debt", "/auto", "/home-buying", "/insurance"];

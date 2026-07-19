@@ -981,3 +981,128 @@ Stage Summary:
 - Home Buying department enabled on homepage and hub
 - All navigation, footer, sitemap, and robots updated
 - Total sitemap URLs: 26 (0 duplicates)
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Create Refinance Break-Even Calculator page at /home-buying/refinance-break-even-calculator/
+
+Work Log:
+- Read worklog and PMI calculator reference page to match exact patterns
+- Created page at src/app/home-buying/refinance-break-even-calculator/page.tsx with:
+  - Full SEO metadata (title, description, OG, Twitter, canonical, robots) matching PMI page pattern
+  - JSON-LD: BreadcrumbList (Home > Home Buying Calculators > Refinance Break-Even Calculator), FAQPage, WebApplication
+  - Breadcrumb navigation matching PMI page structure
+  - H1: "Refinance Break-Even Calculator"
+  - Intro paragraph (~100 words) explaining break-even formula and calculator purpose
+  - Calculator component import (RefinanceBreakEvenCalculator from @/components/calculators/)
+  - Single mid-content AdSlot (print:hidden)
+  - 5 H2 content sections with Substantive content, Cards, and worked examples:
+    1. "Refinance Break Even Calculator" - core formula, worked $300K example, break-even ~30 months
+    2. "Mortgage Refinance Savings Calculator" - rate drop comparison table (7% to 6.5%, 6%, 5.5%)
+    3. "Is It Worth Refinancing Calculator" - decision framework, term-reset warning
+    4. "Refinance Break Even Point Calculator with Closing Costs" - cost breakdown, minimizing costs, rolling into loan
+    5. "Cash Out Refinance Break Even Calculator" - cash-out mechanics, when it makes sense
+  - 5 FAQ items (native <details> accordion with ChevronIcon)
+  - Related Calculators: Home Buying hub, PMI Calculator, Debt Consolidation Calculator, DTI Calculator, Personal Loan Calculator
+  - Footer AdSlot (lazy)
+  - ChevronIcon sub-component at bottom of file
+- Content: ~1,000 words across sections, no em-dashes, uses VERIFIED_DATE, YMYL disclaimers
+- ESLint: 0 errors on new file (existing errors on title-loan-calculator unrelated)
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Create RefinanceBreakEvenCalculator component
+
+Work Log:
+- Read PMICalculator.tsx, loan-math.ts, ShareButtons.tsx, slider.tsx to match exact patterns
+- Created /src/components/calculators/RefinanceBreakEvenCalculator.tsx with:
+  - 9 inputs: balance, current rate, current payment (optional override), current remaining term (optional override), new rate, new term (10/15/20/25/30 yr buttons), closing costs (dollar/pct toggle), cash-out (checkbox + slider), planned years in home
+  - Smart auto-calculation: if no payment/term provided, assumes 30yr original term and amortizes current balance
+  - If only payment provided, finds remaining term by running amortization until balance = 0
+  - If only term provided, computes payment via standard amortization formula
+  - New loan = balance + closing costs + cash-out; standard amortization for new payment
+  - Break-even = closing costs / monthly savings (null if savings <= 0)
+  - Interest comparison: current remaining total interest vs new loan total interest
+  - Term-reset detection and warning when new term > remaining term
+  - Worth-it decision based on break-even months vs planned years in home
+  - Results panel: highlighted new monthly payment, worth-it verdict (green/red), term-reset warning (yellow), 4 ResultCards (monthly savings, break-even point, interest saved, new loan amount)
+  - Cash-out breakdown table when enabled
+  - Interest comparison section with current vs new totals
+  - URL params: balance, curRate, newRate, newTerm, costs, cashout, years
+  - Action row: Copy Link, Print, Reset + ShareButtons (matches PMI pattern exactly)
+  - summaryText generates concise share message
+  - Print CSS, PrintFooter, PrintDateAndUrl sub-components (same as PMI)
+  - ResultCard with optional valueClass for color coding
+  - All calculations wrapped in useMemo
+  - No em-dashes, no Suspense, default export, "use client"
+  - Uses formatCurrency, calculateLoan, formatPercent from loan-math
+  - Uses r2(n) locally for rounding
+- ESLint: 0 errors on new file
+---
+Task ID: 3-a
+Agent: full-stack-developer (subagent)
+Task: Build RefinanceBreakEvenCalculator.tsx client component
+
+Work Log:
+- Created /src/components/calculators/RefinanceBreakEvenCalculator.tsx with "use client" pattern
+- 9 inputs: current balance, current rate, current payment (optional override), remaining term (optional override), new rate, new term (10/15/20/25/30), closing costs ($ or % toggle), cash-out amount (checkbox-gated), planned years in home
+- Smart auto-resolve: computes current payment/term from balance+rate when not provided
+- New loan amount = balance + closing costs + cash-out
+- Break-even months = closing costs / monthly savings
+- Total interest comparison (current remaining vs new loan full term)
+- Term-reset detection with warning flag
+- Worth-it verdict: green/red based on break-even vs planned stay
+- URL params: balance, curRate, newRate, newTerm, costs, cashout, years
+- Action row: Copy Link, Print, Reset + ShareButtons
+- ResultCard sub-component with optional valueClass for color coding
+- PrintFooter + PrintDateAndUrl sub-components
+
+Stage Summary:
+- Component created with full refinance break-even logic
+- Correctly destructures .schedule from calculateLoan() (avoided PMI bug)
+- Zero em-dashes, zero lint errors
+---
+Task ID: 3-b
+Agent: full-stack-developer (subagent)
+Task: Build /home-buying/refinance-break-even-calculator/page.tsx
+
+Work Log:
+- Created page with full SEO metadata (title, description, canonical, OG, Twitter, robots)
+- 3 JSON-LD schemas: BreadcrumbJsonLd, FaqJsonLd, WebApplicationJsonLd
+- Breadcrumbs: Home > Home Buying Calculators > Refinance Break-Even Calculator
+- H1: "Refinance Break-Even Calculator"
+- Intro paragraph (~100 words on break-even formula)
+- Calculator component integration
+- 5 H2 content sections: Break Even Calculator, Refinance Savings, Is It Worth It, Closing Costs, Cash-Out
+- 5 FAQs with native <details> accordion
+- Related Calculators: PMI, Debt Consolidation, DTI, Personal Loan, hub
+- Single mid-content ad slot + footer ad slot
+- No em-dashes, uses VERIFIED_DATE, YMYL accuracy notes
+
+Stage Summary:
+- Page created matching exact PMI calculator template
+- ~1,000 words of unique content
+- All SEO/JSON-LD/schema requirements met
+---
+Task ID: 3-c
+Agent: Main Agent
+Task: Config updates and verification
+
+Work Log:
+- Added Refinance Break-Even Calculator entry to site.config.ts (category: "home-buying")
+- Added /home-buying/refinance-break-even-calculator to sitemap.ts (27 total URLs)
+- Added /home-buying/refinance-break-even-calculator to robots.ts allowed paths
+- Hub page (/home-buying) auto-updates from calculatorPages filter
+- Header nav auto-updates from homeBuyingCalculators filter
+- Footer auto-updates from calculatorPages iteration
+- Build verification: npx next build passes with 0 errors, 34/34 static pages
+- Zero new lint errors (11 pre-existing title-loan em-dash errors unchanged)
+- Dev server OOM prevents live browser verification (known infrastructure issue)
+- Production build confirms all pages compile and render correctly
+
+Stage Summary:
+- Refinance Break-Even Calculator fully built at /home-buying/refinance-break-even-calculator
+- All navigation, footer, sitemap, and robots updated automatically
+- Build passes cleanly: 27 sitemap URLs, 0 duplicates, 0 new lint errors
