@@ -78,7 +78,7 @@ const faqs = [
   {
     question: "Are annuity payouts taxable?",
     answer:
-      "Partially. If you purchase an annuity with after-tax dollars (non-qualified annuity), a portion of each payment is considered a return of your original premium and is not taxed. The remaining portion, which represents earnings, is taxed as ordinary income when received. The exclusion ratio determines the tax-free and taxable portions. For a $100,000 premium that produces $90,000 in total expected lifetime payments, roughly 100,000 divided by 90,000, or about 89%, of each payment would be tax-free return of principal (this is simplified; the actual calculation uses your life expectancy). If the annuity is held inside a qualified retirement account like an IRA or 401(k), the entire payment is taxed as ordinary income because the contributions were tax-deferred. Consult a tax professional for guidance specific to your situation.",
+      "Partially. If you purchase an annuity with after-tax dollars (non-qualified annuity), a portion of each payment is considered a return of your original premium and is not taxed. The remaining portion, which represents earnings, is taxed as ordinary income when received. The exclusion ratio determines the tax-free and taxable portions. For a $100,000 premium expected to produce $180,000 in total lifetime payments, roughly $100,000 divided by $180,000, or about 56%, of each payment would be tax-free return of principal. If the annuity is held inside a qualified retirement account like an IRA or 401(k), the entire payment is taxed as ordinary income because the contributions were tax-deferred. Consult a tax professional for guidance specific to your situation.",
   },
 ];
 
@@ -269,7 +269,7 @@ export default function AnnuityPayoutCalculatorPage() {
             For fixed-period annuities, the monthly payout is driven by
             the interest rate rather than age. A $100,000 premium at 4.5%
             over 20 years produces approximately $633 per month, for a
-            total of $151,928 (of which $51,928 is interest). At 6% over
+            total of $151,836 (of which $51,836 is interest). At 6% over
             20 years, the same premium pays approximately $716 per month.
             Fixed-period payouts are the same regardless of age or sex
             because there is no mortality risk for the insurer to price.
