@@ -348,6 +348,18 @@ export const calculatorPages = [
     primaryKeyword: "cd early withdrawal penalty calculator",
     category: "savings",
   },
+  {
+    label: "Net Worth by Age Calculator",
+    href: "/savings/net-worth-calculator",
+    description:
+      "Add your assets, subtract your debts, and compare your net worth to the U.S. median and average for your age group using Federal Reserve SCF 2022 data.",
+    longDescription:
+      "Enter your assets (cash, retirement, investments, home value, vehicles, other) and liabilities (mortgage, auto, student loans, credit cards, other) with add-or-remove rows, plus your age, to see total assets, total liabilities, net worth (red when negative), home equity, and net worth excluding home equity. Compares your net worth to the median and average for your age bracket from the Federal Reserve 2022 Survey of Consumer Finances and prints a plain sentence saying whether you are above or below the median.",
+    typesCopy:
+      "computes net worth from assets and liabilities with add-or-remove rows, breaks out home equity and net worth excluding home equity, and compares your number to the median and average for your age bracket from the Federal Reserve SCF 2022",
+    primaryKeyword: "net worth by age calculator",
+    category: "savings",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────

@@ -1448,3 +1448,58 @@ Stage Summary:
 - Homepage, footer, sitemap, and site.config all updated for the new department
 - Template/design system/schema/share row match existing calculator pages exactly
 - Ready for user review before building the next calculator
+
+---
+Task ID: 5
+Agent: Main Agent
+Task: Build Net Worth by Age Calculator at /savings/net-worth-calculator (2nd Savings department calculator)
+
+Work Log:
+- Read existing templates: CD Early Withdrawal Penalty Calculator page + component, site.config.ts, sitemap.ts, /savings hub page, SalaryToHourlyCalculator component, ShareButtons component
+- Verified all check numbers before coding: assets $50k+$80k+$350k+$15k=$495k; liabilities $250k+$12k+$8k=$270k; net worth $225k; home equity $100k; excluding home equity $125k; 35-44 bracket median $135,600 and average $549,600
+- Created src/components/calculators/NetWorthCalculator.tsx (client component):
+  - Assets section with add/remove rows (6 defaults: Cash and savings $50k, Retirement accounts $80k, Investment accounts $0, Home value $350k, Vehicles $15k, Other assets $0); each row has label + amount inputs + trash button; minimum 1 row enforced
+  - Liabilities section with add/remove rows (5 defaults: Mortgage balance $250k, Auto loans $12k, Student loans $0, Credit cards $8k, Other debts $0); same add/remove pattern
+  - Age slider (18-90, default 40) + number input
+  - Live reference line showing net worth, assets, liabilities, age bracket
+  - 4 result tiles: Total Assets ($495k), Total Liabilities ($270k), Net Worth ($225k, red when negative), and a wide tile showing Home Equity ($100k) + Net Worth Excluding Home Equity ($125k)
+  - Comparison card: "How You Compare: {bracket}" with plain sentence verdict, 3 sub-cards (Your Net Worth with trend icon, Median, Average), source citation (Federal Reserve SCF 2022, released October 2023, next release late 2026)
+  - Visible JS constant NET_WORTH_BENCHMARKS with all 6 age brackets (Under 35 through 75+) + ALL_HOUSEHOLDS, exact SCF 2022 figures
+  - URL params: age, a (encoded assets: label|amount,label|amount), l (encoded liabilities)
+  - Copy Link, Print, Reset, ShareButtons (5 platforms: X, Facebook, WhatsApp, Reddit, Email)
+  - Home value identified by /home/i regex on row label; mortgage by /mortgage/i
+- Created src/app/savings/net-worth-calculator/page.tsx:
+  - SEO: title "Net Worth by Age Calculator – How Do You Compare? | CalcForge", meta description (exact spec), canonical, OG, Twitter, robots
+  - JSON-LD: BreadcrumbList, FAQPage (5 FAQs), WebApplication
+  - Breadcrumb: Home > Savings Calculators > Net Worth by Age Calculator
+  - H1 + intro paragraph (first 100 words answer "net worth by age calculator" with formula and $192,700 / $135,600 benchmarks cited to Fed SCF 2022)
+  - 6 content H2 sections: Net Worth by Age Calculator (primary keyword, why median beats average), How the Net Worth Calculation Works (with worked example card: $495k assets, $270k liabilities, $225k net worth, $100k home equity, $125k excluding home equity + full benchmark table with all 6 brackets + all households), Net Worth Percentile Calculator (honest: Fed publishes median and mean only; by-age percentiles are third-party estimates from SCF microdata; being above median = top half of bracket), How Much Net Worth to Be in the Top 1% by Age (Fed does not publish official by-age top 1%; national SCF 2022 analyses put overall top 1% threshold in low teens of millions, ~$13-14M, stated as estimate range; varies strongly by age), Net Worth Calculator with Home Equity (home equity is largest asset for most households; why lenders look at net worth excluding it; worked example numbers), Am I Above Average Net Worth for My Age (median is better test than average; 35-44 example: $200k is above median $135,600 but below average $549,600; benchmark figures are 2022 dollars, next SCF late 2026)
+  - Full benchmark table with all 6 age brackets + all households, median and average, cited to Federal Reserve SCF 2022
+  - FaqSection (unified component), Related Calculators (Savings hub, CD Early Withdrawal Penalty Calculator, Debt Payoff Calculator, Home Affordability Calculator with keyword-rich anchors)
+- Added entry to calculatorPages in site.config.ts (category: "savings") - hub card auto-populates
+- Added /savings/net-worth-calculator to sitemap.ts with priority 0.9
+- Lint: 0 errors in new files (11 pre-existing em-dash errors in untouched title-loan-calculator/page.tsx)
+- Browser-verified via agent-browser (before server OOM):
+  - Route returns HTTP 200
+  - Default check numbers EXACT: Total Assets $495,000, Total Liabilities $270,000, Net Worth $225,000, Home Equity $100,000, Net Worth Excluding Home Equity $125,000, Your Net Worth (comparison) $225,000, Median (35-44) $135,600, Average (35-44) $549,600
+  - Comparison sentence EXACT: "At age 40 (35-44) with a net worth of $225,000, you are above the median of $135,600 for your age bracket."
+  - 8 H2 sections (6 content + FAQ + Related): Net Worth by Age Calculator, How the Net Worth Calculation Works, Net Worth Percentile Calculator, How Much Net Worth to Be in the Top 1% by Age, Net Worth Calculator with Home Equity, Am I Above Average Net Worth for My Age, Frequently Asked Questions, Related Calculators
+  - Breadcrumbs correct: Home > Savings Calculators > Net Worth by Age Calculator
+  - 3 JSON-LD scripts (BreadcrumbList, FAQPage, WebApplication) verified in HTML
+  - 5 share buttons verified (X, Facebook, WhatsApp, Reddit, Email)
+  - 5 FAQ questions verified as <details>/<summary> accordions
+  - Add asset row + Add liability row buttons present
+  - 4 internal links verified: /savings, /savings/cd-early-withdrawal-penalty-calculator, /debt/debt-payoff-calculator, /home-buying/home-affordability-calculator
+  - Savings hub shows both CD calculator and Net Worth calculator cards
+  - Sitemap includes /savings/net-worth-calculator
+  - Homepage already has Savings department card with PiggyBank icon (from Task ID 4)
+  - Note: dev server experienced intermittent OOM crashes during testing due to memory constraints (4GB RAM, chrome processes competing); verified via curl + HTML parsing + agent-browser eval before crashes
+
+Stage Summary:
+- Net Worth by Age Calculator is live at /savings/net-worth-calculator
+- All check numbers verified exact via browser automation (assets $495k, liabilities $270k, net worth $225k, home equity $100k, excluding home equity $125k, 35-44 median $135,600, average $549,600)
+- Benchmark data stored as visible JS constant with exact Federal Reserve SCF 2022 figures, cited in-page and in-component
+- All 5 target long-tail keywords have dedicated H2 sections with honest answers (no invented percentile or top-1% figures beyond what spec allows)
+- Template/design system/schema/share row/code conventions match existing calculator pages exactly
+- Savings hub auto-shows new card via site.config.ts; sitemap updated; homepage already has Savings dept from Task ID 4
+- Ready for user review before building the next calculator
