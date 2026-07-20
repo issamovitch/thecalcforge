@@ -17,6 +17,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/loans/personal-loan-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/loans/auto-loan-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/loans/debt-consolidation-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
+    { url: `${base}/loans/student-loan-payoff-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     // Debt hub + calculators
     { url: `${base}/debt`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/debt/debt-payoff-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },

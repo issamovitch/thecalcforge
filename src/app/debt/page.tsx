@@ -27,7 +27,7 @@ const debtCalculators: readonly HubCalculator[] = [
     label: "Debt Payoff Calculator",
     href: "/debt/debt-payoff-calculator",
     longDescription:
-      "Compare snowball vs avalanche payoff strategies for multiple debts. Add extra monthly payments, see your exact debt-free date, and view a full month-by-month payoff schedule with per-debt breakdowns.",
+      "Weigh snowball against avalanche payoff across all your debts. See your exact debt-free date and how extra payments accelerate it.",
     typesCopy:
       "compares snowball and avalanche payoff strategies across multiple debts, showing interest saved, debt-free date, and a full month-by-month schedule",
     primaryKeyword: "debt payoff calculator",
@@ -36,7 +36,7 @@ const debtCalculators: readonly HubCalculator[] = [
     label: "DTI Calculator",
     href: "/debt/dti-calculator",
     longDescription:
-      "Calculate your debt-to-income ratio by entering your monthly debt payments and gross monthly income. See whether you meet common lender thresholds for mortgages and other loans.",
+      "Calculate your front-end and back-end debt-to-income ratio. See exactly where you land against FHA, VA, and conventional lender thresholds before you apply.",
     typesCopy: "calculates your front-end and back-end debt-to-income ratios to evaluate loan eligibility",
     primaryKeyword: "DTI calculator",
   },
@@ -44,7 +44,7 @@ const debtCalculators: readonly HubCalculator[] = [
     label: "Credit Card Payoff Calculator",
     href: "/debt/credit-card-payoff-calculator",
     longDescription:
-      "Estimate how long it takes to pay off a credit card and how much interest you will pay. Compare minimum payments against fixed monthly payments and see the total cost difference.",
+      "See how long it takes to pay off your credit cards and how much interest you pay. Find out how much extra payments save.",
     typesCopy: "estimates credit card payoff timeline and total interest for minimum vs fixed payment strategies",
     primaryKeyword: "credit card payoff calculator",
   },
@@ -52,7 +52,7 @@ const debtCalculators: readonly HubCalculator[] = [
     label: "Credit Card Minimum Payment Calculator",
     href: "/debt/credit-card-minimum-payment-calculator",
     longDescription:
-      "See how credit card minimum payments are calculated and how long it takes to pay off a balance making only minimums. Understand the true cost of minimum payments.",
+      "Understand how your issuer calculates the minimum payment and what paying only the minimum actually costs. Compare minimum-only repayment against a fixed monthly payment.",
     typesCopy: "shows how minimum payments are calculated, total interest paid, and payoff timeline when paying only minimums",
     primaryKeyword: "credit card minimum payment calculator",
   },
@@ -60,7 +60,7 @@ const debtCalculators: readonly HubCalculator[] = [
     label: "Balance Transfer Calculator",
     href: "/debt/balance-transfer-calculator",
     longDescription:
-      "Compare the cost of keeping a balance on your current card versus transferring it to a new card with a promotional APR. Factor in transfer fees and the promotional period length.",
+      "Decide whether a balance transfer saves money after the transfer fee. Find your break-even month and whether the promo period is long enough.",
     typesCopy: "compares keeping a balance versus transferring to a promotional APR card, factoring in transfer fees and promo period",
     primaryKeyword: "balance transfer calculator",
   },

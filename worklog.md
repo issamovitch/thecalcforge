@@ -1503,3 +1503,107 @@ Stage Summary:
 - Template/design system/schema/share row/code conventions match existing calculator pages exactly
 - Savings hub auto-shows new card via site.config.ts; sitemap updated; homepage already has Savings dept from Task ID 4
 - Ready for user review before building the next calculator
+
+---
+Task ID: shorten-hub-descriptions
+Agent: Main Agent
+Task: Shorten all calculator card descriptions on every hub page sitewide (/loans, /debt, /auto, /home-buying, /insurance, /income, /savings) to 20-35 words, 1-2 sentences, text content only
+
+Work Log:
+- Analyzed how each hub page sources card descriptions:
+  - /loans, /income, /savings: use HubPage component → maps `longDescription` from site.config.ts → HubPage passes it to CalculatorCard
+  - /debt: uses HubPage but with HARDCODED `longDescription` values in /debt/page.tsx (not from site.config)
+  - /auto: uses CalculatorCard directly with HARDCODED `description` values in /auto/page.tsx
+  - /home-buying, /insurance: use CalculatorCard directly, pull `description` from site.config via calculatorPages.filter()
+- Updated `description` field in site.config.ts for all 28 calculators (used by /home-buying and /insurance hubs)
+- Updated `longDescription` field in site.config.ts for all 28 calculators (used by /loans, /income, /savings hubs via HubPage)
+- Updated 4 hardcoded `description` values in /auto/page.tsx
+- Updated 5 hardcoded `longDescription` values in /debt/page.tsx
+- Each new description: 1-2 sentences, 20-28 words, sentence 1 = what the calculator computes, sentence 2 = single most useful feature/question
+- No input lists, no feature enumerations, no "enter your X, Y, Z" phrasing
+- Each description uses a unique sentence structure (varied openers: Estimate, Reveal, Calculate, Figure, Project, Compare, Find, See, Weigh, Understand, Decide, Turn, Add, etc.)
+- Lint: 0 new errors (11 pre-existing em-dash errors in untouched title-loan-calculator/page.tsx)
+- Browser-verified via curl + HTML parsing (server experienced intermittent OOM crashes due to 4GB RAM constraint):
+  - /loans ✅ 3 descriptions confirmed (Title Loan, Payday APR, Auto Loan)
+  - /debt ✅ 2 descriptions confirmed (Debt Payoff, Balance Transfer)
+  - /auto ✅ 4 descriptions confirmed (all 4 cards)
+  - /home-buying ✅ 2 descriptions confirmed (PMI, Home Affordability)
+  - /savings ✅ 2 descriptions confirmed (CD Early Withdrawal, Net Worth)
+  - /income ✅ 2 descriptions confirmed (Overtime, Hourly to Salary)
+  - /insurance ✅ pattern-confirmed (same code pattern as /home-buying: calculatorPages.filter() → calc.description)
+
+Stage Summary:
+- All 28 unique calculator card descriptions shortened to 20-28 words across all 7 hub pages
+- 3 files modified: site.config.ts (description + longDescription for all 28), auto/page.tsx (4 hardcoded), debt/page.tsx (5 hardcoded)
+- All descriptions follow the rules: 1-2 sentences, no input lists, no feature enumerations, each unique
+- Calculator names and "Open calculator" links untouched
+- No styling changes
+
+---
+Task ID: 6
+Agent: Main Agent
+Task: Build Student Loan Payoff Calculator at /loans/student-loan-payoff-calculator
+
+Work Log:
+- Read existing templates: PersonalLoanCalculator.tsx (component pattern with amortization, extra payments, URL params, share row), personal-loan-calculator/page.tsx (page template with build-time computed examples), loan-math.ts (existing calculation library)
+- Added calculateStudentLoanPayoff function to src/lib/loan-math.ts:
+  - Takes balance, APR, monthly payment, optional extra monthly, optional lump sum
+  - Applies lump sum at start of month 1 (before interest accrues), reducing effective starting balance
+  - Guard: if total monthly payment <= first month's interest on effective balance, returns neverPayoff=true
+  - Simulates month-by-month amortization with final-month exact payment
+  - Returns months, totalInterest, totalPaid, schedule, neverPayoff, effectiveStartingBalance, lumpSumApplied
+  - Uses r2 rounding helper consistent with rest of library
+- Created src/components/calculators/StudentLoanPayoffCalculator.tsx (client component):
+  - Inputs: balance ($30k default, slider 1k-200k), rate (6.5% default, slider 0-15%), monthly payment ($350 default, slider 50-3000), extra monthly ($0 default, slider 0-2000), lump sum ($0 default, slider 0-50k)
+  - All inputs have slider + number input + label with tooltip
+  - Red warning block when neverPayoff=true (payment doesn't cover first month's interest), showing exact interest amount
+  - Results: Payoff Time (years+months, large ember highlight), Total Interest, Total Paid (2x grid), debt-free date (client-side computed from today + months)
+  - Comparison block (when extra or lump > 0): Baseline vs Your Plan with months saved, interest saved, baseline payoff/interest, plan payoff/interest
+  - Lump sum note showing how the starting balance was reduced
+  - YMYL disclaimer about federal loan protections, IDR plans, refinancing
+  - Collapsible amortization schedule (Month, Payment, Principal, Interest, Balance)
+  - URL params (balance, rate, payment, extra, lump), Copy Link, Print, Reset, ShareButtons (5 platforms)
+  - Uses calculateStudentLoanPayoff from loan-math.ts for both plan and baseline
+- Created src/app/loans/student-loan-payoff-calculator/page.tsx:
+  - SEO: title "Student Loan Payoff Calculator – With Extra Payments | CalcForge", meta description (exact spec), canonical, OG, Twitter, robots
+  - JSON-LD: BreadcrumbList, FAQPage (5 FAQs), WebApplication
+  - Breadcrumb: Home > Loan Calculators > Student Loan Payoff Calculator
+  - H1 + intro paragraph (first 100 words answer "student loan payoff calculator" with exact computed figures: 9 years 8 months, $10,439.33 interest)
+  - 5 content H2 sections (one per target long-tail keyword):
+    1. Student Loan Payoff Calculator (primary keyword + amortization formula + worked example card with exact base numbers)
+    2. Student Loan Payoff Calculator with Extra Payments (worked example: $100/mo extra, 33 months saved, $3,118.03 interest saved)
+    3. How Fast Can I Pay Off My Student Loans (payment-driven, how-fast table: $350/$500/$750 with exact payoff times and interest)
+    4. Extra Payment Student Loan Calculator (extra goes to principal, servicer confirmation, one practical paragraph)
+    5. Student Loan Lump Sum Payment Calculator (worked example: $5,000 lump, 25 months saved, $3,741.45 interest saved, 74.8% return, servicer principal application note)
+  - FaqSection (unified component), Related Calculators (/loans hub, Debt Payoff Calculator, Debt Consolidation Calculator, DTI Calculator with keyword-rich anchors)
+  - Build-time computed examples using calculateStudentLoanPayoff from loan-math.ts
+- Added entry to calculatorPages in site.config.ts (category: "loans") with short description per the new card rules
+- Added /loans/student-loan-payoff-calculator to sitemap.ts with priority 0.9
+- Fixed 2 em-dash lint errors in component (replaced "—" with "-" in Months/Interest Saved fallback text)
+- Lint: 0 errors in new files (11 pre-existing em-dash errors in untouched title-loan-calculator/page.tsx)
+- Browser-verified via curl + HTML parsing + Python extraction:
+  - Route returns HTTP 200
+  - Title tag EXACT: "Student Loan Payoff Calculator – With Extra Payments | CalcForge"
+  - Canonical, 3 JSON-LD scripts (BreadcrumbList, FAQPage, WebApplication) verified
+  - H1: Student Loan Payoff Calculator
+  - 7 H2 sections (5 content + FAQ + Related): all 5 target long-tail keywords have dedicated H2 sections
+  - Breadcrumbs: Home > Loan Calculators > Student Loan Payoff Calculator
+  - 5 FAQ questions verified as <details>/<summary> accordions
+  - 5 share buttons verified (X, Facebook, WhatsApp, Reddit, Email)
+  - /loans hub shows new card with short description
+  - Sitemap includes new URL
+  - All check numbers verified EXACT (computed by calculator's own amortization engine at build time):
+    - Base: $30,000 @ 6.50%, $350/mo → 9 years 8 months (116 months), $10,439.33 interest, $40,439.33 total
+    - Extra: $350 + $100/mo → 6 years 11 months, $7,321.30 interest, saves 33 months, saves $3,118.03 interest
+    - Lump: $350/mo + $5,000 lump → 7 years 7 months, $6,697.88 interest, saves 25 months, saves $3,741.45 interest, 74.8% return
+    - How-fast table: $350→9y8m/$10,439.33, $500→6y1m/$6,379.27, $750→3y10m/$3,903.71
+  - Note: spec said "about 9 years 1 month" and "roughly $9,000" but explicitly instructed to "compute the exact figures with the calculator's own math and use those, do not round the method" — exact math gives 9 years 8 months and $10,439.33, which is what the page uses
+
+Stage Summary:
+- Student Loan Payoff Calculator is live at /loans/student-loan-payoff-calculator
+- All check numbers verified exact via build-time computation with the same amortization engine
+- Added calculateStudentLoanPayoff to loan-math.ts (reusable, handles lump sum + extra + guard)
+- Template/design system/schema/share row/code conventions match existing loan calculator pages exactly
+- /loans hub auto-shows new card via site.config.ts; sitemap updated
+- YMYL disclaimer included (federal loan protections, IDR, refinancing warning, no product recommendations)
+- Ready for user review before building the next calculator

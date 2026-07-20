@@ -11,25 +11,25 @@ const autoHubCalculators = [
     label: "Auto Loan Calculator",
     href: "/loans/auto-loan-calculator",
     description:
-      "Calculate car payments with trade-in equity, negative equity rollover, sales tax, and extra payments.",
+      "Project your monthly car payment and total interest. See how trade-in value and negative equity rollover change what you actually finance.",
   },
   {
     label: "Car Affordability Calculator",
     href: "/auto/car-affordability-calculator",
     description:
-      "Find the maximum vehicle price you can afford based on income or target payment, with 20/4/10 rule analysis.",
+      "Find the maximum vehicle price you can afford from your income or target monthly payment. Check your numbers against the 20/4/10 rule.",
   },
   {
     label: "Auto Lease Calculator",
     href: "/auto/auto-lease-payment-calculator",
     description:
-      "Calculate monthly lease payments broken into depreciation, finance charge, and tax, with money factor conversion and buyout estimate.",
+      "See your monthly car lease payment with each component shown separately. Convert the money factor to APR and check the end-of-lease buyout price.",
   },
   {
     label: "Lease vs Buy Calculator",
     href: "/auto/lease-vs-buy-calculator",
     description:
-      "Compare the total cost of leasing versus buying a car over the same period, including resale equity and break-even analysis.",
+      "Compare the total cost of leasing versus buying the same car over your ownership period. See which option is cheaper and the month the buy side pulls ahead.",
   },
 ];
 

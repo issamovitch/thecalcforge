@@ -760,6 +760,135 @@ export function calculateFixedPaymentPayoff(
   return { monthsToPayoff: months, totalInterest, totalCost, neverPayoff: false };
 }
 
+// ── Student loan payoff (fixed payment + extra + lump sum) ──────────────────
+
+export interface StudentLoanPayoffResult {
+  /** Number of months until balance reaches zero */
+  months: number;
+  /** Total interest paid over the payoff period */
+  totalInterest: number;
+  /** Total amount paid (lump sum + all monthly payments) */
+  totalPaid: number;
+  /** Month-by-month amortization schedule */
+  schedule: AmortizationRow[];
+  /** True if the monthly payment does not cover monthly interest */
+  neverPayoff: boolean;
+  /** Starting balance after lump sum is applied */
+  effectiveStartingBalance: number;
+  /** Lump sum amount actually applied (capped at balance) */
+  lumpSumApplied: number;
+}
+
+/**
+ * Given a balance, APR, fixed monthly payment, optional extra monthly payment,
+ * and optional one-time lump sum applied in month 1, simulates month-by-month
+ * until the balance is zero.
+ *
+ * Convention: the lump sum is applied to principal at the start of month 1,
+ * before interest accrues, reducing the effective starting balance. The
+ * amortization schedule then proceeds on the reduced balance with the total
+ * monthly payment (base + extra).
+ *
+ * Guard: if the total monthly payment does not cover the first month's
+ * interest on the effective balance, the loan will never pay off and
+ * neverPayoff is set to true.
+ */
+export function calculateStudentLoanPayoff(
+  balance: number,
+  apr: number,
+  monthlyPayment: number,
+  extraMonthly: number = 0,
+  lumpSum: number = 0,
+): StudentLoanPayoffResult {
+  if (balance <= 0) {
+    return {
+      months: 0, totalInterest: 0, totalPaid: 0, schedule: [],
+      neverPayoff: false, effectiveStartingBalance: 0, lumpSumApplied: 0,
+    };
+  }
+
+  const monthlyRate = apr / 100 / 12;
+
+  // Apply lump sum first (month 1, before interest accrues)
+  const effectiveLumpSum = Math.min(lumpSum, balance);
+  const effectiveBalance = balance - effectiveLumpSum;
+
+  // Lump sum covers the entire balance
+  if (effectiveBalance <= 0) {
+    return {
+      months: 0, totalInterest: 0, totalPaid: effectiveLumpSum, schedule: [],
+      neverPayoff: false, effectiveStartingBalance: 0, lumpSumApplied: effectiveLumpSum,
+    };
+  }
+
+  // Guard: total monthly payment must exceed first month's interest
+  const totalMonthly = monthlyPayment + extraMonthly;
+  const firstMonthInterest = effectiveBalance * monthlyRate;
+
+  if (totalMonthly <= firstMonthInterest) {
+    return {
+      months: 0, totalInterest: 0, totalPaid: effectiveLumpSum, schedule: [],
+      neverPayoff: true, effectiveStartingBalance: effectiveBalance, lumpSumApplied: effectiveLumpSum,
+    };
+  }
+
+  const schedule: AmortizationRow[] = [];
+  let remaining = effectiveBalance;
+  let totalInterest = 0;
+  let totalPayments = effectiveLumpSum;
+  const maxMonths = 600;
+
+  for (let month = 1; month <= maxMonths; month++) {
+    const interest = remaining * monthlyRate;
+    const principal = totalMonthly - interest;
+
+    if (principal >= remaining) {
+      // Final month: pay exact remaining balance + interest
+      const lastPayment = remaining + interest;
+      totalInterest += interest;
+      totalPayments += lastPayment;
+      schedule.push({
+        month,
+        payment: r2(lastPayment),
+        principal: r2(remaining),
+        interest: r2(interest),
+        balance: 0,
+      });
+      remaining = 0;
+      break;
+    }
+
+    remaining -= principal;
+    totalInterest += interest;
+    totalPayments += totalMonthly;
+
+    schedule.push({
+      month,
+      payment: r2(totalMonthly),
+      principal: r2(principal),
+      interest: r2(interest),
+      balance: r2(remaining),
+    });
+  }
+
+  if (remaining > 0) {
+    return {
+      months: 0, totalInterest: 0, totalPaid: r2(totalPayments), schedule: [],
+      neverPayoff: true, effectiveStartingBalance: effectiveBalance, lumpSumApplied: effectiveLumpSum,
+    };
+  }
+
+  return {
+    months: schedule.length,
+    totalInterest: r2(totalInterest),
+    totalPaid: r2(totalPayments),
+    schedule,
+    neverPayoff: false,
+    effectiveStartingBalance: effectiveBalance,
+    lumpSumApplied: effectiveLumpSum,
+  };
+}
+
 // ── Reverse-solve: max principal from a given monthly payment ────────────────
 
 /**
