@@ -179,8 +179,8 @@ export default function AmortizationSchedulePage() {
         A {formatCurrency(BAL)} loan at {formatPercent(APR)} for {TERM} years
         has a monthly payment of{" "}
         {formatCurrency(exBase.monthlyPayment)} and costs{" "}
-        {formatCurrency(exBase.totalInterest)} in total interest over the full
-        term. This amortization schedule calculator shows every monthly
+        {formatCurrency(exBase.totalInterest)}{" "}in total interest over the
+        full term. This amortization schedule calculator shows every monthly
         payment&apos;s interest and principal split, the running balance, and
         the exact payoff date, then recomputes the whole schedule when you add
         extra monthly, annual, or one-time payments.
@@ -329,10 +329,10 @@ export default function AmortizationSchedulePage() {
           <p className="text-muted-foreground leading-relaxed">
             A lump sum applied early saves more than the same total spread
             across monthly extras, because the entire amount stops accruing
-            interest from that month forward. A ${"500"} lump sum in month 12
-            saves more interest than adding about ${"42"} per month for a year,
-            because the lump sum hits the balance all at once and the
-            month-by-month extras only reduce the balance gradually. The
+            interest from that month forward. A ${"6,000"} lump sum in month 1
+            saves more interest than adding ${"100"} per month for five years,
+            because the entire amount stops accruing interest immediately
+            instead of arriving gradually over 60 months. The
             calculator&apos;s comparison block shows the exact months and
             interest saved for whatever combination of extras you enter.
           </p>

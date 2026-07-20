@@ -205,11 +205,17 @@ export function calculateAmortization(
     let rowPrincipal: number;
     let rowExtra: number;
 
-    if (principal >= balance) {
-      // Final month: pay exact remaining balance + interest.
+    // Final month when: (a) the payment naturally covers the remaining balance
+    // (early payoff via extras, or natural final month), OR (b) we've reached
+    // the last scheduled month. In case (b), any sub-dollar residual from
+    // rounding is folded into this payment so the schedule always has exactly
+    // `termMonths` rows in the baseline (no stray extra month).
+    if (principal >= balance || month >= termMonths) {
       rowPrincipal = balance;
-      rowExtra = Math.max(0, extra - (principal - balance));
       rowPayment = rowPrincipal + interest;
+      // Only the user-initiated extra that was actually needed (and applied)
+      // shows in the extra column — residual absorption does not.
+      rowExtra = Math.min(extra, Math.max(0, rowPayment - basePayment));
       principal = balance;
     } else {
       rowPayment = totalPayment;
