@@ -361,6 +361,18 @@ export const calculatorPages = [
     category: "savings",
   },
   {
+    label: "Savings Goal Calculator",
+    href: "/savings/savings-goal-calculator",
+    description:
+      "Find the monthly contribution that hits your savings goal by a target date, or see how long your current contributions will take.",
+    longDescription:
+      "Find the monthly contribution that hits your savings goal by a target date, or see how long your current contributions will take.",
+    typesCopy:
+      "solves for the level monthly contribution that reaches a savings goal in a fixed term, or solves for the time to reach a goal from a fixed monthly contribution, with monthly compounding, total contributed, growth from returns, and the calendar month and year the goal is reached",
+    primaryKeyword: "savings goal calculator",
+    category: "savings",
+  },
+  {
     label: "Student Loan Payoff Calculator",
     href: "/loans/student-loan-payoff-calculator",
     description:

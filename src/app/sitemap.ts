@@ -49,6 +49,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/savings`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/savings/cd-early-withdrawal-penalty-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/savings/net-worth-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
+    { url: `${base}/savings/savings-goal-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     // Info pages
     { url: `${base}/about`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.3 },
     { url: `${base}/contact`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },

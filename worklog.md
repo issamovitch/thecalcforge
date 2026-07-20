@@ -1607,3 +1607,65 @@ Stage Summary:
 - /loans hub auto-shows new card via site.config.ts; sitemap updated
 - YMYL disclaimer included (federal loan protections, IDR, refinancing warning, no product recommendations)
 - Ready for user review before building the next calculator
+
+---
+Task ID: 6
+Agent: Main Agent
+Task: Build Savings Goal Calculator page at /savings/savings-goal-calculator
+
+Work Log:
+- Read existing template files (NetWorthCalculator, CdEarlyWithdrawalCalculator pages, ShareButtons, JsonLd, FaqSection, savings hub, site.config, sitemap) to match exact conventions
+- Created src/lib/savings-goal-math.ts — shared math engine (solveMonthly, solveTime, futureValue, addMonths) with closed-form solutions for both tabs; handles i=0, M=0, current=0 edge cases; exported for both client component and server-side page rendering
+- Created src/components/calculators/SavingsGoalCalculator.tsx — client component with:
+  - Two tabs: "How much per month" (solve for M) and "How long will it take" (solve for n)
+  - Tab 1 inputs: goal, current, years (slider 1-50), rate (slider 0-12%)
+  - Tab 2 inputs: goal, current, monthly, rate
+  - Shared inputs (goal, current, rate) carry over when switching tabs
+  - URL params: tab, goal, current, rate, years, monthly
+  - Results: required monthly OR time to goal (years/months + calendar month/year), plus total contributed, growth from returns, final amount
+  - Unreachable guard: clear message when monthly=0 and rate=0 (or current=0 and monthly=0)
+  - YMYL disclaimer (returns are assumptions, not guarantees)
+  - Share row (X, Facebook, WhatsApp, Reddit, Email, native share), Copy Link, Print, Reset buttons
+- Created src/app/savings/savings-goal-calculator/page.tsx with:
+  - SEO metadata (title, description, canonical, OG, Twitter, robots)
+  - JSON-LD: BreadcrumbList, FAQPage, WebApplication
+  - Breadcrumbs: Home > Savings Calculators > Savings Goal Calculator
+  - H1: "Savings Goal Calculator"
+  - Intro paragraph (~100 words) with concrete result from engine: $662.08/mo to reach $50k from $5k in 5y at 4.00%
+  - 6 H2 sections answering target long-tail keywords:
+    1. Savings Goal Calculator (what it computes)
+    2. How the Savings Goal Calculation Works (formula + worked example card)
+    3. How Long to Save a Million Dollars (table: $500/$1000/$2000 at 7% from $0)
+    4. How Much to Save Per Month to Reach My Goal ($1M in 30y vs 20y at 7%)
+    5. Save a Million Dollars Calculator (table: 10/20/30/40 years at 7% from $0)
+    6. How Much Do I Need to Save Each Month (formula recap + rate assumption guidance)
+  - 5 FAQ items
+  - Related Calculators: /savings hub, CD Early Withdrawal, Net Worth by Age
+  - All content figures computed server-side by the same engine (no hardcoded numbers)
+- Added site.config.ts entry (Python script for \r\n line endings): label, href, description (short per card rules: "Find the monthly contribution that hits your savings goal by a target date, or see how long your current contributions will take."), longDescription, typesCopy, primaryKeyword="savings goal calculator", category="savings"
+- Added sitemap.ts entry: /savings/savings-goal-calculator, priority 0.9
+- Fixed lint issues:
+  - Replaced 6 &mdash; HTML entities with colons/periods (calcforge/no-em-dash rule)
+  - Removed useEffect+setState pattern for today's date (set-state-in-effect rule); now calls new Date() inline in render like StudentLoanPayoffCalculator
+  - Removed manual useMemo (preserve-manual-memoization rule); let React Compiler handle memoization
+  - Fixed URL param parser bug: Number(null) returned 0, masking defaults; now checks raw===null first
+- Verified with bun script: all math exact (Tab 1 defaults: $662.08/mo, $44,725 contributed, $5,275 growth, $50,000 final; Tab 2 timelines and Tab 1 million-dollar table all match)
+- Verified with Agent Browser end-to-end:
+  - Page renders with all content, JSON-LD, breadcrumbs
+  - Calculator defaults load correctly ($50k/$5k/5y/4% → $662.08/mo)
+  - Tab switch to "How long will it take" carries shared inputs, shows "6 years 5 months" for $50k from $5k at $500/mo 4%, URL params update
+  - URL param loading works: ?tab=1&goal=1000000&current=0&rate=7&years=30 → $819.69/mo (matches content table)
+  - Unreachable guard works: ?tab=2&goal=50000&current=5000&rate=0&monthly=0 → "GOAL UNREACHABLE" message
+  - Reset button clears URL params and restores defaults
+  - Share row (X, Facebook, WhatsApp, Reddit, Email), Copy Link, Print, Reset all present
+  - Sticky footer pattern: min-h-screen flex flex-col
+- Hub card verified on /savings: "Savings Goal Calculator" with short description appears in the savings hub grid
+
+Stage Summary:
+- New page live at /savings/savings-goal-calculator, fully functional
+- Shared math engine in src/lib/savings-goal-math.ts (reusable)
+- All content figures computed by the same engine that powers the interactive calculator (no hardcoded numbers)
+- Site config entry added with short description per card rules
+- Sitemap updated
+- All new files lint clean (pre-existing title-loan-calculator lint errors are from a prior task, not this one)
+- Dev server requires NODE_OPTIONS="--max-old-space-size=2048" and periodic chrome process cleanup due to container memory limits (4GB total, shared with agent-browser)
