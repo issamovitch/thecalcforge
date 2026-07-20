@@ -83,7 +83,7 @@ export default function HomePage() {
         />
         <div className="relative mx-auto max-w-5xl px-4 py-20 sm:px-6 sm:py-28 lg:py-36">
           <div className="mx-auto max-w-3xl text-center">
-            <h1 className="text-4xl font-bold tracking-tight leading-[1.33] text-foreground sm:text-5xl lg:text-6xl">
+            <h1 className="text-4xl font-bold tracking-tight leading-[1.27] text-foreground sm:text-5xl lg:text-6xl">
               Precision-Crafted
               <span className="block text-ember">Financial Calculators</span>
             </h1>

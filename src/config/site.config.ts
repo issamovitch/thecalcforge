@@ -324,6 +324,18 @@ export const calculatorPages = [
     primaryKeyword: "salary to hourly calculator",
     category: "income",
   },
+  {
+    label: "Hourly to Salary Calculator",
+    href: "/income/hourly-to-salary-calculator",
+    description:
+      "Convert any hourly wage to annual salary, plus weekly, biweekly, and monthly gross pay based on your real hours with optional overtime.",
+    longDescription:
+      "Enter your hourly wage, hours per week, and weeks per year to see your annual salary, weekly, biweekly, and monthly gross pay. Includes an optional overtime block (OT hours and multiplier) that adds to the annual total, a live reference line, and a quick-reference table of annual equivalents for wages from $12 to $40 at the standard 2,080-hour year.",
+    typesCopy:
+      "converts an hourly wage to an annual salary using actual work hours with optional overtime, weekly, biweekly, and monthly gross pay, a live reference line, and a quick-reference table",
+    primaryKeyword: "hourly to salary calculator",
+    category: "income",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────

@@ -1354,3 +1354,48 @@ Stage Summary:
 - Modified 3 files: src/config/site.config.ts (new registry entry), src/app/income/overtime-calculator/page.tsx (real Related link), src/app/sitemap.ts (new URL)
 - Income hub (/income) now shows 2 calculator cards automatically via the filter
 - All check numbers verified exact to the cent in the browser
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Build Hourly to Salary Calculator page at /income/hourly-to-salary-calculator (3rd Income dept calculator)
+
+Work Log:
+- Read existing templates: Overtime Pay Calculator page, Salary to Hourly Calculator page + component, site.config.ts, sitemap.ts, /income hub page
+- Verified all check numbers before coding: $20→$41,600/$800/$1,600/$3,466.67; $25→$52,000; $15→$31,200; table values $12→$24,960 through $40→$83,200; OT scenario $20+5h@1.5x=$49,400
+- Created src/components/calculators/HourlyToSalaryCalculator.tsx (client component) matching SalaryToHourlyCalculator template exactly:
+  - Inputs: hourly wage (default $20, slider $7.25-$100), hours/week (default 40, slider 10-80), weeks/year (default 52, slider 48-52), optional OT block (OT hours default 0, multiplier default 1.5)
+  - Outputs: Annual Salary (with OT highlighted), Without Overtime card (only when OT>0), Weekly, Biweekly, Monthly gross
+  - Live reference line: "$X an hour is $Y a year at Z hours per week" (+OT suffix when OT active)
+  - Quick reference table: $12,$15,$18,$20,$22,$25,$30,$35,$40 wages → annual at 40h/52w, computed live, current row highlighted when wage matches and OT=0
+  - URL params: wage, hours, weeks, othrs, otmult; Copy Link, Print, Reset, ShareButtons
+- Created src/app/income/hourly-to-salary-calculator/page.tsx matching Overtime/Salary-to-Hourly template:
+  - SEO: title, description, canonical, OG, Twitter, robots
+  - JSON-LD: BreadcrumbList, FAQPage (5 FAQs), WebApplication
+  - Breadcrumb: Home > Income Calculators > Hourly to Salary Calculator
+  - H1 + intro paragraph (first 100 words answer "hourly to salary calculator" with $20→$41,600)
+  - 6 content H2 sections: Hourly to Salary Calculator, How the Conversion Works (with worked example card), $20 an Hour Is How Much a Year ($41,600 + $36,400 part-time + $49,400 with OT), $25 an Hour Is How Much a Year ($52,000 + $45,500 + $39,000), Hourly Wage to Annual Salary Calculator (with $12-$40 table), How Much Is $15 an Hour Annually ($31,200 + $2,600 monthly + living-cost context)
+  - FaqSection (unified component), Related Calculators (Income hub, Salary to Hourly mirror, Overtime Pay)
+- Added entry to calculatorPages in site.config.ts (category: "income") - hub card appears automatically
+- Added URL to sitemap.ts
+- Added cross-link from salary-to-hourly page Related Calculators to this new page (both directions now linked)
+- Lint: 0 errors in new files (11 pre-existing em-dash errors in untouched title-loan-calculator/page.tsx)
+- Browser-verified via agent-browser:
+  - All routes return HTTP 200
+  - Default $20 wage: $41,600.00 / $800.00 / $1,600.00 / $3,466.67 (exact)
+  - $25 wage: $52,000.00 / $1,000.00 / $2,000.00 / $4,333.33 (exact)
+  - $15 wage: $31,200.00 / $600.00 / $1,200.00 / $2,600.00 (exact)
+  - OT test ($20 + 5h @1.5x): $49,400.00 with-OT, $41,600.00 without-OT, $950.00 weekly, $1,900.00 biweekly, $4,116.67 monthly (exact)
+  - Live reference line: "$20.00 an hour is $41,600.00 a year at 40 hours per week." (exact)
+  - Quick reference table: all 9 values exact, $20 row highlighted when OT=0
+  - Breadcrumbs correct, 5 FAQ items present and accordion opens, 6 content H2 sections present
+  - Income hub now shows 3 calculator cards (Overtime, Salary to Hourly, Hourly to Salary)
+  - No console errors, no dev log errors
+
+Stage Summary:
+- Hourly to Salary Calculator is live at /income/hourly-to-salary-calculator
+- All check numbers verified exact via browser automation
+- Template, design system, schema, share row, and code conventions match Overtime and Salary-to-Hourly pages exactly
+- Income hub automatically shows the new card via site.config.ts
+- Cross-links established both directions with Salary to Hourly Calculator
+- Ready for user review before building calculator 4 of 9

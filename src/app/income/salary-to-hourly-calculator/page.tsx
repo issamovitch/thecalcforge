@@ -372,8 +372,16 @@ export default function SalaryToHourlyPage() {
             >
               Income Calculators
             </a>{" "}
-            hub. If you earn an hourly wage and want to see how overtime
-            affects your paycheck, the{" "}
+            hub. To convert in the opposite direction, the{" "}
+            <a
+              href="/income/hourly-to-salary-calculator"
+              className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+            >
+              Hourly to Salary Calculator
+            </a>{" "}
+            turns any hourly wage into an annual salary with optional overtime.
+            If you earn an hourly wage and want to see how overtime affects your
+            paycheck, the{" "}
             <a
               href="/income/overtime-calculator"
               className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
