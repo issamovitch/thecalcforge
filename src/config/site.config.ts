@@ -300,6 +300,18 @@ export const calculatorPages = [
     primaryKeyword: "annuity payout calculator",
     category: "insurance",
   },
+  {
+    label: "Overtime Pay Calculator",
+    href: "/income/overtime-calculator",
+    description:
+      "Calculate your overtime hourly rate, overtime pay, regular pay, and total gross paycheck for any hourly wage and overtime multiplier.",
+    longDescription:
+      "Enter your regular hourly wage, regular hours, overtime hours, and overtime multiplier to see your overtime hourly rate, overtime pay, regular pay, total gross pay for the period, and annualized gross. Supports time and a half (1.5x), double time (2x), and custom multipliers, with weekly, biweekly, and monthly pay period scaling.",
+    typesCopy:
+      "calculates time and a half, double time, and custom overtime pay with pay period scaling, annualized totals, and a live reference rate line",
+    primaryKeyword: "overtime pay calculator",
+    category: "income",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────

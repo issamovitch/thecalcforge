@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+
 import {
   DollarSign,
   CreditCard,
@@ -17,16 +17,31 @@ import {
   Home,
   Shield,
   ArrowRight,
+  Calculator,
 } from "lucide-react";
-import { siteConfig } from "@/config/site.config";
+import { siteConfig, calculatorPages } from "@/config/site.config";
 
 const departments = [
-  { slug: "loans", name: "Loan Calculators", description: "Estimate monthly payments, total interest, and amortization schedules for any loan type.", icon: "Landmark", live: true, href: "/loans" },
-  { slug: "debt", name: "Debt Calculators", description: "Build payoff strategies, compare snowball vs. avalanche, and see your debt-free date.", icon: "CreditCard", live: true, href: "/debt" },
-  { slug: "auto", name: "Auto Calculators", description: "Factor in car payments, insurance, depreciation, and total cost of ownership.", icon: "Car", live: true, href: "/auto" },
-  { slug: "home-buying", name: "Home Buying", description: "Crunch mortgage numbers, property taxes, PMI, and closing costs.", icon: "Home", live: true, href: "/home-buying" },
-  { slug: "insurance", name: "Insurance", description: "Estimate coverage needs and premiums for health, life, auto, and homeowners insurance.", icon: "Shield", live: false, href: "/insurance" },
+  { slug: "loans", name: "Loan Calculators", description: "Estimate monthly payments, total interest, and amortization schedules for any loan type.", icon: "Landmark", href: "/loans" },
+  { slug: "debt", name: "Debt Calculators", description: "Build payoff strategies, compare snowball vs. avalanche, and see your debt-free date.", icon: "CreditCard", href: "/debt" },
+  { slug: "auto", name: "Auto Calculators", description: "Factor in car payments, insurance, depreciation, and total cost of ownership.", icon: "Car", href: "/auto" },
+  { slug: "home-buying", name: "Home Buying", description: "Crunch mortgage numbers, property taxes, PMI, and closing costs.", icon: "Home", href: "/home-buying" },
+  { slug: "insurance", name: "Insurance", description: "Estimate coverage needs and premiums for life, disability, and annuity income planning.", icon: "Shield", href: "/insurance" },
+  { slug: "income", name: "Income Calculators", description: "Calculate overtime pay, salary conversions, and take-home pay for any hourly wage or salary.", icon: "DollarSign", href: "/income" },
 ];
+
+const popularSlugs = [
+  "/loans/auto-loan-calculator",
+  "/debt/debt-payoff-calculator",
+  "/debt/dti-calculator",
+  "/home-buying/home-affordability-calculator",
+  "/insurance/life-insurance-calculator",
+  "/home-buying/heloc-calculator",
+];
+
+const popularCalculators = popularSlugs
+  .map((slug) => calculatorPages.find((p) => p.href === slug))
+  .filter(Boolean);
 
 const deptIcons: Record<string, React.ReactNode> = {
   DollarSign: <DollarSign className="h-7 w-7" />,
@@ -104,7 +119,7 @@ export default function HomePage() {
             Departments
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Financial calculators across every category. More tools coming soon.
+            Browse all 24 calculators across six categories.
           </p>
         </div>
 
@@ -114,7 +129,7 @@ export default function HomePage() {
             const card = (
               <Card
                 key={dept.slug}
-                className={`relative transition-shadow h-full ${dept.live ? 'hover:shadow-md hover:border-ember/40 cursor-pointer' : 'hover:shadow-md'}`}
+                className="relative transition-shadow h-full hover:shadow-md hover:border-ember/40 cursor-pointer"
               >
                 <CardHeader className="flex flex-row items-start gap-3 pb-2">
                   <div className="mt-0.5 shrink-0 text-muted-foreground">
@@ -123,47 +138,60 @@ export default function HomePage() {
                   <div className="min-w-0 flex-1">
                     <CardTitle className="text-base">{dept.name}</CardTitle>
                   </div>
-                  {dept.live ? (
-                    <Badge className="bg-ember/10 text-ember border-ember/20 text-xs font-medium shrink-0">
-                      Live
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="text-xs font-medium shrink-0">
-                      Coming Soon
-                    </Badge>
-                  )}
                 </CardHeader>
                 <CardContent>
                   <CardDescription className="text-sm leading-relaxed">
                     {dept.description}
                   </CardDescription>
-                  {dept.live ? (
-                    <div className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-ember transition-colors">
+                  <div className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-ember transition-colors">
                       Open calculator
                       <ArrowRight className="h-3 w-3" />
                     </div>
-                  ) : (
-                    <a
-                      href={dept.href}
-                      className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      Learn more
-                      <ArrowRight className="h-3 w-3" />
-                    </a>
-                  )}
                 </CardContent>
               </Card>
             );
-            return dept.live ? (
+            return (
               <Link key={dept.slug} href={dept.href} className="group">
                 {card}
               </Link>
-            ) : (
-              <div key={dept.slug}>
-                {card}
-              </div>
             );
           })}
+        </div>
+      </section>
+
+      {/* Popular Calculators */}
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            Popular Calculators
+          </h2>
+          <p className="mt-3 text-muted-foreground">
+            The most-used tools on CalcForge.
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {popularCalculators.map((calc) => (
+            <Link key={calc!.href} href={calc!.href} className="group">
+              <Card className="relative h-full transition-shadow hover:shadow-md hover:border-ember/40 cursor-pointer">
+                <CardHeader className="flex flex-row items-start gap-3 pb-2">
+                  <div className="mt-0.5 shrink-0 text-muted-foreground">
+                    <Calculator className="h-5 w-5" />
+                  </div>
+                  <CardTitle className="text-base">{calc!.label}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-sm leading-relaxed">
+                    {calc!.description}
+                  </CardDescription>
+                  <div className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-ember transition-colors">
+                    Open calculator
+                    <ArrowRight className="h-3 w-3" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
         </div>
       </section>
     </>

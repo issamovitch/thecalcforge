@@ -23,9 +23,10 @@ const loanPaths = [
   "/insurance/disability-insurance-calculator",
   "/insurance/life-insurance-calculator",
   "/insurance/annuity-payout-calculator",
+  "/income/overtime-calculator",
 ];
 
-const departmentPaths = ["/debt", "/auto", "/home-buying", "/insurance"];
+const departmentPaths = ["/debt", "/auto", "/home-buying", "/insurance", "/income"];
 
 export default function robots(): MetadataRoute.Robots {
   return {
