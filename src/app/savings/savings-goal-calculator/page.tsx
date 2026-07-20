@@ -88,7 +88,9 @@ const m_10y = solveMonthly(1_000_000, 0, 0.07, 10);
 const m_40y = solveMonthly(1_000_000, 0, 0.07, 40);
 
 // Sub-figures used in the worked-example card
-const ex1_currentGrown = ex1.totalContributed - ex1.monthlyContribution * 60;
+// Current savings grown forward at the assumed rate for the full term:
+// $5,000 × (1 + 0.04/12)^60 ≈ $6,105
+const ex1_currentGrown = 5000 * Math.pow(1 + 0.04 / 12, 60);
 const ex1_gap = 50000 - ex1_currentGrown;
 
 /* ─── FAQ Data ─── */
@@ -252,9 +254,10 @@ export default function SavingsGoalPage() {
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Monthly rate i = 0.04 &divide; 12 = 0.003333. Number of months
                 n = 5 &times; 12 = 60. (1+i)<sup>n</sup> &asymp; 1.2210.
-                Current savings grown forward = $5,000 &times; 1.2210 &asymp;{" "}
+                Current savings grown forward = $5,000 &times; 1.2210 ={" "}
                 <strong>{f(ex1_currentGrown)}</strong>. Gap to goal = $50,000
-                &minus; that = <strong>{f(ex1_gap)}</strong>. Annuity factor
+                &minus; <strong>{f(ex1_currentGrown)}</strong> ={" "}
+                <strong>{f(ex1_gap)}</strong>. Annuity factor
                 ((1+i)<sup>n</sup> &minus; 1) &divide; i &asymp; 66.30.
                 Required monthly = gap &divide; factor ={" "}
                 <strong>{fc(ex1.monthlyContribution)}</strong>. Total
