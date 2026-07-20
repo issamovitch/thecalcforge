@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Calculator } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import {
@@ -9,6 +8,8 @@ import {
   FaqJsonLd,
 } from "@/components/seo/JsonLd";
 import { CanonicalUrl } from "@/components/seo/CanonicalUrl";
+import { CalculatorCard } from "@/components/shared/CalculatorCard";
+import { FaqSection, type FaqItem } from "@/components/shared/FaqSection";
 import { siteConfig } from "@/config/site.config";
 
 /* ─── Types ─── */
@@ -73,6 +74,7 @@ export function HubPage({
   source,
 }: HubPageProps) {
   const fullUrl = `${siteConfig.url}${path}`;
+  const faqItems: FaqItem[] = faq;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
@@ -109,23 +111,13 @@ export function HubPage({
       {/* ─── Calculator Cards ─── */}
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         {calculators.map((calc) => (
-          <Link key={calc.href} href={calc.href} className="group">
-            <Card className="h-full transition-colors hover:border-ember/40 hover:bg-muted/40">
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2.5">
-                  <Calculator className="size-5 text-ember" />
-                  <CardTitle className="text-base font-semibold group-hover:text-ember transition-colors">
-                    {calc.label}
-                  </CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {calc.longDescription}
-                </p>
-              </CardContent>
-            </Card>
-          </Link>
+          <CalculatorCard
+            key={calc.href}
+            title={calc.label}
+            description={calc.longDescription}
+            href={calc.href}
+            icon={<Calculator className="size-5" />}
+          />
         ))}
       </div>
 
@@ -195,25 +187,7 @@ export function HubPage({
       </section>
 
       {/* ─── FAQ ─── */}
-      <Separator className="my-10" />
-      <section className="space-y-3">
-        <h2 className="text-2xl font-bold tracking-tight">
-          Frequently Asked Questions
-        </h2>
-        {faq.map((item) => (
-          <details
-            key={item.question}
-            className="group rounded-lg border border-border bg-white dark:bg-card"
-          >
-            <summary className="cursor-pointer select-none px-5 py-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/40">
-              {item.question}
-            </summary>
-            <div className="px-5 pb-4 text-sm text-muted-foreground leading-relaxed">
-              {item.answer}
-            </div>
-          </details>
-        ))}
-      </section>
+      <FaqSection faqs={faqItems} />
     </div>
   );
 }

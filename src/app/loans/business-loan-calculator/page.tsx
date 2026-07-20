@@ -18,6 +18,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import AdSlot from "@/components/monetization/AdSlot";
+import { FaqSection } from "@/components/shared/FaqSection";
 
 /* ─── Build-time computed examples (single source of truth) ─── */
 
@@ -331,30 +332,7 @@ export default function BusinessLoanCalculatorPage() {
         </Card>
       </section>
 
-      <Separator className="my-12" />
-
-      {/* ─── FAQ Section ─── */}
-      <section className="space-y-6">
-        <h2 className="text-2xl font-bold tracking-tight">
-          Frequently Asked Questions
-        </h2>
-        <div className="space-y-4">
-          {faqs.map((faq, index) => (
-            <details
-              key={index}
-              className="group rounded-lg border bg-white dark:bg-card"
-            >
-              <summary className="cursor-pointer select-none px-5 py-4 text-sm font-semibold text-foreground hover:text-ember transition-colors list-none flex items-center justify-between">
-                {faq.question}
-                <ChevronIcon />
-              </summary>
-              <div className="px-5 pb-4 text-sm leading-relaxed text-muted-foreground">
-                {faq.answer}
-              </div>
-            </details>
-          ))}
-        </div>
-      </section>
+      <FaqSection faqs={faqs} />
 
       <Separator className="my-12" />
 
@@ -393,22 +371,5 @@ export default function BusinessLoanCalculatorPage() {
         <AdSlot slot="footer" lazy />
       </div>
     </div>
-  );
-}
-
-/* ─── Sub-components ─── */
-
-function ChevronIcon() {
-  return (
-    <svg
-      className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={2}
-      aria-hidden="true"
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-    </svg>
   );
 }

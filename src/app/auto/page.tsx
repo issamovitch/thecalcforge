@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/config/site.config";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { BreadcrumbJsonLd } from "@/components/seo/JsonLd";
-import Link from "next/link";
+import { CalculatorCard } from "@/components/shared/CalculatorCard";
+import { Calculator } from "lucide-react";
 
 /* ─── Auto calculators shown on this hub ─── */
 const autoHubCalculators = [
@@ -53,7 +54,7 @@ export const metadata: Metadata = {
 
 export default function AutoPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
       <BreadcrumbJsonLd items={[{ name: "Home", url: siteConfig.url }, { name: "Auto Calculators", url: `${siteConfig.url}/auto` }]} />
       <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Auto Calculators" }]} className="mb-8" />
       <div className="flex items-center gap-3 mb-4">
@@ -64,18 +65,13 @@ export default function AutoPage() {
       {/* Calculator cards */}
       <div className="grid gap-4 sm:grid-cols-2">
         {autoHubCalculators.map((calc) => (
-          <Link
+          <CalculatorCard
             key={calc.href}
+            title={calc.label}
+            description={calc.description}
             href={calc.href}
-            className="group rounded-lg border border-border bg-card p-5 transition-colors hover:border-ember/40 hover:bg-accent/50"
-          >
-            <h2 className="text-base font-semibold text-foreground group-hover:text-ember transition-colors">
-              {calc.label}
-            </h2>
-            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-              {calc.description}
-            </p>
-          </Link>
+            icon={<Calculator className="h-7 w-7" />}
+          />
         ))}
       </div>
     </div>

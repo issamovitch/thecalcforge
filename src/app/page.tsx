@@ -1,13 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { CalculatorCard } from "@/components/shared/CalculatorCard";
 
 import {
   DollarSign,
@@ -16,7 +9,6 @@ import {
   Car,
   Home,
   Shield,
-  ArrowRight,
   Calculator,
 } from "lucide-react";
 import { siteConfig, calculatorPages } from "@/config/site.config";
@@ -91,7 +83,7 @@ export default function HomePage() {
         />
         <div className="relative mx-auto max-w-5xl px-4 py-20 sm:px-6 sm:py-28 lg:py-36">
           <div className="mx-auto max-w-3xl text-center">
-            <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+            <h1 className="text-4xl font-bold tracking-tight leading-[1.33] text-foreground sm:text-5xl lg:text-6xl">
               Precision-Crafted
               <span className="block text-ember">Financial Calculators</span>
             </h1>
@@ -126,34 +118,14 @@ export default function HomePage() {
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {departments.map((dept) => {
             const Icon = deptIcons[dept.icon] ?? <DollarSign className="h-7 w-7" />;
-            const card = (
-              <Card
-                key={dept.slug}
-                className="relative transition-shadow h-full hover:shadow-md hover:border-ember/40 cursor-pointer"
-              >
-                <CardHeader className="flex flex-row items-start gap-3 pb-2">
-                  <div className="mt-0.5 shrink-0 text-muted-foreground">
-                    {Icon}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <CardTitle className="text-base">{dept.name}</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-sm leading-relaxed">
-                    {dept.description}
-                  </CardDescription>
-                  <div className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-ember transition-colors">
-                      Open calculator
-                      <ArrowRight className="h-3 w-3" />
-                    </div>
-                </CardContent>
-              </Card>
-            );
             return (
-              <Link key={dept.slug} href={dept.href} className="group">
-                {card}
-              </Link>
+              <CalculatorCard
+                key={dept.slug}
+                title={dept.name}
+                description={dept.description}
+                href={dept.href}
+                icon={Icon}
+              />
             );
           })}
         </div>
@@ -172,25 +144,13 @@ export default function HomePage() {
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {popularCalculators.map((calc) => (
-            <Link key={calc!.href} href={calc!.href} className="group">
-              <Card className="relative h-full transition-shadow hover:shadow-md hover:border-ember/40 cursor-pointer">
-                <CardHeader className="flex flex-row items-start gap-3 pb-2">
-                  <div className="mt-0.5 shrink-0 text-muted-foreground">
-                    <Calculator className="h-5 w-5" />
-                  </div>
-                  <CardTitle className="text-base">{calc!.label}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-sm leading-relaxed">
-                    {calc!.description}
-                  </CardDescription>
-                  <div className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-ember transition-colors">
-                    Open calculator
-                    <ArrowRight className="h-3 w-3" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+            <CalculatorCard
+              key={calc!.href}
+              title={calc!.label}
+              description={calc!.description}
+              href={calc!.href}
+              icon={<Calculator className="h-7 w-7" />}
+            />
           ))}
         </div>
       </section>

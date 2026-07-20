@@ -42,6 +42,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // Income hub + calculators
     { url: `${base}/income`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/income/overtime-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
+    { url: `${base}/income/salary-to-hourly-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     // Info pages
     { url: `${base}/about`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.3 },
     { url: `${base}/contact`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },

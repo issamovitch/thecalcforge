@@ -89,7 +89,7 @@ export default function IncomePage() {
           </p>
           <p className="text-muted-foreground leading-relaxed">
             Pay period scaling works by multiplying the weekly result: biweekly
-            pay is the weekly total times 26 paychecks per year, and monthly pay
+            pay is the weekly total times 2 (26 paychecks per year), and monthly pay
             is the weekly total times 52 divided by 12. Annualized gross income
             is the weekly total times 52. All figures shown by CalcForge
             calculators are gross (before taxes and deductions).

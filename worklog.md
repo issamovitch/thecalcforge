@@ -1304,3 +1304,53 @@ Stage Summary:
 - Hub page finalized (no coming soon items)
 - Cross-links added between all 3 insurance calculator pages
 - SPIA rate table is auditable (visible JS constant with documented source basis)
+
+---
+Task ID: refactor-unify
+Agent: main
+Task: Remove "Live" badge from everywhere, unify all FAQ components, unify all cards across the website
+
+Work Log:
+- Explored codebase: found "Live" badge in insurance/page.tsx and home-buying/page.tsx
+- Found two different FAQ implementations: calculator pages (with ChevronIcon, font-semibold, hover:text-ember) and HubPage component (font-medium, hover:bg-muted/40, no chevron)
+- Found 6 different card variations: homepage departments, homepage popular, HubPage cards, insurance hub cards (with Live badge), home-buying hub cards (with Live badge), auto hub (raw Link, no Card component)
+- Created unified FaqSection component at src/components/shared/FaqSection.tsx with rotating chevron, ember hover, consistent border/bg
+- Created unified CalculatorCard component at src/components/shared/CalculatorCard.tsx with icon, title, description, "Open calculator" + ArrowRight
+- Removed "Live" badge from insurance/page.tsx and home-buying/page.tsx (also removed Badge import)
+- Refactored insurance/page.tsx, home-buying/page.tsx, auto/page.tsx to use CalculatorCard
+- Refactored homepage (page.tsx) to use CalculatorCard for both departments and popular calculators grids
+- Refactored HubPage component to use unified FaqSection and CalculatorCard
+- Wrote Python script to refactor all 25 calculator pages: added FaqSection import, replaced FAQ block with <FaqSection faqs={faqs} />, removed local ChevronIcon function and Sub-components comment
+- Verified all routes return 200, no errors in dev log, no lint errors from changes (only pre-existing em-dash errors in untouched title-loan-calculator/page.tsx)
+- Verified with Agent Browser: no "Live" badge anywhere, all cards have unified "Open calculator" text, FAQ sections have identical styling across calculator pages and hub pages
+
+Stage Summary:
+- Created 2 new shared components: FaqSection.tsx and CalculatorCard.tsx
+- Modified 30 files total: 25 calculator pages, 3 hub pages (insurance, home-buying, auto), homepage, HubPage component
+- "Live" badge completely removed from the website
+- All FAQ sections now use a single unified component with consistent styling (border-border, bg-card, font-semibold, hover:text-ember, rotating chevron)
+- All navigation cards now use a single unified CalculatorCard component with consistent styling (icon, title, description, "Open calculator" + ArrowRight, hover:shadow-md hover:border-ember/40)
+
+---
+Task ID: salary-to-hourly-calc
+Agent: main
+Task: Build the second Income department calculator (Salary to Hourly Calculator) at /income/salary-to-hourly-calculator, matching the Overtime Pay Calculator template exactly
+
+Work Log:
+- Studied OvertimePayCalculator.tsx component (vanilla JS, URL params, share row, tooltip pattern, result tiles) and overtime-calculator/page.tsx (SEO, JSON-LD, content structure, FaqSection, Related Calculators)
+- Studied site.config.ts calculator registry structure and ShareButtons component
+- Created SalaryToHourlyCalculator.tsx component with: annual salary input (default $60,000), hours/week slider (10-80, default 40), weeks/year slider (48-52, default 52), live reference line, 5 result tiles (hourly/daily/weekly/biweekly/monthly gross), computed quick-reference table ($30k-$100k in $10k steps with current-row highlight), URL param encoding, copy link/print/reset, full ShareButtons row
+- Created salary-to-hourly-calculator/page.tsx with: exact SEO metadata (title, meta description, canonical, OG, Twitter), BreadcrumbList + FAQPage + WebApplication JSON-LD, breadcrumbs (Home > Income Calculators > Salary to Hourly Calculator), H1, intro paragraph answering "salary to hourly calculator" with $60,000=$28.85/hr, 6 H2 content sections (Salary to Hourly Calculator, How the Conversion Works with worked example card, $70,000 answered with 45h/50h variants, $60,000 answered with 45h/50h variants, Annual Salary to Hourly Wage Calculator with formula table, What Is My Hourly Rate from My Salary), FaqSection with 5 FAQs, Related Calculators linking to /income hub + /income/overtime-calculator + /debt/dti-calculator
+- Registered calculator in site.config.ts (label, href, description, longDescription, typesCopy, primaryKeyword, category) so it appears on the /income hub automatically
+- Updated overtime-calculator/page.tsx Related Calculators: replaced "coming soon" mention with a real link to /income/salary-to-hourly-calculator
+- Added /income/salary-to-hourly-calculator to sitemap.ts with priority 0.9
+- Verified all check numbers: $60,000 -> $28.85/hr, $1,153.85 weekly, $2,307.69 biweekly, $5,000.00 monthly; $70,000 -> $33.65/hr; 45h/50h variants match
+- Verified SEO: 3 JSON-LD scripts (BreadcrumbList, FAQPage, WebApplication), canonical URL, breadcrumbs, internal links
+- Verified interactivity: sliders, URL param sharing (?salary=75000 loads $36.06/hr), reset restores defaults and clears URL, quick-reference table highlights matching row, share row (X/Facebook/WhatsApp/Reddit/Email), copy link, print all present
+- No errors in dev log or browser console; no new lint errors
+
+Stage Summary:
+- Created 2 new files: src/components/calculators/SalaryToHourlyCalculator.tsx, src/app/income/salary-to-hourly-calculator/page.tsx
+- Modified 3 files: src/config/site.config.ts (new registry entry), src/app/income/overtime-calculator/page.tsx (real Related link), src/app/sitemap.ts (new URL)
+- Income hub (/income) now shows 2 calculator cards automatically via the filter
+- All check numbers verified exact to the cent in the browser

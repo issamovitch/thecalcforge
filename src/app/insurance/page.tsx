@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { siteConfig, calculatorPages } from "@/config/site.config";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { BreadcrumbJsonLd } from "@/components/seo/JsonLd";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { CalculatorCard } from "@/components/shared/CalculatorCard";
 import { Calculator } from "lucide-react";
 
 const insuranceCalcs = calculatorPages.filter(
@@ -72,43 +70,13 @@ export default function InsurancePage() {
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2">
         {insuranceCalcs.map((calc) => (
-          <Link key={calc.href} href={calc.href} className="group">
-            <Card className="h-full transition-shadow hover:shadow-md hover:border-ember/40">
-              <CardHeader className="flex flex-row items-start gap-3 pb-2">
-                <div className="mt-0.5 shrink-0 text-muted-foreground">
-                  <Calculator className="h-7 w-7" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <CardTitle className="text-base">{calc.label}</CardTitle>
-                </div>
-                <Badge className="bg-ember/10 text-ember border-ember/20 text-xs font-medium shrink-0">
-                  Live
-                </Badge>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {calc.description}
-                </p>
-                <span className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-ember transition-colors">
-                  Open calculator
-                  <svg
-                    className="size-3"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </span>
-              </CardContent>
-            </Card>
-          </Link>
+          <CalculatorCard
+            key={calc.href}
+            title={calc.label}
+            description={calc.description}
+            href={calc.href}
+            icon={<Calculator className="h-7 w-7" />}
+          />
         ))}
       </div>
     </div>
