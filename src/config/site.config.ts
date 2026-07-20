@@ -336,6 +336,18 @@ export const calculatorPages = [
     primaryKeyword: "hourly to salary calculator",
     category: "income",
   },
+  {
+    label: "CD Early Withdrawal Penalty Calculator",
+    href: "/savings/cd-early-withdrawal-penalty-calculator",
+    description:
+      "See the CD early withdrawal penalty in dollars, your net proceeds, and whether breaking your CD early is worth it.",
+    longDescription:
+      "Enter your CD principal, APY, penalty type (3, 6, or 12 months of interest, or custom days), months held, and total term to see the penalty in dollars, interest earned so far, net gain or loss, and net proceeds after breaking. Includes a worth-breaking comparison that models keeping the CD to maturity versus breaking it, paying the penalty, and reinvesting the net proceeds at a new APY for the remaining months.",
+    typesCopy:
+      "computes the CD early withdrawal penalty in dollars, net proceeds, and a keep-versus-break comparison so you can see whether cashing a CD early is worth it",
+    primaryKeyword: "cd early withdrawal penalty calculator",
+    category: "savings",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────

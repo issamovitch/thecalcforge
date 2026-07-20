@@ -9,6 +9,7 @@ import {
   Car,
   Home,
   Shield,
+  PiggyBank,
   Calculator,
 } from "lucide-react";
 import { siteConfig, calculatorPages } from "@/config/site.config";
@@ -20,6 +21,7 @@ const departments = [
   { slug: "home-buying", name: "Home Buying", description: "Crunch mortgage numbers, property taxes, PMI, and closing costs.", icon: "Home", href: "/home-buying" },
   { slug: "insurance", name: "Insurance", description: "Estimate coverage needs and premiums for life, disability, and annuity income planning.", icon: "Shield", href: "/insurance" },
   { slug: "income", name: "Income Calculators", description: "Calculate overtime pay, salary conversions, and take-home pay for any hourly wage or salary.", icon: "DollarSign", href: "/income" },
+  { slug: "savings", name: "Savings", description: "Estimate CD early withdrawal penalties, net proceeds, and whether breaking a CD early is worth it.", icon: "PiggyBank", href: "/savings" },
 ];
 
 const popularSlugs = [
@@ -42,6 +44,7 @@ const deptIcons: Record<string, React.ReactNode> = {
   Car: <Car className="h-7 w-7" />,
   Home: <Home className="h-7 w-7" />,
   Shield: <Shield className="h-7 w-7" />,
+  PiggyBank: <PiggyBank className="h-7 w-7" />,
 };
 
 export const metadata = {
@@ -111,7 +114,7 @@ export default function HomePage() {
             Departments
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Browse all 24 calculators across six categories.
+            Browse all 25 calculators across seven categories.
           </p>
         </div>
 

@@ -1399,3 +1399,52 @@ Stage Summary:
 - Income hub automatically shows the new card via site.config.ts
 - Cross-links established both directions with Salary to Hourly Calculator
 - Ready for user review before building calculator 4 of 9
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Build /savings department hub + CD Early Withdrawal Penalty Calculator page
+
+Work Log:
+- Read HubPage component, Footer, homepage, existing income hub as templates
+- Created src/app/savings/page.tsx using HubPage component:
+  - SEO metadata (title, description, canonical, OG)
+  - CollectionPage + Breadcrumb + FAQ JSON-LD (via HubPage)
+  - Intro, calculator cards (auto from site.config category filter), how-it-works (CD penalty math), types, costs (penalty policies), 5-item FAQ
+- Added Savings to footer departmentLinks (after Income)
+- Added Savings department to homepage: PiggyBank lucide icon, dept entry, deptIcons mapping, updated count "25 calculators across seven categories"
+- Created src/components/calculators/CdEarlyWithdrawalCalculator.tsx (client component):
+  - Inputs: principal (default $10k), APY (default 4.5%), penalty type dropdown (3/6/12 months or custom days), custom days field (conditional), months held (slider 0-term), total term (default 12), new APY (default 5%)
+  - Math (simple interest): penalty = principal*APY*penaltyMonths/12 (or *days/365 for custom); interest earned = principal*APY*monthsHeld/12; net gain = interest-penalty (red when negative); net proceeds = principal+interest-penalty
+  - Worth-breaking comparison: keep to maturity value vs break+reinvest at new APY for remaining months; winner declared with $ difference
+  - Edge case warning (amber) when penalty > interest earned, explaining bank-policy variation (cap at interest vs deduct from principal)
+  - Live reference line, URL params (principal, apy, ptype, days, held, term, newapy), Copy Link/Print/Reset/ShareButtons
+- Created src/app/savings/cd-early-withdrawal-penalty-calculator/page.tsx:
+  - SEO: title, description, canonical, OG, Twitter, robots
+  - JSON-LD: BreadcrumbList, FAQPage (5 FAQs), WebApplication
+  - Breadcrumb: Home > Savings Calculators > CD Early Withdrawal Penalty Calculator
+  - H1 + intro (first 100 words answer primary keyword with $225 concrete number)
+  - 6 content H2 sections: CD Early Withdrawal Penalty Calculator, How the CD Penalty Calculation Works (worked example $10k@4.5% 6mo held 6/12), Early Withdrawal Penalty Calculator (CD vs 10% IRA/401k tax penalty distinction, no tax advice), How Much Is the Penalty for Cashing a CD Early ($112.50/$225/$450 examples), CD Penalty Calculator (deposit agreement, Truth in Savings, brokered CDs), Is It Worth Breaking a CD Early (full worked example from addendum)
+  - FaqSection (unified), Related Calculators (Savings hub, Annuity Payout, Debt Payoff cross-dept links)
+- Addendum worked example computed with exact calculator math: $10k@3%, 12mo remaining, 6mo penalty, new APY 5% → penalty $150, net proceeds $9,850, keep=$10,300, break=$10,342.50, break wins by $42.50
+- Added entry to calculatorPages in site.config.ts (category: "savings") - hub card auto-populates
+- Added /savings hub + /savings/cd-early-withdrawal-penalty-calculator to sitemap.ts
+- Lint: 0 errors in new files (11 pre-existing em-dash errors in untouched title-loan-calculator/page.tsx)
+- Browser-verified via agent-browser:
+  - All routes HTTP 200 (calculator, hub, homepage, URL-param shareable links)
+  - Default check numbers EXACT: penalty $225.00, interest $225.00, net gain $0.00, net proceeds $10,000.00, keep $10,450.00, break $10,250.00
+  - Worth-breaking addendum example EXACT: penalty $150.00, interest $0.00, net gain -$150.00 (red), net proceeds $9,850.00, keep $10,300.00, break $10,342.50, "Break the CD and reinvest wins by $42.50"
+  - 3-month penalty: $112.50 EXACT; 12-month: $450.00 EXACT; custom 90 days: $110.96 EXACT
+  - Edge-case amber warning appears when penalty > interest earned
+  - Savings hub shows CD calculator card; homepage shows Savings department card with updated count
+  - Footer shows Savings link
+  - 5 FAQ items present and accordion opens; 8 H2 sections (6 content + FAQ + Related)
+  - Hydration warnings present but identical to sibling Salary-to-Hourly calculator (pre-existing URL-param pattern, not a regression)
+
+Stage Summary:
+- /savings department hub live with intro, how-it-works, types, costs, FAQ sections
+- CD Early Withdrawal Penalty Calculator live at /savings/cd-early-withdrawal-penalty-calculator
+- All check numbers verified exact via browser automation including the addendum worth-breaking example
+- Homepage, footer, sitemap, and site.config all updated for the new department
+- Template/design system/schema/share row match existing calculator pages exactly
+- Ready for user review before building the next calculator

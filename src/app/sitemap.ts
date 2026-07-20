@@ -44,6 +44,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/income/overtime-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/income/salary-to-hourly-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/income/hourly-to-salary-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
+    // Savings hub + calculators
+    { url: `${base}/savings`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/savings/cd-early-withdrawal-penalty-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     // Info pages
     { url: `${base}/about`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.3 },
     { url: `${base}/contact`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },

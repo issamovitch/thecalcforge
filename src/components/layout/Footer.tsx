@@ -9,6 +9,7 @@ const departmentLinks = [
   { label: "Home Buying", href: "/home-buying" },
   { label: "Insurance", href: "/insurance" },
   { label: "Income", href: "/income" },
+  { label: "Savings", href: "/savings" },
 ];
 
 const popularCalculators = [
