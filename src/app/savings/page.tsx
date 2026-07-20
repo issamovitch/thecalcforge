@@ -4,14 +4,14 @@ import { HubPage, type HubCalculator, type HubFaqItem } from "@/components/hub/H
 
 /* ─── SEO Metadata ─── */
 export const metadata: Metadata = {
-  title: "Savings Calculators: CDs, Penalties & Yield Tools",
+  title: "Savings Calculators: CDs, Goals, Net Worth & Emergency Funds",
   description:
-    "Savings calculators to estimate CD early withdrawal penalties, net proceeds, and whether breaking a CD early is worth it. Free tools at CalcForge.",
+    "Free savings calculators: estimate CD early withdrawal penalties, plan a savings goal timeline, compare your net worth by age, and size an emergency fund. CalcForge.",
   alternates: { canonical: `${siteConfig.url}/savings` },
   openGraph: {
-    title: "Savings Calculators: CDs, Penalties & Yield Tools",
+    title: "Savings Calculators: CDs, Goals, Net Worth & Emergency Funds",
     description:
-      "Savings calculators to estimate CD early withdrawal penalties, net proceeds, and whether breaking a CD early is worth it at CalcForge.",
+      "Free savings calculators: estimate CD early withdrawal penalties, plan a savings goal timeline, compare your net worth by age, and size an emergency fund at CalcForge.",
     url: `${siteConfig.url}/savings`,
     siteName: siteConfig.name,
     locale: "en_US",
@@ -65,8 +65,8 @@ export default function SavingsPage() {
     <HubPage
       breadcrumbLabel="Savings Calculators"
       path="/savings"
-      collectionDescription="Free savings calculators to estimate CD early withdrawal penalties, net proceeds, and whether breaking a CD early is worth it."
-      intro="Savings calculators help you understand the real cost of accessing locked-in cash before a term ends. CalcForge's free savings calculators cover CD early withdrawal penalties, net proceeds after penalties, and a side-by-side comparison of keeping a CD to maturity versus breaking it and reinvesting at a higher rate. Whether you are weighing a penalty against a better yield elsewhere or checking whether accrued interest covers the penalty, these tools give you the numbers quickly."
+      collectionDescription="Free savings calculators to estimate CD early withdrawal penalties, plan a savings goal, compare your net worth by age, and size an emergency fund."
+      intro="Savings calculators help you make decisions about cash you are holding or building. CalcForge's free savings calculators cover four questions: whether breaking a CD early is worth the penalty, how much to save per month or how long it will take to reach a savings goal, how your net worth compares to the median and average for your age bracket, and how big an emergency fund you need and how long it will take to build. Each tool is built for a single calculation so the result matches how the underlying math actually works, whether that is months-of-interest penalties, monthly compounding, or expenses-times-coverage-period targeting."
       calculators={savingsCalculators}
       howToTitle="How CD Early Withdrawal Penalties Are Calculated"
       howToContent={

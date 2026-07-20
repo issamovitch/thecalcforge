@@ -1718,3 +1718,65 @@ Stage Summary:
 - /loans hub now lists the new calculator card
 - Lint: 0 new errors (11 pre-existing em-dash errors in title-loan-calculator/page.tsx, unchanged)
 - Template/design/schema fully matches existing loans pages; no restyling
+
+---
+Task ID: emergency-fund-calculator
+Agent: Main Agent
+Task: Build Emergency Fund Calculator page at /savings/emergency-fund-calculator (fourth and final Savings department calculator)
+
+Work Log:
+- Read worklog.md, savings-goal-math.ts (solve-for-n engine), SavingsGoalCalculator.tsx + page.tsx (template), savings hub page, site.config.ts savings entries, sitemap.ts
+- Created src/lib/emergency-fund-math.ts:
+  - calculateEmergencyFund(inputs, today) computing target = expenses × months, gap (floored $0), surplus, 3/6/12 month strip
+  - Delegates time-to-reach to solveTime from savings-goal-math.ts (identical monthly-compounding convention, handles rate 0, contribution 0, current 0 cleanly)
+  - DEFAULT_EXPENSE_LINES: housing $1,400, utilities $250, food $600, transport $300, insurance $250, debts $700 (sum = $3,500)
+  - Returns EmergencyFundResult with months/years/remainingMonths/targetDate/finalAmount/totalContributed/growthFromReturns/reason
+- Created src/components/calculators/EmergencyFundCalculator.tsx (client component):
+  - Inputs: monthly essential expenses (with optional itemized breakdown toggle), months of coverage (slider 3-12, default 6), current savings ($2,000), monthly savings ($400), APY (4.00%)
+  - Itemized breakdown: Collapsible with 6 default category rows (label + amount + delete), add-row button, sum feeds total (read-only when itemized), "Use a single total" toggle carries sum back to direct input
+  - Results: time-to-build highlight (years + months + calendar date), 3 secondary stat cards (Target Fund, Remaining Gap, Growth from Returns), 3/6/12 month target strip
+  - Already-funded case: "EMERGENCY FUND COMPLETE" message with surplus
+  - Unreachable guard: "GOAL UNREACHABLE" with reason (e.g. 0% return + 0 contribution)
+  - URL params (expenses, months, current, monthly, rate), Copy Link, Print, Reset, full ShareButtons row (X, Facebook, WhatsApp, Reddit, Email)
+  - YMYL disclaimer
+- Created src/app/savings/emergency-fund-calculator/page.tsx:
+  - SEO: title "Emergency Fund Calculator – How Much Do You Need? | CalcForge", meta description, canonical, OG, Twitter, robots
+  - 3 JSON-LD schemas: BreadcrumbList, FAQPage (5 FAQs), WebApplication
+  - Breadcrumbs: Home > Savings Calculators > Emergency Fund Calculator
+  - Intro paragraph (~100 words) with computed defaults: $21,000 target, 3 years 8 months, $19,000 gap, ~$1,638 growth
+  - 5 H2 content sections matching target long-tail keywords:
+    1. Emergency Fund Calculator (what it computes + worked example card: target $21,000, gap $19,000, 44 months, contributed $19,600, growth $1,638, final $21,238)
+    2. How Much Emergency Fund Do I Need (3-6 month convention, when 3 vs 6-12 fits, 3/6/12 strip figures)
+    3. How Many Months of Expenses Should I Save (expenses not income, table at $2,500/$3,500/$5,000 × 3/6/12)
+    4. How Long to Build an Emergency Fund ($21k from $0 at 4% table: $200→7y7m, $400→4y1m, $800→2y2m; pausing-contributions note)
+    5. 6 Month Emergency Fund Calculator (6 × expenses math, what counts as essential, where to keep it with CD Early Withdrawal Penalty Calculator link)
+  - 5 FAQ items
+  - Related Calculators: /savings hub, Savings Goal, Net Worth by Age, Debt Payoff (keyword-rich anchors)
+  - All content figures computed server-side by the same engine (ex, build_200, build_400, build_800 module-scope constants)
+- Updated src/config/site.config.ts: added Emergency Fund Calculator entry (category: "savings", short description, via Python script to preserve CRLF line endings)
+- Updated src/app/sitemap.ts: added /savings/emergency-fund-calculator entry (priority 0.9)
+- Updated src/app/savings/page.tsx: broadened hub title, description, collectionDescription, and intro to mention all four savings calculators (CD Early Withdrawal, Net Worth by Age, Savings Goal, Emergency Fund) instead of CDs only
+- Fixed lint: converted toggleItemized from useCallback to plain function (React Compiler handles memoization; resolve-manual-memoization rule)
+- Lint: 0 new errors (11 pre-existing em-dash errors in title-loan-calculator/page.tsx, unchanged)
+- Browser-verified via Agent Browser end-to-end:
+  - Page renders at 200, no runtime errors
+  - Title, H1, canonical, 3 JSON-LD scripts verified
+  - 7 H2s (5 target keywords + FAQ + Related) all present
+  - Calculator defaults load correctly ($3,500/6mo/$2,000/$400/4% → target $21,000, gap $19,000, 3y 8m, 44 months, growth $1,638)
+  - 3/6/12 strip: $10,500 / $21,000 / $42,000
+  - Expense table: all 9 products exact ($7,500/$15,000/$30,000; $10,500/$21,000/$42,000; $15,000/$30,000/$60,000)
+  - Itemized breakdown toggle: opens 6 default categories summing to $3,500, each deletable, add-row button works
+  - Guard case (?monthly=0&rate=0): "GOAL UNREACHABLE" message with reason
+  - Already-funded case (?current=25000): "EMERGENCY FUND COMPLETE" with surplus
+  - Share row (5 platforms), Copy Link, Print, Reset all present
+  - 5 internal links present (/savings, Savings Goal, CD Early Withdrawal, Net Worth by Age, Debt Payoff)
+  - /savings hub shows new card with short description; hub intro mentions all four calculators
+  - Footer positioned at bottom of page content (sticky layout pattern intact)
+
+Stage Summary:
+- New page live at /savings/emergency-fund-calculator, fully functional, 4th and final Savings calculator
+- Shared math engine in src/lib/emergency-fund-math.ts reuses solveTime from savings-goal-math.ts (no math duplication)
+- All content figures computed by the same engine that powers the interactive calculator (no hardcoded numbers)
+- Savings hub now lists all 4 calculators (CD Early Withdrawal, Net Worth by Age, Savings Goal, Emergency Fund) with broadened intro
+- Site config + sitemap updated; lint clean; browser-verified end-to-end
+- Template/design/schema/share row/code conventions match existing savings pages exactly; no restyling

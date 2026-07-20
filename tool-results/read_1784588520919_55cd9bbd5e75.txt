@@ -1,0 +1,491 @@
+     1→     1→    50→  robots: {
+     2→     2→    51→    index: true,
+     3→     3→    52→    follow: true,
+     4→     4→    53→    googleBot: { index: true, follow: true, "max-snippet": -1 },
+     5→     5→    54→  },
+     6→     6→    55→};
+     7→     7→    56→
+     8→     8→    57→/* ─── Computed examples (module scope, static generation) ─── */
+     9→     9→    58→/* Every figure in the content below comes from the same engine that powers the
+    10→    10→    59→   interactive calculator above. No hardcoded numbers. */
+    11→    11→    60→
+    12→    12→    61→const f = (n: number) =>
+    13→    13→    62→  n.toLocaleString("en-US", {
+    14→    14→    63→    style: "currency",
+    15→    15→    64→    currency: "USD",
+    16→    16→    65→    minimumFractionDigits: 0,
+    17→    17→    66→    maximumFractionDigits: 0,
+    18→    18→    67→  });
+    19→    19→    68→const fc = (n: number) =>
+    20→    20→    69→  n.toLocaleString("en-US", {
+    21→    21→    70→    style: "currency",
+    22→    22→    71→    currency: "USD",
+    23→    23→    72→    minimumFractionDigits: 2,
+    24→    24→    73→    maximumFractionDigits: 2,
+    25→    25→    74→  });
+    26→    26→    75→
+    27→    27→    76→// Intro / worked example — Tab 1 defaults: $50k goal, $5k current, 5y, 4.00%
+    28→    28→    77→const ex1 = solveMonthly(50000, 5000, 0.04, 5);
+    29→    29→    78→
+    30→    30→    79→// Tab 2 — million-dollar timeline from $0 at 7%
+    31→    31→    80→const t2_500 = solveTime(1_000_000, 0, 500, 0.07);
+    32→    32→    81→const t2_1000 = solveTime(1_000_000, 0, 1000, 0.07);
+    33→    33→    82→const t2_2000 = solveTime(1_000_000, 0, 2000, 0.07);
+    34→    34→    83→
+    35→    35→    84→// Tab 1 — required monthly to reach $1M from $0 at 7%
+    36→    36→    85→const m_30y = solveMonthly(1_000_000, 0, 0.07, 30);
+    37→    37→    86→const m_20y = solveMonthly(1_000_000, 0, 0.07, 20);
+    38→    38→    87→const m_10y = solveMonthly(1_000_000, 0, 0.07, 10);
+    39→    39→    88→const m_40y = solveMonthly(1_000_000, 0, 0.07, 40);
+    40→    40→    89→
+    41→    41→    90→// Sub-figures used in the worked-example card
+    42→    42→    91→// Current savings grown forward at the assumed rate for the full term:
+    43→    43→    92→// $5,000 × (1 + 0.04/12)^60 ≈ $6,105
+    44→    44→    93→const ex1_currentGrown = 5000 * Math.pow(1 + 0.04 / 12, 60);
+    45→    45→    94→const ex1_gap = 50000 - ex1_currentGrown;
+    46→    46→    95→
+    47→    47→    96→/* ─── FAQ Data ─── */
+    48→    48→    97→
+    49→    49→    98→const faqs = [
+    50→    50→    99→  {
+    51→    51→   100→    question: "How much do I need to save per month to reach my goal?",
+    52→    52→   101→    answer:
+    53→    53→   102→      `Take your goal, subtract what you already have saved (grown forward at your assumed rate for the full term), and divide the gap by the future value of a $1 monthly contribution over the same term. For a $50,000 goal with $5,000 already saved, 5 years to go, and a 4.00% annual return, the calculator above computes a required monthly contribution of ${fc(ex1.monthlyContribution)}. You will contribute ${f(ex1.totalContributed)} in total (current savings plus every monthly contribution), earn ${f(ex1.growthFromReturns)} in growth from returns, and end with ${f(ex1.finalAmount)}.`,
+    54→    54→   103→  },
+    55→    55→   104→  {
+    56→    56→   105→    question: "How long will it take to save a million dollars?",
+    57→    57→   106→    answer:
+    58→    58→   107→      `It depends on your monthly contribution and your assumed return. Starting from $0 at a 7.00% annual return, the calculator above shows that $500 per month reaches $1,000,000 in ${t2_500.years} years and ${t2_500.remainingMonths} months; $1,000 per month reaches it in ${t2_1000.years} years and ${t2_1000.remainingMonths} months; and $2,000 per month reaches it in ${t2_2000.years} years and ${t2_2000.remainingMonths} months. Switch to the "How long will it take" tab above and enter your own goal, current savings, contribution, and rate to see your timeline and the calendar month and year you would reach it.`,
+    59→    59→   108→  },
+    60→    60→   109→  {
+    61→    61→   110→    question: "Does the calculator compound monthly or annually?",
+    62→    62→   111→    answer:
+    63→    63→   112→      "Monthly. The calculator divides the annual return by 12 to get a monthly rate and applies it every month. Contributions are added at the end of each month (an ordinary annuity). This matches how most savings accounts and many investment projections work, and it is slightly conservative versus annual compounding because each contribution starts earning interest in the month it is made.",
+    64→    64→   113→  },
+    65→    65→   114→  {
+    66→    66→   115→    question: "What return rate should I enter?",
+    67→    67→   116→    answer:
+    68→    68→   117→      "It depends on where the money will live. A high-yield savings account might pay around 4 to 5 percent in a high-rate environment and can drop near zero when the Federal Reserve cuts rates. A diversified stock and bond portfolio is often modeled at a long-term historical real return around 5 to 7 percent, but actual returns vary every year and can be negative. Use a conservative number for must-hit goals (a down payment you need in two years) and a higher, growth-oriented assumption for long-horizon goals (retirement decades away). The rate is an assumption, not a guarantee.",
+    69→    69→   118→  },
+    70→    70→   119→  {
+    71→    71→   120→    question: "What if my current savings already exceed my goal?",
+    72→    72→   121→    answer:
+    73→    73→   122→      "The calculator tells you so. In the How-much-per-month tab, if your current savings grown forward at the entered rate already reaches the goal within the term, the required monthly contribution shows as $0.00 and a note explains that no additional contribution is needed. In the How-long-will-it-take tab, the time to goal shows as zero months and the target date is today.",
+    74→    74→   123→  },
+    75→    75→   124→];
+    76→    76→   125→
+    77→    77→   126→/* ─── Page Component ─── */
+    78→    78→   127→
+    79→    79→   128→export default function SavingsGoalPage() {
+    80→    80→   129→  return (
+    81→    81→   130→    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
+    82→    82→   131→      {/* JSON-LD */}
+    83→    83→   132→      <BreadcrumbJsonLd
+    84→    84→   133→        items={[
+    85→    85→   134→          { name: "Home", url: siteConfig.url },
+    86→    86→   135→          {
+    87→    87→   136→            name: "Savings Calculators",
+    88→    88→   137→            url: `${siteConfig.url}/savings`,
+    89→    89→   138→          },
+    90→    90→   139→          { name: "Savings Goal Calculator", url: pageUrl },
+    91→    91→   140→        ]}
+    92→    92→   141→      />
+    93→    93→   142→      <FaqJsonLd faqs={faqs} />
+    94→    94→   143→      <WebApplicationJsonLd
+    95→    95→   144→        name="Savings Goal Calculator"
+    96→    96→   145→        description="Free online savings goal calculator. See how much to save per month to reach any goal, or how long your current monthly savings will take to get there, with monthly compounding."
+    97→    97→   146→        url={pageUrl}
+    98→    98→   147→      />
+    99→    99→   148→
+   100→   100→   149→      {/* Breadcrumbs */}
+   101→   101→   150→      <Breadcrumbs
+   102→   102→   151→        items={[
+   103→   103→   152→          { label: "Home", href: "/" },
+   104→   104→   153→          { label: "Savings Calculators", href: "/savings" },
+   105→   105→   154→          { label: "Savings Goal Calculator" },
+   106→   106→   155→        ]}
+   107→   107→   156→        className="mb-8 print:hidden"
+   108→   108→   157→      />
+   109→   109→   158→
+   110→   110→   159→      {/* H1 */}
+   111→   111→   160→      <h1 className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-[2.5rem]">
+   112→   112→   161→        Savings Goal Calculator
+   113→   113→   162→      </h1>
+   114→   114→   163→
+   115→   115→   164→      {/* Intro paragraph (first ~100 words answer the primary keyword) */}
+   116→   116→   165→      <p className="mt-3 text-lg text-muted-foreground leading-relaxed max-w-3xl print:hidden">
+   117→   117→   166→        A savings goal calculator answers two questions: how much to save per
+   118→   118→   167→        month to hit a target by a set date, or how long your current monthly
+   119→   119→   168→        savings will take to get there. Starting from $5,000 and aiming for
+   120→   120→   169→        $50,000 in 5 years at a 4.00% annual return, you need to save{" "}
+   121→   121→   170→        <strong>{fc(ex1.monthlyContribution)} per month</strong>. You will
+   122→   122→   171→        contribute {f(ex1.totalContributed)} in total and earn{" "}
+   123→   123→   172→        {f(ex1.growthFromReturns)} in growth from returns. Enter your own
+   124→   124→   173→        goal, current savings, timeline, and rate above to see your number.
+   125→   125→   174→      </p>
+   126→   126→   175→
+   127→   127→   176→      {/* Calculator */}
+   128→   128→   177→      <div className="mt-8">
+   129→   129→   178→        <SavingsGoalCalculator />
+   130→   130→   179→      </div>
+   131→   131→   180→
+   132→   132→   181→      <div className="print:hidden">
+   133→   133→   182→        <AdSlot slot="mid-content" />
+   134→   134→   183→      </div>
+   135→   135→   184→
+   136→   136→   185→      {/* ─── Content Sections ─── */}
+   137→   137→   186→
+   138→   138→   187→      <div className="print:hidden">
+   139→   139→   188→        <Separator className="my-12" />
+   140→   140→   189→
+   141→   141→   190→        {/* H2: Savings Goal Calculator */}
+   142→   142→   191→        <section className="space-y-4">
+   143→   143→   192→          <h2 className="text-2xl font-bold tracking-tight">
+   144→   144→   193→            Savings Goal Calculator
+   145→   145→   194→          </h2>
+   146→   146→   195→          <p className="text-muted-foreground leading-relaxed">
+   147→   147→   196→            A savings goal calculator takes four inputs: a target dollar
+   148→   148→   197→            amount, what you have saved today, a monthly contribution or a time
+   149→   149→   198→            horizon, and an assumed annual return. It then answers one of two
+   150→   150→   199→            questions. Pick &quot;How much per month&quot; and the calculator
+   151→   151→   200→            solves for the level monthly contribution that hits the goal exactly
+   152→   152→   201→            by the end of the term. Pick &quot;How long will it take&quot; and it
+   153→   153→   202→            solves for the number of months until the growing balance first
+   154→   154→   203→            reaches the goal, then converts that into years and months and
+   155→   155→   204→            names the calendar month and year you would cross the finish line.
+   156→   156→   205→          </p>
+   157→   157→   206→          <p className="text-muted-foreground leading-relaxed">
+   158→   158→   207→            Both tabs share the same engine and the same monthly compounding,
+   159→   159→   208→            so the answers are consistent with each other. Switch tabs and your
+   160→   160→   209→            goal, current savings, and rate carry over, so you can test a
+   161→   161→   210→            monthly amount and a timeline back to back without re-entering the
+   162→   162→   211→            shared inputs. Every result also shows total contributed, growth
+   163→   163→   212→            from returns, and final amount, so you can see how much of the goal
+   164→   164→   213→            comes from saving versus compounding.
+   165→   165→   214→          </p>
+   166→   166→   215→        </section>
+   167→   167→   216→
+   168→   168→   217→        <Separator className="my-10" />
+   169→   169→   218→
+   170→   170→   219→        {/* H2: How the Savings Goal Calculation Works */}
+   171→   171→   220→        <section className="space-y-4">
+   172→   172→   221→          <h2 className="text-2xl font-bold tracking-tight">
+   173→   173→   222→            How the Savings Goal Calculation Works
+   174→   174→   223→          </h2>
+   175→   175→   224→          <p className="text-muted-foreground leading-relaxed">
+   176→   176→   225→            Both tabs use the standard future-value formula with monthly
+   177→   177→   226→            compounding. Let <strong>i</strong> be the monthly rate (annual
+   178→   178→   227→            rate divided by 12) and <strong>n</strong> be the number of months.
+   179→   179→   228→            The balance after n months, starting from current savings and
+   180→   180→   229→            adding a level monthly contribution M, is{" "}
+   181→   181→   230→            <strong>FV = current &times; (1+i)<sup>n</sup> + M &times;
+   182→   182→   231→            ((1+i)<sup>n</sup> &minus; 1) &divide; i</strong>. The first term
+   183→   183→   232→            is your starting savings grown forward; the second is the future
+   184→   184→   233→            value of the stream of monthly contributions (an ordinary annuity).
+   185→   185→   234→          </p>
+   186→   186→   235→          <p className="text-muted-foreground leading-relaxed">
+   187→   187→   236→            The two tabs solve this same equation in different directions. The
+   188→   188→   237→            &quot;How much per month&quot; tab fixes n (your years to goal
+   189→   189→   238→            times 12) and solves for M:{" "}
+   190→   190→   239→            <strong>M = (goal &minus; current &times; (1+i)<sup>n</sup>)
+   191→   191→   240→            &times; i &divide; ((1+i)<sup>n</sup> &minus; 1)</strong>. The
+   192→   192→   241→            &quot;How long will it take&quot; tab fixes M and solves for n:{" "}
+   193→   193→   242→            <strong>n = ln((goal + M&divide;i) &divide; (current + M&divide;i))
+   194→   194→   243→            &divide; ln(1+i)</strong>, then rounded up to the next whole month
+   195→   195→   244→            so the balance actually reaches the goal. When the rate is zero,
+   196→   196→   245→            both directions degenerate to plain arithmetic: M = (goal
+   197→   197→   246→            &minus; current) &divide; n, or n = (goal &minus; current)
+   198→   198→   247→            &divide; M, with no divide-by-zero.
+   199→   199→   248→          </p>
+   200→   200→   249→          <Card className="bg-muted/30">
+   201→   201→   250→            <CardContent className="p-5">
+   202→   202→   251→              <p className="text-sm font-semibold mb-2">
+   203→   203→   252→                Worked Example: $50,000 Goal from $5,000 in 5 Years at 4.00%
+   204→   204→   253→              </p>
+   205→   205→   254→              <p className="text-sm text-muted-foreground leading-relaxed">
+   206→   206→   255→                Monthly rate i = 0.04 &divide; 12 = 0.003333. Number of months
+   207→   207→   256→                n = 5 &times; 12 = 60. (1+i)<sup>n</sup> &asymp; 1.2210.
+   208→   208→   257→                Current savings grown forward = $5,000 &times; 1.2210 ={" "}
+   209→   209→   258→                <strong>{f(ex1_currentGrown)}</strong>. Gap to goal = $50,000
+   210→   210→   259→                &minus; <strong>{f(ex1_currentGrown)}</strong> ={" "}
+   211→   211→   260→                <strong>{f(ex1_gap)}</strong>. Annuity factor
+   212→   212→   261→                ((1+i)<sup>n</sup> &minus; 1) &divide; i &asymp; 66.30.
+   213→   213→   262→                Required monthly = gap &divide; factor ={" "}
+   214→   214→   263→                <strong>{fc(ex1.monthlyContribution)}</strong>. Total
+   215→   215→   264→                contributed = $5,000 + {fc(ex1.monthlyContribution)} &times; 60
+   216→   216→   265→                = <strong>{f(ex1.totalContributed)}</strong>. Growth from
+   217→   217→   266→                returns = <strong>{f(ex1.growthFromReturns)}</strong>. Final
+   218→   218→   267→                amount = <strong>{f(ex1.finalAmount)}</strong>. Every figure
+   219→   219→   268→                matches the calculator above.
+   220→   220→   269→              </p>
+   221→   221→   270→            </CardContent>
+   222→   222→   271→          </Card>
+   223→   223→   272→        </section>
+   224→   224→   273→
+   225→   225→   274→        <Separator className="my-10" />
+   226→   226→   275→
+   227→   227→   276→        {/* H2: How Long to Save a Million Dollars */}
+   228→   228→   277→        <section className="space-y-4">
+   229→   229→   278→          <h2 className="text-2xl font-bold tracking-tight">
+   230→   230→   279→            How Long to Save a Million Dollars
+   231→   231→   280→          </h2>
+   232→   232→   281→          <p className="text-muted-foreground leading-relaxed">
+   233→   233→   282→            The &quot;How long will it take&quot; tab answers this directly.
+   234→   234→   283→            Starting from $0 and earning a 7.00% annual return (a common
+   235→   235→   284→            long-term assumption for a diversified portfolio, and an
+   236→   236→   285→            assumption, not a guarantee), the calculator produces the following
+   237→   237→   286→            timelines for three monthly contribution levels. Each row shows
+   238→   238→   287→            how many months it takes, expressed in years and months, plus the
+   239→   239→   288→            total you actually contributed and the dollar amount of growth that
+   240→   240→   289→            got you the rest of the way.
+   241→   241→   290→          </p>
+   242→   242→   291→          <Card className="bg-muted/30">
+   243→   243→   292→            <CardContent className="p-5">
+   244→   244→   293→              <p className="text-sm font-semibold mb-3">
+   245→   245→   294→                Time to $1,000,000 from $0 at 7.00% Annual Return
+   246→   246→   295→              </p>
+   247→   247→   296→              <div className="overflow-x-auto">
+   248→   248→   297→                <table className="w-full text-sm">
+   249→   249→   298→                  <thead>
+   250→   250→   299→                    <tr className="border-b">
+   251→   251→   300→                      <th className="text-left py-2 pr-4 font-medium">Monthly Contribution</th>
+   252→   252→   301→                      <th className="text-right py-2 px-4 font-medium">Time to Goal</th>
+   253→   253→   302→                      <th className="text-right py-2 px-4 font-medium">Total Contributed</th>
+   254→   254→   303→                      <th className="text-right py-2 pl-4 font-medium">Growth from Returns</th>
+   255→   255→   304→                    </tr>
+   256→   256→   305→                  </thead>
+   257→   257→   306→                  <tbody>
+   258→   258→   307→                    <tr className="border-b border-border/50">
+   259→   259→   308→                      <td className="py-2 pr-4 tabular-nums">$500</td>
+   260→   260→   309→                      <td className="py-2 px-4 text-right tabular-nums">{t2_500.years} yr {t2_500.remainingMonths} mo</td>
+   261→   261→   310→                      <td className="py-2 px-4 text-right tabular-nums">{f(t2_500.totalContributed)}</td>
+   262→   262→   311→                      <td className="py-2 pl-4 text-right tabular-nums">{f(t2_500.growthFromReturns)}</td>
+   263→   263→   312→                    </tr>
+   264→   264→   313→                    <tr className="border-b border-border/50">
+   265→   265→   314→                      <td className="py-2 pr-4 tabular-nums">$1,000</td>
+   266→   266→   315→                      <td className="py-2 px-4 text-right tabular-nums">{t2_1000.years} yr {t2_1000.remainingMonths} mo</td>
+   267→   267→   316→                      <td className="py-2 px-4 text-right tabular-nums">{f(t2_1000.totalContributed)}</td>
+   268→   268→   317→                      <td className="py-2 pl-4 text-right tabular-nums">{f(t2_1000.growthFromReturns)}</td>
+   269→   269→   318→                    </tr>
+   270→   270→   319→                    <tr>
+   271→   271→   320→                      <td className="py-2 pr-4 tabular-nums">$2,000</td>
+   272→   272→   321→                      <td className="py-2 px-4 text-right tabular-nums">{t2_2000.years} yr {t2_2000.remainingMonths} mo</td>
+   273→   273→   322→                      <td className="py-2 px-4 text-right tabular-nums">{f(t2_2000.totalContributed)}</td>
+   274→   274→   323→                      <td className="py-2 pl-4 text-right tabular-nums">{f(t2_2000.growthFromReturns)}</td>
+   275→   275→   324→                    </tr>
+   276→   276→   325→                  </tbody>
+   277→   277→   326→                </table>
+   278→   278→   327→              </div>
+   279→   279→   328→              <p className="text-xs text-muted-foreground mt-3">
+   280→   280→   329→                Growth from returns is the difference between the final balance
+   281→   281→   330→                (just over $1,000,000 in each row) and the total contributed.
+   282→   282→   331→                Doubling the contribution from $500 to $1,000 cuts the timeline
+   283→   283→   332→                from {t2_500.years} years and {t2_500.remainingMonths} months
+   284→   284→   333→                to {t2_1000.years} years and {t2_1000.remainingMonths} months.
+   285→   285→   334→                That is not in half, because more of the work is done by
+   286→   286→   335→                contributions and less by compounding.
+   287→   287→   336→              </p>
+   288→   288→   337→            </CardContent>
+   289→   289→   338→          </Card>
+   290→   290→   339→          <p className="text-muted-foreground leading-relaxed">
+   291→   291→   340→            A 7.00% return is a long-term assumption for a growth-oriented
+   292→   292→   341→            portfolio, not a promise. Real returns swing every year and can be
+   293→   293→   342→            negative. The point of the table is the shape of the relationship
+   294→   294→   343→            between contributions and time, not a forecast of what you will
+   295→   295→   344→            actually earn. Run your own numbers in the calculator above with a
+   296→   296→   345→            rate that matches where your money will actually live.
+   297→   297→   346→          </p>
+   298→   298→   347→        </section>
+   299→   299→   348→
+   300→   300→   349→        <Separator className="my-10" />
+   301→   301→   350→
+   302→   302→   351→        {/* H2: How Much to Save Per Month to Reach My Goal */}
+   303→   303→   352→        <section className="space-y-4">
+   304→   304→   353→          <h2 className="text-2xl font-bold tracking-tight">
+   305→   305→   354→            How Much to Save Per Month to Reach My Goal
+   306→   306→   355→          </h2>
+   307→   307→   356→          <p className="text-muted-foreground leading-relaxed">
+   308→   308→   357→            The &quot;How much per month&quot; tab flips the question: instead
+   309→   309→   358→            of asking how long a fixed contribution takes, it asks what level
+   310→   310→   359→            monthly contribution hits the goal in a fixed term. The closed-form
+   311→   311→   360→            answer is M = (goal &minus; current &times; (1+i)<sup>n</sup>)
+   312→   312→   361→            &times; i &divide; ((1+i)<sup>n</sup> &minus; 1), with i equal to
+   313→   313→   362→            the annual rate divided by 12 and n equal to the term in months.
+   314→   314→   363→            The shorter the runway, the larger the required monthly amount,
+   315→   315→   364→            because there is less time for compounding to do the work.
+   316→   316→   365→          </p>
+   317→   317→   366→          <p className="text-muted-foreground leading-relaxed">
+   318→   318→   367→            Two illustrations from the same engine, both starting from $0 and
+   319→   319→   368→            targeting $1,000,000 at a 7.00% annual return. With 30 years to
+   320→   320→   369→            go, the required monthly contribution is{" "}
+   321→   321→   370→            <strong>{fc(m_30y.monthlyContribution)}</strong>, with total
+   322→   322→   371→            contributed {f(m_30y.totalContributed)} and growth from returns{" "}
+   323→   323→   372→            {f(m_30y.growthFromReturns)}. Compress the runway to 20 years and
+   324→   324→   373→            the required monthly jumps to{" "}
+   325→   325→   374→            <strong>{fc(m_20y.monthlyContribution)}</strong>, with total
+   326→   326→   375→            contributed {f(m_20y.totalContributed)} and growth from returns{" "}
+   327→   327→   376→            {f(m_20y.growthFromReturns)}. Cutting the term by a third more than
+   328→   328→   377→            doubles the required monthly contribution, because you lose both
+   329→   329→   378→            the years of contributions and the years of compounding on the
+   330→   330→   379→            earlier contributions.
+   331→   331→   380→          </p>
+   332→   332→   381→        </section>
+   333→   333→   382→
+   334→   334→   383→        <Separator className="my-10" />
+   335→   335→   384→
+   336→   336→   385→        {/* H2: Save a Million Dollars Calculator */}
+   337→   337→   386→        <section className="space-y-4">
+   338→   338→   387→          <h2 className="text-2xl font-bold tracking-tight">
+   339→   339→   388→            Save a Million Dollars Calculator
+   340→   340→   389→          </h2>
+   341→   341→   390→          <p className="text-muted-foreground leading-relaxed">
+   342→   342→   391→            The table below shows the required monthly contribution to reach
+   343→   343→   392→            $1,000,000 from $0 at a 7.00% annual return across four time
+   344→   344→   393→            horizons, all computed by the same engine that powers the
+   345→   345→   394→            calculator above. The pattern is what matters: every extra decade
+   346→   346→   395→            you give yourself roughly halves the required monthly contribution,
+   347→   347→   396→            because compounding has more time to work.
+   348→   348→   397→          </p>
+   349→   349→   398→          <Card className="bg-muted/30">
+   350→   350→   399→            <CardContent className="p-5">
+   351→   351→   400→              <p className="text-sm font-semibold mb-3">
+   352→   352→   401→                Monthly Contribution to Reach $1,000,000 from $0 at 7.00%
+   353→   353→   402→              </p>
+   354→   354→   403→              <div className="overflow-x-auto">
+   355→   355→   404→                <table className="w-full text-sm">
+   356→   356→   405→                  <thead>
+   357→   357→   406→                    <tr className="border-b">
+   358→   358→   407→                      <th className="text-left py-2 pr-4 font-medium">Time Horizon</th>
+   359→   359→   408→                      <th className="text-right py-2 px-4 font-medium">Required Monthly</th>
+   360→   360→   409→                      <th className="text-right py-2 px-4 font-medium">Total Contributed</th>
+   361→   361→   410→                      <th className="text-right py-2 pl-4 font-medium">Growth from Returns</th>
+   362→   362→   411→                    </tr>
+   363→   363→   412→                  </thead>
+   364→   364→   413→                  <tbody>
+   365→   365→   414→                    <tr className="border-b border-border/50">
+   366→   366→   415→                      <td className="py-2 pr-4 tabular-nums">10 years</td>
+   367→   367→   416→                      <td className="py-2 px-4 text-right tabular-nums">{fc(m_10y.monthlyContribution)}</td>
+   368→   368→   417→                      <td className="py-2 px-4 text-right tabular-nums">{f(m_10y.totalContributed)}</td>
+   369→   369→   418→                      <td className="py-2 pl-4 text-right tabular-nums">{f(m_10y.growthFromReturns)}</td>
+   370→   370→   419→                    </tr>
+   371→   371→   420→                    <tr className="border-b border-border/50">
+   372→   372→   421→                      <td className="py-2 pr-4 tabular-nums">20 years</td>
+   373→   373→   422→                      <td className="py-2 px-4 text-right tabular-nums">{fc(m_20y.monthlyContribution)}</td>
+   374→   374→   423→                      <td className="py-2 px-4 text-right tabular-nums">{f(m_20y.totalContributed)}</td>
+   375→   375→   424→                      <td className="py-2 pl-4 text-right tabular-nums">{f(m_20y.growthFromReturns)}</td>
+   376→   376→   425→                    </tr>
+   377→   377→   426→                    <tr className="border-b border-border/50">
+   378→   378→   427→                      <td className="py-2 pr-4 tabular-nums">30 years</td>
+   379→   379→   428→                      <td className="py-2 px-4 text-right tabular-nums">{fc(m_30y.monthlyContribution)}</td>
+   380→   380→   429→                      <td className="py-2 px-4 text-right tabular-nums">{f(m_30y.totalContributed)}</td>
+   381→   381→   430→                      <td className="py-2 pl-4 text-right tabular-nums">{f(m_30y.growthFromReturns)}</td>
+   382→   382→   431→                    </tr>
+   383→   383→   432→                    <tr>
+   384→   384→   433→                      <td className="py-2 pr-4 tabular-nums">40 years</td>
+   385→   385→   434→                      <td className="py-2 px-4 text-right tabular-nums">{fc(m_40y.monthlyContribution)}</td>
+   386→   386→   435→                      <td className="py-2 px-4 text-right tabular-nums">{f(m_40y.totalContributed)}</td>
+   387→   387→   436→                      <td className="py-2 pl-4 text-right tabular-nums">{f(m_40y.growthFromReturns)}</td>
+   388→   388→   437→                    </tr>
+   389→   389→   438→                  </tbody>
+   390→   390→   439→                </table>
+   391→   391→   440→              </div>
+   392→   392→   441→              <p className="text-xs text-muted-foreground mt-3">
+   393→   393→   442→                Growth from returns is final amount ($1,000,000 in every row)
+   394→   394→   443→                minus total contributed. At 40 years, more than 80% of the
+   395→   395→   444→                final balance comes from returns; at 10 years, less than a
+   396→   396→   445→                third does.
+   397→   397→   446→              </p>
+   398→   398→   447→            </CardContent>
+   399→   399→   448→          </Card>
+   400→   400→   449→        </section>
+   401→   401→   450→
+   402→   402→   451→        <Separator className="my-10" />
+   403→   403→   452→
+   404→   404→   453→        {/* H2: How Much Do I Need to Save Each Month */}
+   405→   405→   454→        <section className="space-y-4">
+   406→   406→   455→          <h2 className="text-2xl font-bold tracking-tight">
+   407→   407→   456→            How Much Do I Need to Save Each Month
+   408→   408→   457→          </h2>
+   409→   409→   458→          <p className="text-muted-foreground leading-relaxed">
+   410→   410→   459→            The general formula for the required monthly contribution is{" "}
+   411→   411→   460→            <strong>M = (goal &minus; current &times; (1+i)<sup>n</sup>)
+   412→   412→   461→            &times; i &divide; ((1+i)<sup>n</sup> &minus; 1)</strong>, with i
+   413→   413→   462→            equal to your assumed annual return divided by 12 and n equal to
+   414→   414→   463→            the number of months until the goal. If your current savings grown
+   415→   415→   464→            forward at the assumed rate already exceeds the goal, the formula
+   416→   416→   465→            returns zero (or a negative number that the calculator clamps to
+   417→   417→   466→            zero). If the rate is zero, the formula simplifies to M = (goal
+   418→   418→   467→            &minus; current) &divide; n.
+   419→   419→   468→          </p>
+   420→   420→   469→          <p className="text-muted-foreground leading-relaxed">
+   421→   421→   470→            Picking a rate assumption is the most consequential input. Money in
+   422→   422→   471→            a high-yield savings account or a certificate of deposit earns a
+   423→   423→   472→            stated APY that you can read off the bank&apos;s rate sheet. In
+   424→   424→   473→            a high-rate environment that might be around 4 to 5 percent, and
+   425→   425→   474→            it can fall quickly when the Federal Reserve cuts rates. Money in
+   426→   426→   475→            a diversified portfolio of stocks and bonds does not have a stated
+   427→   427→   476→            rate; long-term historical averages are often modeled around 5 to
+   428→   428→   477→            7 percent real, but actual yearly returns swing widely and can be
+   429→   429→   478→            negative. For must-hit goals with a short horizon (a down payment
+   430→   430→   479→            you need in two years), use the rate a savings account or CD
+   431→   431→   480→            actually pays, because investment volatility could leave you short.
+   432→   432→   481→            For long-horizon goals (retirement decades away), a growth-oriented
+   433→   433→   482→            assumption is reasonable, but understand it is an assumption, not a
+   434→   434→   483→            forecast.
+   435→   435→   484→          </p>
+   436→   436→   485→          <p className="text-muted-foreground leading-relaxed">
+   437→   437→   486→            Whichever rate you choose, treat the output as a plan, not a
+   438→   438→   487→            prediction. The calculator uses future value, compound growth,
+   439→   439→   488→            monthly contribution, time horizon, and rate of return as the
+   440→   440→   489→            working vocabulary; the target date in the &quot;How long will it
+   441→   441→   490→            take&quot; tab is the month and year the balance first crosses your
+   442→   442→   491→            goal, assuming your inputs hold exactly. Real life will not match
+   443→   443→   492→            the assumption line for line, so revisit your inputs whenever your
+   444→   444→   493→            rate, your contributions, or your goal changes.
+   445→   445→   494→          </p>
+   446→   446→   495→        </section>
+   447→   447→   496→
+   448→   448→   497→        <FaqSection faqs={faqs} />
+   449→   449→   498→
+   450→   450→   499→        <Separator className="my-12" />
+   451→   451→   500→
+   452→   452→   501→        {/* ─── Related Calculators ─── */}
+   453→   453→   502→        <section className="space-y-4">
+   454→   454→   503→          <h2 className="text-2xl font-bold tracking-tight">
+   455→   455→   504→            Related Calculators
+   456→   456→   505→          </h2>
+   457→   457→   506→          <p className="text-muted-foreground leading-relaxed">
+   458→   458→   507→            Browse all tools on the{" "}
+   459→   459→   508→            <a
+   460→   460→   509→              href="/savings"
+   461→   461→   510→              className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+   462→   462→   511→            >
+   463→   463→   512→              Savings Calculators
+   464→   464→   513→            </a>{" "}
+   465→   465→   514→            hub. If you are weighing whether to break a CD to free up cash for
+   466→   466→   515→            your goal, the{" "}
+   467→   467→   516→            <a
+   468→   468→   517→              href="/savings/cd-early-withdrawal-penalty-calculator"
+   469→   469→   518→              className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+   470→   470→   519→            >
+   471→   471→   520→              CD Early Withdrawal Penalty Calculator
+   472→   472→   521→            </a>{" "}
+   473→   473→   522→            shows the penalty in dollars, your net proceeds, and whether
+   474→   474→   523→            breaking the CD beats keeping it to maturity. To see whether your
+   475→   475→   524→            savings put you ahead of or behind the typical household your age,
+   476→   476→   525→            the{" "}
+   477→   477→   526→            <a
+   478→   478→   527→              href="/savings/net-worth-calculator"
+   479→   479→   528→              className="text-ember hover:text-ember-hover underline underline-offset-4 transition-colors"
+   480→   480→   529→            >
+   481→   481→   530→              Net Worth by Age Calculator
+   482→   482→   531→            </a>{" "}
+   483→   483→   532→            compares your number to the median and average for your age bracket
+   484→   484→   533→            from the Federal Reserve&apos;s 2022 Survey of Consumer Finances.
+   485→   485→   534→          </p>
+   486→   486→   535→        </section>
+   487→   487→   536→      </div>
+   488→   488→   537→    </div>
+   489→   489→   538→  );
+   490→   490→   539→}
+   491→   491→   540→

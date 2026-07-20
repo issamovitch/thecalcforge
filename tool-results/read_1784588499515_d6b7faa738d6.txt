@@ -1,0 +1,621 @@
+     1→"use client";
+     2→
+     3→import { useState, useCallback } from "react";
+     4→import {
+     5→  Calculator, Copy, Check, Printer, RotateCcw, Info, Target, Clock,
+     6→} from "lucide-react";
+     7→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+     8→import { Input } from "@/components/ui/input";
+     9→import { Label } from "@/components/ui/label";
+    10→import { Button } from "@/components/ui/button";
+    11→import {
+    12→  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+    13→} from "@/components/ui/tooltip";
+    14→import { Slider } from "@/components/ui/slider";
+    15→import { toast } from "sonner";
+    16→import ShareButtons from "@/components/calculators/ShareButtons";
+    17→import {
+    18→  solveMonthly, solveTime, type SolveTimeResult,
+    19→} from "@/lib/savings-goal-math";
+    20→
+    21→/* ─── Types ─── */
+    22→
+    23→type TabId = 1 | 2;
+    24→
+    25→interface SharedInputs {
+    26→  goal: number;
+    27→  current: number;
+    28→  rate: number; // annual, percent
+    29→}
+    30→
+    31→interface Tab1Inputs extends SharedInputs {
+    32→  years: number;
+    33→}
+    34→
+    35→interface Tab2Inputs extends SharedInputs {
+    36→  monthly: number;
+    37→}
+    38→
+    39→/* ─── Defaults (match the worked example in the page content) ─── */
+    40→
+    41→const DEFAULT_GOAL = 50000;
+    42→const DEFAULT_CURRENT = 5000;
+    43→const DEFAULT_RATE = 4; // %
+    44→const DEFAULT_YEARS = 5;
+    45→const DEFAULT_MONTHLY = 500;
+    46→
+    47→const DEFAULT_TAB1: Tab1Inputs = {
+    48→  goal: DEFAULT_GOAL,
+    49→  current: DEFAULT_CURRENT,
+    50→  rate: DEFAULT_RATE,
+    51→  years: DEFAULT_YEARS,
+    52→};
+    53→
+    54→const DEFAULT_TAB2: Tab2Inputs = {
+    55→  goal: DEFAULT_GOAL,
+    56→  current: DEFAULT_CURRENT,
+    57→  rate: DEFAULT_RATE,
+    58→  monthly: DEFAULT_MONTHLY,
+    59→};
+    60→
+    61→/* ─── URL Param Helpers ─── */
+    62→/* Encoding: tab=1|2 goal= current= rate= years= (tab1) monthly= (tab2) */
+    63→
+    64→function readParams(): { tab: TabId; tab1: Tab1Inputs; tab2: Tab2Inputs } {
+    65→  if (typeof window === "undefined") {
+    66→    return { tab: 1, tab1: DEFAULT_TAB1, tab2: DEFAULT_TAB2 };
+    67→  }
+    68→  const p = new URLSearchParams(window.location.search);
+    69→  const num = (key: string, fallback: number) => {
+    70→    const raw = p.get(key);
+    71→    if (raw === null) return fallback;
+    72→    const v = Number(raw);
+    73→    return Number.isFinite(v) && v >= 0 ? v : fallback;
+    74→  };
+    75→  const goal = num("goal", DEFAULT_GOAL);
+    76→  const current = num("current", DEFAULT_CURRENT);
+    77→  const rate = num("rate", DEFAULT_RATE);
+    78→  const years = num("years", DEFAULT_YEARS);
+    79→  const monthly = num("monthly", DEFAULT_MONTHLY);
+    80→  const tabParam = p.get("tab");
+    81→  const tab: TabId = tabParam === "2" ? 2 : 1;
+    82→  return {
+    83→    tab,
+    84→    tab1: { goal, current, rate, years },
+    85→    tab2: { goal, current, rate, monthly },
+    86→  };
+    87→}
+    88→
+    89→function pushParams(tab: TabId, shared: SharedInputs, extra: { years?: number; monthly?: number }) {
+    90→  if (typeof window === "undefined") return;
+    91→  const p = new URLSearchParams();
+    92→  p.set("tab", String(tab));
+    93→  p.set("goal", String(shared.goal));
+    94→  p.set("current", String(shared.current));
+    95→  p.set("rate", String(shared.rate));
+    96→  if (tab === 1 && extra.years !== undefined) p.set("years", String(extra.years));
+    97→  if (tab === 2 && extra.monthly !== undefined) p.set("monthly", String(extra.monthly));
+    98→  const url = `${window.location.pathname}?${p.toString()}`;
+    99→  window.history.replaceState(null, "", url);
+   100→}
+   101→
+   102→/* ─── Formatting ─── */
+   103→
+   104→function fmt(n: number): string {
+   105→  return n.toLocaleString("en-US", {
+   106→    style: "currency",
+   107→    currency: "USD",
+   108→    minimumFractionDigits: 0,
+   109→    maximumFractionDigits: 0,
+   110→  });
+   111→}
+   112→
+   113→function fmtCents(n: number): string {
+   114→  return n.toLocaleString("en-US", {
+   115→    style: "currency",
+   116→    currency: "USD",
+   117→    minimumFractionDigits: 2,
+   118→    maximumFractionDigits: 2,
+   119→  });
+   120→}
+   121→
+   122→function fmtDate(d: Date): string {
+   123→  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+   124→}
+   125→
+   126→/* ─── Component ─── */
+   127→
+   128→export default function SavingsGoalCalculator() {
+   129→  const initial = readParams();
+   130→  const [tab, setTab] = useState<TabId>(initial.tab);
+   131→  const [tab1, setTab1] = useState<Tab1Inputs>(initial.tab1);
+   132→  const [tab2, setTab2] = useState<Tab2Inputs>(initial.tab2);
+   133→  const [copied, setCopied] = useState(false);
+   134→
+   135→  /* ─── Results (live) ─── */
+   136→  /* Computed inline on every render. The React Compiler handles memoization.
+   137→     `today` is captured fresh per render so the target date reflects the
+   138→     user's current month, matching the pattern in StudentLoanPayoffCalculator. */
+   139→
+   140→  const r1 = solveMonthly(tab1.goal, tab1.current, tab1.rate / 100, tab1.years);
+   141→
+   142→  const r2: SolveTimeResult = solveTime(
+   143→    tab2.goal,
+   144→    tab2.current,
+   145→    tab2.monthly,
+   146→    tab2.rate / 100
+   147→  );
+   148→
+   149→  /* ─── Update handlers (push URL params on every change) ─── */
+   150→
+   151→  const updateTab1 = useCallback((patch: Partial<Tab1Inputs>) => {
+   152→    setTab1((prev) => {
+   153→      const next = { ...prev, ...patch };
+   154→      pushParams(1, next, { years: next.years });
+   155→      return next;
+   156→    });
+   157→  }, []);
+   158→
+   159→  const updateTab2 = useCallback((patch: Partial<Tab2Inputs>) => {
+   160→    setTab2((prev) => {
+   161→      const next = { ...prev, ...patch };
+   162→      pushParams(2, next, { monthly: next.monthly });
+   163→      return next;
+   164→    });
+   165→  }, []);
+   166→
+   167→  const switchTab = useCallback((next: TabId) => {
+   168→    setTab(next);
+   169→    if (next === 1) {
+   170→      pushParams(1, tab1, { years: tab1.years });
+   171→    } else {
+   172→      pushParams(2, tab2, { monthly: tab2.monthly });
+   173→    }
+   174→  }, [tab1, tab2]);
+   175→
+   176→  const handleCopyLink = useCallback(() => {
+   177→    if (typeof window === "undefined") return;
+   178→    navigator.clipboard.writeText(window.location.href).then(() => {
+   179→      setCopied(true);
+   180→      toast.success("Link copied to clipboard");
+   181→      setTimeout(() => setCopied(false), 2000);
+   182→    });
+   183→  }, []);
+   184→
+   185→  const handleReset = useCallback(() => {
+   186→    setTab(1);
+   187→    setTab1(DEFAULT_TAB1);
+   188→    setTab2(DEFAULT_TAB2);
+   189→    if (typeof window !== "undefined") {
+   190→      window.history.replaceState(null, "", window.location.pathname);
+   191→    }
+   192→  }, []);
+   193→
+   194→  const handlePrint = useCallback(() => {
+   195→    if (typeof window !== "undefined") window.print();
+   196→  }, []);
+   197→
+   198→  /* ─── Share summary text ─── */
+   199→
+   200→  const summaryText = (() => {
+   201→    if (tab === 1) {
+   202→      return `To reach ${fmt(tab1.goal)} in ${tab1.years} year${tab1.years === 1 ? "" : "s"} at ${tab1.rate.toFixed(2)}% from ${fmt(tab1.current)}, save ${fmtCents(r1.monthlyContribution)}/month. Calculate yours:`;
+   203→    }
+   204→    if (r2.months === null) {
+   205→      return `Goal ${fmt(tab2.goal)} from ${fmt(tab2.current)} at ${fmt(tab2.monthly)}/month is unreachable. Calculate yours:`;
+   206→    }
+   207→    return `Goal ${fmt(tab2.goal)} from ${fmt(tab2.current)} at ${fmt(tab2.monthly)}/month (${tab2.rate.toFixed(2)}%) reached in ${r2.years} year${r2.years === 1 ? "" : "s"} ${r2.remainingMonths} month${r2.remainingMonths === 1 ? "" : "s"}. Calculate yours:`;
+   208→  })();
+   209→
+   210→  /* ─── Render ─── */
+   211→
+   212→  return (
+   213→    <TooltipProvider delayDuration={200}>
+   214→      <Card className="w-full">
+   215→        <CardHeader>
+   216→          <CardTitle className="flex items-center gap-2 text-lg">
+   217→            <Calculator className="size-5 text-ember" />
+   218→            Savings Goal Calculator
+   219→          </CardTitle>
+   220→        </CardHeader>
+   221→        <CardContent className="space-y-6">
+   222→          {/* Tab Switcher */}
+   223→          <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
+   224→            <button
+   225→              type="button"
+   226→              onClick={() => switchTab(1)}
+   227→              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+   228→                tab === 1 ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+   229→              }`}
+   230→              aria-pressed={tab === 1}
+   231→            >
+   232→              <Target className="size-3.5" />
+   233→              How much per month
+   234→            </button>
+   235→            <button
+   236→              type="button"
+   237→              onClick={() => switchTab(2)}
+   238→              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+   239→                tab === 2 ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+   240→              }`}
+   241→              aria-pressed={tab === 2}
+   242→            >
+   243→              <Clock className="size-3.5" />
+   244→              How long will it take
+   245→            </button>
+   246→          </div>
+   247→
+   248→          {/* ─── Tab 1: How much per month ─── */}
+   249→          {tab === 1 && (
+   250→            <div className="space-y-5">
+   251→              <div className="grid gap-4 sm:grid-cols-2">
+   252→                <div className="space-y-2">
+   253→                  <div className="flex items-center gap-2">
+   254→                    <Label htmlFor="t1-goal">Savings Goal</Label>
+   255→                    <Tooltip>
+   256→                      <TooltipTrigger asChild>
+   257→                        <Info className="size-3.5 text-muted-foreground cursor-help" />
+   258→                      </TooltipTrigger>
+   259→                      <TooltipContent>The dollar amount you want to reach.</TooltipContent>
+   260→                    </Tooltip>
+   261→                  </div>
+   262→                  <div className="relative">
+   263→                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+   264→                    <Input
+   265→                      id="t1-goal"
+   266→                      type="number"
+   267→                      min={0}
+   268→                      step={1000}
+   269→                      value={tab1.goal}
+   270→                      onChange={(e) => updateTab1({ goal: Math.max(0, Number(e.target.value)) })}
+   271→                      className="pl-7"
+   272→                    />
+   273→                  </div>
+   274→                </div>
+   275→
+   276→                <div className="space-y-2">
+   277→                  <div className="flex items-center gap-2">
+   278→                    <Label htmlFor="t1-current">Current Savings</Label>
+   279→                    <Tooltip>
+   280→                      <TooltipTrigger asChild>
+   281→                        <Info className="size-3.5 text-muted-foreground cursor-help" />
+   282→                      </TooltipTrigger>
+   283→                      <TooltipContent>What you already have saved today.</TooltipContent>
+   284→                    </Tooltip>
+   285→                  </div>
+   286→                  <div className="relative">
+   287→                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+   288→                    <Input
+   289→                      id="t1-current"
+   290→                      type="number"
+   291→                      min={0}
+   292→                      step={1000}
+   293→                      value={tab1.current}
+   294→                      onChange={(e) => updateTab1({ current: Math.max(0, Number(e.target.value)) })}
+   295→                      className="pl-7"
+   296→                    />
+   297→                  </div>
+   298→                </div>
+   299→
+   300→                <div className="space-y-2">
+   301→                  <div className="flex items-center justify-between">
+   302→                    <div className="flex items-center gap-2">
+   303→                      <Label htmlFor="t1-years">Years to Goal</Label>
+   304→                      <Tooltip>
+   305→                        <TooltipTrigger asChild>
+   306→                          <Info className="size-3.5 text-muted-foreground cursor-help" />
+   307→                        </TooltipTrigger>
+   308→                        <TooltipContent>How long you have to save. Monthly compounding uses years &times; 12 months.</TooltipContent>
+   309→                      </Tooltip>
+   310→                    </div>
+   311→                    <span className="text-sm font-medium text-foreground tabular-nums">{tab1.years} yr</span>
+   312→                  </div>
+   313→                  <div className="flex items-center gap-4">
+   314→                    <Slider
+   315→                      min={1}
+   316→                      max={50}
+   317→                      step={1}
+   318→                      value={[tab1.years]}
+   319→                      onValueChange={([v]) => updateTab1({ years: v })}
+   320→                      className="flex-1"
+   321→                    />
+   322→                    <Input
+   323→                      id="t1-years"
+   324→                      type="number"
+   325→                      min={1}
+   326→                      max={50}
+   327→                      step={1}
+   328→                      value={tab1.years}
+   329→                      onChange={(e) => updateTab1({ years: Math.max(1, Math.min(50, Number(e.target.value) || 1)) })}
+   330→                      className="w-20"
+   331→                    />
+   332→                  </div>
+   333→                </div>
+   334→
+   335→                <div className="space-y-2">
+   336→                  <div className="flex items-center justify-between">
+   337→                    <div className="flex items-center gap-2">
+   338→                      <Label htmlFor="t1-rate">Annual Return (APY)</Label>
+   339→                      <Tooltip>
+   340→                        <TooltipTrigger asChild>
+   341→                          <Info className="size-3.5 text-muted-foreground cursor-help" />
+   342→                        </TooltipTrigger>
+   343→                        <TooltipContent>Assumed annual rate of return. Enter 0 for a no-growth savings account.</TooltipContent>
+   344→                      </Tooltip>
+   345→                    </div>
+   346→                    <span className="text-sm font-medium text-foreground tabular-nums">{tab1.rate.toFixed(2)}%</span>
+   347→                  </div>
+   348→                  <div className="flex items-center gap-4">
+   349→                    <Slider
+   350→                      min={0}
+   351→                      max={12}
+   352→                      step={0.05}
+   353→                      value={[tab1.rate]}
+   354→                      onValueChange={([v]) => updateTab1({ rate: v })}
+   355→                      className="flex-1"
+   356→                    />
+   357→                    <Input
+   358→                      id="t1-rate"
+   359→                      type="number"
+   360→                      min={0}
+   361→                      max={30}
+   362→                      step={0.05}
+   363→                      value={tab1.rate}
+   364→                      onChange={(e) => updateTab1({ rate: Math.max(0, Math.min(30, Number(e.target.value) || 0)) })}
+   365→                      className="w-20"
+   366→                    />
+   367→                  </div>
+   368→                </div>
+   369→              </div>
+   370→
+   371→              {/* Result: required monthly */}
+   372→              <Card className="border-ember/30 bg-muted/30">
+   373→                <CardContent className="p-5">
+   374→                  {r1.alreadyReached ? (
+   375→                    <p className="text-sm text-foreground leading-relaxed">
+   376→                      Your current savings of <strong>{fmt(tab1.current)}</strong>, grown at{" "}
+   377→                      {tab1.rate.toFixed(2)}% for {tab1.years} years, already reaches your goal of{" "}
+   378→                      <strong>{fmt(tab1.goal)}</strong>. No additional monthly contribution is needed.
+   379→                    </p>
+   380→                  ) : (
+   381→                    <>
+   382→                      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+   383→                        Required Monthly Contribution
+   384→                      </p>
+   385→                      <p className="mt-1 text-3xl font-bold text-ember tabular-nums">
+   386→                        {fmtCents(r1.monthlyContribution)}<span className="text-base font-medium text-muted-foreground">/mo</span>
+   387→                      </p>
+   388→                      <p className="text-xs text-muted-foreground mt-1">
+   389→                        To reach {fmt(tab1.goal)} in {tab1.years} year{tab1.years === 1 ? "" : "s"} at {tab1.rate.toFixed(2)}% from {fmt(tab1.current)}.
+   390→                      </p>
+   391→                    </>
+   392→                  )}
+   393→                </CardContent>
+   394→              </Card>
+   395→
+   396→              {/* Secondary stats */}
+   397→              <div className="grid gap-4 sm:grid-cols-3">
+   398→                <Card className="bg-muted/30">
+   399→                  <CardContent className="p-4">
+   400→                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Total Contributed</p>
+   401→                    <p className="mt-1 text-xl font-bold tabular-nums">{fmt(r1.totalContributed)}</p>
+   402→                    <p className="text-xs text-muted-foreground">Current savings plus every monthly contribution</p>
+   403→                  </CardContent>
+   404→                </Card>
+   405→                <Card className="bg-muted/30">
+   406→                  <CardContent className="p-4">
+   407→                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Growth from Returns</p>
+   408→                    <p className="mt-1 text-xl font-bold tabular-nums text-ember">{fmt(r1.growthFromReturns)}</p>
+   409→                    <p className="text-xs text-muted-foreground">Interest earned on the growing balance</p>
+   410→                  </CardContent>
+   411→                </Card>
+   412→                <Card className="bg-muted/30">
+   413→                  <CardContent className="p-4">
+   414→                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Final Amount</p>
+   415→                    <p className="mt-1 text-xl font-bold tabular-nums">{fmt(r1.finalAmount)}</p>
+   416→                    <p className="text-xs text-muted-foreground">Projected balance at the end of the term</p>
+   417→                  </CardContent>
+   418→                </Card>
+   419→              </div>
+   420→            </div>
+   421→          )}
+   422→
+   423→          {/* ─── Tab 2: How long will it take ─── */}
+   424→          {tab === 2 && (
+   425→            <div className="space-y-5">
+   426→              <div className="grid gap-4 sm:grid-cols-2">
+   427→                <div className="space-y-2">
+   428→                  <div className="flex items-center gap-2">
+   429→                    <Label htmlFor="t2-goal">Savings Goal</Label>
+   430→                    <Tooltip>
+   431→                      <TooltipTrigger asChild>
+   432→                        <Info className="size-3.5 text-muted-foreground cursor-help" />
+   433→                      </TooltipTrigger>
+   434→                      <TooltipContent>The dollar amount you want to reach.</TooltipContent>
+   435→                    </Tooltip>
+   436→                  </div>
+   437→                  <div className="relative">
+   438→                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+   439→                    <Input
+   440→                      id="t2-goal"
+   441→                      type="number"
+   442→                      min={0}
+   443→                      step={1000}
+   444→                      value={tab2.goal}
+   445→                      onChange={(e) => updateTab2({ goal: Math.max(0, Number(e.target.value)) })}
+   446→                      className="pl-7"
+   447→                    />
+   448→                  </div>
+   449→                </div>
+   450→
+   451→                <div className="space-y-2">
+   452→                  <div className="flex items-center gap-2">
+   453→                    <Label htmlFor="t2-current">Current Savings</Label>
+   454→                    <Tooltip>
+   455→                      <TooltipTrigger asChild>
+   456→                        <Info className="size-3.5 text-muted-foreground cursor-help" />
+   457→                      </TooltipTrigger>
+   458→                      <TooltipContent>What you already have saved today.</TooltipContent>
+   459→                    </Tooltip>
+   460→                  </div>
+   461→                  <div className="relative">
+   462→                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+   463→                    <Input
+   464→                      id="t2-current"
+   465→                      type="number"
+   466→                      min={0}
+   467→                      step={1000}
+   468→                      value={tab2.current}
+   469→                      onChange={(e) => updateTab2({ current: Math.max(0, Number(e.target.value)) })}
+   470→                      className="pl-7"
+   471→                    />
+   472→                  </div>
+   473→                </div>
+   474→
+   475→                <div className="space-y-2">
+   476→                  <div className="flex items-center gap-2">
+   477→                    <Label htmlFor="t2-monthly">Monthly Contribution</Label>
+   478→                    <Tooltip>
+   479→                      <TooltipTrigger asChild>
+   480→                        <Info className="size-3.5 text-muted-foreground cursor-help" />
+   481→                      </TooltipTrigger>
+   482→                      <TooltipContent>How much you add to savings each month.</TooltipContent>
+   483→                    </Tooltip>
+   484→                  </div>
+   485→                  <div className="relative">
+   486→                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+   487→                    <Input
+   488→                      id="t2-monthly"
+   489→                      type="number"
+   490→                      min={0}
+   491→                      step={50}
+   492→                      value={tab2.monthly}
+   493→                      onChange={(e) => updateTab2({ monthly: Math.max(0, Number(e.target.value)) })}
+   494→                      className="pl-7"
+   495→                    />
+   496→                  </div>
+   497→                </div>
+   498→
+   499→                <div className="space-y-2">
+   500→                  <div className="flex items-center justify-between">
+   501→                    <div className="flex items-center gap-2">
+   502→                      <Label htmlFor="t2-rate">Annual Return (APY)</Label>
+   503→                      <Tooltip>
+   504→                        <TooltipTrigger asChild>
+   505→                          <Info className="size-3.5 text-muted-foreground cursor-help" />
+   506→                        </TooltipTrigger>
+   507→                        <TooltipContent>Assumed annual rate of return. Enter 0 for a no-growth savings account.</TooltipContent>
+   508→                      </Tooltip>
+   509→                    </div>
+   510→                    <span className="text-sm font-medium text-foreground tabular-nums">{tab2.rate.toFixed(2)}%</span>
+   511→                  </div>
+   512→                  <div className="flex items-center gap-4">
+   513→                    <Slider
+   514→                      min={0}
+   515→                      max={12}
+   516→                      step={0.05}
+   517→                      value={[tab2.rate]}
+   518→                      onValueChange={([v]) => updateTab2({ rate: v })}
+   519→                      className="flex-1"
+   520→                    />
+   521→                    <Input
+   522→                      id="t2-rate"
+   523→                      type="number"
+   524→                      min={0}
+   525→                      max={30}
+   526→                      step={0.05}
+   527→                      value={tab2.rate}
+   528→                      onChange={(e) => updateTab2({ rate: Math.max(0, Math.min(30, Number(e.target.value) || 0)) })}
+   529→                      className="w-20"
+   530→                    />
+   531→                  </div>
+   532→                </div>
+   533→              </div>
+   534→
+   535→              {/* Result: time to goal */}
+   536→              {r2.months === null ? (
+   537→                <Card className="border-destructive/30 bg-muted/30">
+   538→                  <CardContent className="p-5">
+   539→                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Goal Unreachable</p>
+   540→                    <p className="mt-2 text-sm text-foreground leading-relaxed">{r2.reason}</p>
+   541→                  </CardContent>
+   542→                </Card>
+   543→              ) : (
+   544→                <Card className="border-ember/30 bg-muted/30">
+   545→                  <CardContent className="p-5">
+   546→                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+   547→                      Time to Reach Your Goal
+   548→                    </p>
+   549→                    <p className="mt-1 text-3xl font-bold text-ember tabular-nums">
+   550→                      {r2.years > 0 ? <>{r2.years} year{r2.years === 1 ? "" : "s"} </> : null}
+   551→                      {r2.remainingMonths} month{r2.remainingMonths === 1 ? "" : "s"}
+   552→                    </p>
+   553→                    <p className="text-xs text-muted-foreground mt-1">
+   554→                      {r2.months} total monthly compounding periods
+   555→                      {r2.targetDate ? <> &middot; reached around <strong>{fmtDate(r2.targetDate)}</strong></> : null}
+   556→                    </p>
+   557→                  </CardContent>
+   558→                </Card>
+   559→              )}
+   560→
+   561→              {/* Secondary stats */}
+   562→              {r2.months !== null && (
+   563→                <div className="grid gap-4 sm:grid-cols-3">
+   564→                  <Card className="bg-muted/30">
+   565→                    <CardContent className="p-4">
+   566→                      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Total Contributed</p>
+   567→                      <p className="mt-1 text-xl font-bold tabular-nums">{fmt(r2.totalContributed)}</p>
+   568→                      <p className="text-xs text-muted-foreground">Current savings plus every monthly contribution</p>
+   569→                    </CardContent>
+   570→                  </Card>
+   571→                  <Card className="bg-muted/30">
+   572→                    <CardContent className="p-4">
+   573→                      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Growth from Returns</p>
+   574→                      <p className="mt-1 text-xl font-bold tabular-nums text-ember">{fmt(r2.growthFromReturns)}</p>
+   575→                      <p className="text-xs text-muted-foreground">Interest earned on the growing balance</p>
+   576→                    </CardContent>
+   577→                  </Card>
+   578→                  <Card className="bg-muted/30">
+   579→                    <CardContent className="p-4">
+   580→                      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Final Amount</p>
+   581→                      <p className="mt-1 text-xl font-bold tabular-nums">{fmt(r2.finalAmount)}</p>
+   582→                      <p className="text-xs text-muted-foreground">Projected balance when the goal is reached</p>
+   583→                    </CardContent>
+   584→                  </Card>
+   585→                </div>
+   586→              )}
+   587→            </div>
+   588→          )}
+   589→
+   590→          {/* YMYL disclaimer */}
+   591→          <p className="text-xs text-muted-foreground leading-relaxed bg-muted/30 rounded-md px-4 py-2.5">
+   592→            The annual return is an assumption, not a guarantee. Investment returns
+   593→            vary from year to year and can be negative. Savings-account APYs change
+   594→            over time. Use the calculator to plan; revisit your inputs as rates and
+   595→            your situation change.
+   596→          </p>
+   597→
+   598→          {/* Action Row */}
+   599→          <div className="flex flex-wrap items-center gap-2 pt-2 print:hidden">
+   600→            <ShareButtons summaryText={summaryText} title="Savings Goal Calculator" />
+   601→            <div className="ml-auto flex items-center gap-2">
+   602→              <Button variant="outline" size="sm" onClick={handleCopyLink}>
+   603→                {copied ? <Check className="size-3.5 mr-1.5" /> : <Copy className="size-3.5 mr-1.5" />}
+   604→                {copied ? "Copied" : "Copy Link"}
+   605→              </Button>
+   606→              <Button variant="outline" size="sm" onClick={handlePrint}>
+   607→                <Printer className="size-3.5 mr-1.5" />
+   608→                Print
+   609→              </Button>
+   610→              <Button variant="outline" size="sm" onClick={handleReset}>
+   611→                <RotateCcw className="size-3.5 mr-1.5" />
+   612→                Reset
+   613→              </Button>
+   614→            </div>
+   615→          </div>
+   616→        </CardContent>
+   617→      </Card>
+   618→    </TooltipProvider>
+   619→  );
+   620→}
+   621→

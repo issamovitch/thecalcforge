@@ -373,6 +373,18 @@ export const calculatorPages = [
     category: "savings",
   },
   {
+    label: "Emergency Fund Calculator",
+    href: "/savings/emergency-fund-calculator",
+    description:
+      "See how much emergency cash you need based on your monthly expenses, and how long it will take to build at your savings pace.",
+    longDescription:
+      "See how much emergency cash you need based on your monthly expenses, and how long it will take to build at your savings pace.",
+    typesCopy:
+      "computes the emergency fund target from monthly essential expenses times a coverage period, shows the gap after current savings, the exact months to reach the target at a given monthly pace and APY, and a 3/6/12 month target strip, with an optional itemized expense breakdown",
+    primaryKeyword: "emergency fund calculator",
+    category: "savings",
+  },
+  {
     label: "Student Loan Payoff Calculator",
     href: "/loans/student-loan-payoff-calculator",
     description:
