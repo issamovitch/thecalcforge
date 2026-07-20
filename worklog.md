@@ -1669,3 +1669,52 @@ Stage Summary:
 - Sitemap updated
 - All new files lint clean (pre-existing title-loan-calculator lint errors are from a prior task, not this one)
 - Dev server requires NODE_OPTIONS="--max-old-space-size=2048" and periodic chrome process cleanup due to container memory limits (4GB total, shared with agent-browser)
+
+---
+Task ID: amortization-schedule-calculator
+Agent: Main Agent
+Task: Build Amortization Schedule Calculator at /loans/amortization-schedule-calculator
+
+Work Log:
+- Read worklog.md, student-loan-payoff-calculator page.tsx + component, site.config.ts, sitemap.ts, loan-math.ts, globals.css print styles, ShareButtons component as reference templates
+- Created src/lib/amortization-math.ts with:
+  - AmortizationInputs/AmortizationScheduleRow/YearSummary/AmortizationResult/AmortizationComparison types
+  - computeMonthlyPayment() standard amortization formula M = P*(r/12)/(1-(1+r/12)^-n)
+  - calculateAmortization() full month-by-month engine with extraMonthly, extraAnnual (every 12th month), oneTimeAmount (in specified month), year grouping, crossover month detection, payoff date
+  - compareAmortization() baseline vs with-extras comparison
+  - formatters: formatCurrency, formatCurrency0, formatPercent, formatMonthYear, formatYearsMonths
+  - Base payment always derived from formula (rounded to cents), so negative amortization is impossible under normal inputs; final month pays exact remainder
+- Created src/components/calculators/AmortizationScheduleCalculator.tsx client component with:
+  - 9 inputs: loanAmount, apr, termYears, startMonth/startYear, extraMonthly, extraAnnual, oneTimeAmount, oneTimeMonth
+  - URL param encoding (amount, rate, term, startmonth, startyear, extra, annual, onetime, lumpmonth)
+  - Monthly payment highlight, 3 result cards (Total Interest, Total Paid, Payoff Date)
+  - Comparison block (baseline vs with extras, months saved, interest saved) appears only when extras > 0
+  - FULL amortization schedule as the page's core feature: year-summary table always visible, each year is a Collapsible that expands to show 12 month rows (payment, extra, interest, principal, balance, date)
+  - Expand All / Collapse All controls
+  - Print Schedule button expands all years then calls window.print()
+  - Copy Link, Print, Reset buttons + full ShareButtons row
+  - Disclaimer linking to PMI Calculator
+- Created src/app/loans/amortization-schedule-calculator/page.tsx with:
+  - SEO metadata (title, description, canonical, OG, Twitter, robots)
+  - 3 JSON-LD schemas: BreadcrumbList, FAQPage, WebApplication
+  - Breadcrumbs: Home > Loan Calculators > Amortization Schedule Calculator
+  - Intro paragraph with computed default result ($250k @ 6.5% / 30yr = $1,580.17/mo, $318,861.27 interest)
+  - 6 H2 content sections matching target long-tail keywords:
+    1. Amortization Schedule Calculator (formula + worked example with month 1 and month 120 splits)
+    2. Amortization Schedule with Extra Payments ($200/mo example: 96 months saved, $97,618.15 interest saved)
+    3. Loan Amortization Calculator with Extra Payments (three extra types explained, schedule-as-core-feature)
+    4. How Much Interest Will I Pay on My Loan (30yr vs 15yr comparison table, both from engine)
+    5. Printable Amortization Schedule (what to check on a printed schedule, print button mention)
+    6. Extra Payment Loan Calculator (strategy, PMI caveat, links to PMI Calculator)
+  - 5 FAQ items
+  - Related Calculators section linking to /loans hub, Student Loan Payoff, Auto Loan, PMI, Refinance Break-Even calculators
+- Updated src/config/site.config.ts: added Amortization Schedule Calculator entry (category: "loans", short description, via Python script to preserve CRLF line endings)
+- Updated src/app/sitemap.ts: added /loans/amortization-schedule-calculator entry
+- All figures in content computed from the same engine (exBase, exExtra200, ex15yr module-scope constants)
+
+Stage Summary:
+- New page live at /loans/amortization-schedule-calculator, returns 200, compiles clean
+- Browser-verified: H1, intro with computed figures, monthly payment $1,580.17, result cards, year-summary table with 31 years, comparison block appears on $200 extra (96 months saved, $97,618.15 interest saved), breadcrumbs correct, all 6 target H2s present, no console errors
+- /loans hub now lists the new calculator card
+- Lint: 0 new errors (11 pre-existing em-dash errors in title-loan-calculator/page.tsx, unchanged)
+- Template/design/schema fully matches existing loans pages; no restyling

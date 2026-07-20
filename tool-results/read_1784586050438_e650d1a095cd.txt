@@ -1,0 +1,934 @@
+     1→// ── Types ────────────────────────────────────────────────────────────────────
+     2→
+     3→export interface LoanInputs {
+     4→  loanAmount: number;
+     5→  apr: number;
+     6→  termMonths: number;
+     7→}
+     8→
+     9→export interface AmortizationRow {
+    10→  month: number;
+    11→  payment: number;
+    12→  principal: number;
+    13→  interest: number;
+    14→  balance: number;
+    15→}
+    16→
+    17→export interface LoanResult {
+    18→  monthlyPayment: number;
+    19→  totalInterest: number;
+    20→  totalCost: number;
+    21→  schedule: AmortizationRow[];
+    22→}
+    23→
+    24→export interface EarlyPayoffResult {
+    25→  result: LoanResult;
+    26→  baseResult: LoanResult;
+    27→  monthsSaved: number;
+    28→  interestSaved: number;
+    29→}
+    30→
+    31→// ── Helpers ──────────────────────────────────────────────────────────────────
+    32→
+    33→const r2 = (n: number): number => Math.round(n * 100) / 100;
+    34→
+    35→function emptyResult(): LoanResult {
+    36→  return { monthlyPayment: 0, totalInterest: 0, totalCost: 0, schedule: [] };
+    37→}
+    38→
+    39→// ── Core calculation ─────────────────────────────────────────────────────────
+    40→
+    41→export function calculateLoan(inputs: LoanInputs): LoanResult {
+    42→  const { loanAmount, apr, termMonths } = inputs;
+    43→
+    44→  // Validation
+    45→  if (loanAmount <= 0 || apr < 0 || termMonths <= 0) {
+    46→    return emptyResult();
+    47→  }
+    48→
+    49→  const monthlyRate = apr / 100 / 12;
+    50→
+    51→  // Step 1–2: compute monthly payment at full precision, then round
+    52→  let monthlyPayment: number;
+    53→  if (monthlyRate === 0) {
+    54→    monthlyPayment = loanAmount / termMonths;
+    55→  } else {
+    56→    const factor = Math.pow(1 + monthlyRate, termMonths);
+    57→    monthlyPayment = (loanAmount * monthlyRate * factor) / (factor - 1);
+    58→  }
+    59→  const roundedMonthly = r2(monthlyPayment);
+    60→
+    61→  // Step 4: amortization loop using the ROUNDED payment
+    62→  const schedule: AmortizationRow[] = [];
+    63→  let balance = loanAmount;
+    64→
+    65→  for (let month = 1; month <= termMonths; month++) {
+    66→    const interest = balance * monthlyRate;
+    67→    const principal = roundedMonthly - interest;
+    68→
+    69→    if (principal >= balance || month === termMonths) {
+    70→      // Final month – absorb rounding drift, force balance to 0
+    71→      const lastPrincipal = balance;
+    72→      const lastInterest = interest;
+    73→      const lastPayment = lastPrincipal + lastInterest;
+    74→
+    75→      schedule.push({
+    76→        month,
+    77→        payment: r2(lastPayment),
+    78→        principal: r2(lastPrincipal),
+    79→        interest: r2(lastInterest),
+    80→        balance: 0,
+    81→      });
+    82→      break;
+    83→    }
+    84→
+    85→    balance -= principal;
+    86→
+    87→    schedule.push({
+    88→      month,
+    89→      payment: r2(roundedMonthly),
+    90→      principal: r2(principal),
+    91→      interest: r2(interest),
+    92→      balance: r2(balance),
+    93→    });
+    94→  }
+    95→
+    96→  // Step 5–6: totals derived from rounded row data
+    97→  const totalCost = r2(schedule.reduce((sum, row) => sum + row.payment, 0));
+    98→  const totalInterest = r2(totalCost - loanAmount);
+    99→
+   100→  return {
+   101→    monthlyPayment: roundedMonthly,
+   102→    totalInterest,
+   103→    totalCost,
+   104→    schedule,
+   105→  };
+   106→}
+   107→
+   108→// ── Early payoff ─────────────────────────────────────────────────────────────
+   109→
+   110→export function calculateEarlyPayoff(
+   111→  baseInputs: LoanInputs,
+   112→  extraMonthly: number,
+   113→  startFromMonth: number,
+   114→): EarlyPayoffResult {
+   115→  // Edge case: no extra payment → identical to base
+   116→  if (extraMonthly <= 0) {
+   117→    const baseResult = calculateLoan(baseInputs);
+   118→    return {
+   119→      result: baseResult,
+   120→      baseResult,
+   121→      monthsSaved: 0,
+   122→      interestSaved: 0,
+   123→    };
+   124→  }
+   125→
+   126→  const baseResult = calculateLoan(baseInputs);
+   127→  const { loanAmount, apr, termMonths } = baseInputs;
+   128→
+   129→  if (loanAmount <= 0 || apr < 0 || termMonths <= 0) {
+   130→    return {
+   131→      result: emptyResult(),
+   132→      baseResult,
+   133→      monthsSaved: 0,
+   134→      interestSaved: 0,
+   135→    };
+   136→  }
+   137→
+   138→  const monthlyRate = apr / 100 / 12;
+   139→
+   140→  // Base rounded monthly payment (same formula as calculateLoan)
+   141→  let baseMonthly: number;
+   142→  if (monthlyRate === 0) {
+   143→    baseMonthly = loanAmount / termMonths;
+   144→  } else {
+   145→    const factor = Math.pow(1 + monthlyRate, termMonths);
+   146→    baseMonthly = (loanAmount * monthlyRate * factor) / (factor - 1);
+   147→  }
+   148→  const roundedBaseMonthly = r2(baseMonthly);
+   149→
+   150→  const schedule: AmortizationRow[] = [];
+   151→  let balance = loanAmount;
+   152→
+   153→  for (let month = 1; month <= termMonths; month++) {
+   154→    const interest = balance * monthlyRate;
+   155→    const isEarlyStart = month >= startFromMonth;
+   156→    const extra = isEarlyStart ? extraMonthly : 0;
+   157→    const totalPayment = roundedBaseMonthly + extra;
+   158→
+   159→    const principal = totalPayment - interest;
+   160→
+   161→    if (principal >= balance || month === termMonths) {
+   162→      // Final month – force balance to 0
+   163→      const lastPrincipal = balance;
+   164→      const lastPayment = lastPrincipal + interest;
+   165→      schedule.push({
+   166→        month,
+   167→        payment: r2(lastPayment),
+   168→        principal: r2(lastPrincipal),
+   169→        interest: r2(interest),
+   170→        balance: 0,
+   171→      });
+   172→      break;
+   173→    }
+   174→
+   175→    balance -= principal;
+   176→
+   177→    schedule.push({
+   178→      month,
+   179→      payment: r2(totalPayment),
+   180→      principal: r2(principal),
+   181→      interest: r2(interest),
+   182→      balance: r2(balance),
+   183→    });
+   184→  }
+   185→
+   186→  const totalCost = r2(schedule.reduce((sum, row) => sum + row.payment, 0));
+   187→  const totalInterest = r2(totalCost - loanAmount);
+   188→
+   189→  const result: LoanResult = {
+   190→    monthlyPayment: roundedBaseMonthly,
+   191→    totalInterest,
+   192→    totalCost,
+   193→    schedule,
+   194→  };
+   195→
+   196→  const monthsSaved = baseResult.schedule.length - schedule.length;
+   197→  const interestSaved = r2(baseResult.totalInterest - totalInterest);
+   198→
+   199→  return {
+   200→    result,
+   201→    baseResult,
+   202→    monthsSaved,
+   203→    interestSaved,
+   204→  };
+   205→}
+   206→
+   207→// ── Florida title-loan interest (Fla. Stat. 537.011, marginal tiers) ─────────
+   208→
+   209→export interface FloridaTitleLoanResult {
+   210→  /** Monthly interest charge for one 30-day period */
+   211→  monthlyInterest: number;
+   212→  /** Blended effective annual rate, as a percentage */
+   213→  blendedAnnualRate: number;
+   214→  /** Total amount due to reclaim title after one 30-day period */
+   215→  totalRepayment: number;
+   216→  /** Per-tier interest breakdown for transparency */
+   217→  tiers: { cap: number; rate: number; portion: number; interest: number }[];
+   218→}
+   219→
+   220→/**
+   221→ * Computes the statutory maximum interest on a Florida title loan
+   222→ * using the marginal-tier system in Fla. Stat. § 537.011.
+   223→ *
+   224→ * Tiers (per annum, applied as simple interest per month):
+   225→ *   - 30 % p.a. on the first $2,000
+   226→ *   - 24 % p.a. on the portion $2,000 – $3,000
+   227→ *   - 18 % p.a. on the portion above $3,000
+   228→ *
+   229→ * Florida title loans are single-payment instruments with a 30-day
+   230→ * maturity; the result reflects one period, not an amortized schedule.
+   231→ */
+   232→export function calculateFloridaTitleLoan(
+   233→  loanAmount: number,
+   234→): FloridaTitleLoanResult {
+   235→  let monthlyInterest = 0;
+   236→  const bracketStarts = [0, 2000, 3000];
+   237→  const rates = [30, 24, 18];
+   238→  const tiers: FloridaTitleLoanResult["tiers"] = [];
+   239→
+   240→  for (let i = 0; i < 3; i++) {
+   241→    const start = bracketStarts[i];
+   242→    const end =
+   243→      i === 2 ? loanAmount : Math.min(loanAmount, bracketStarts[i + 1]);
+   244→    const portion = Math.max(0, end - start);
+   245→    const interest = portion * (rates[i] / 100 / 12);
+   246→    monthlyInterest += interest;
+   247→    tiers.push({
+   248→      cap: i === 2 ? Infinity : bracketStarts[i + 1],
+   249→      rate: rates[i],
+   250→      portion: r2(portion),
+   251→      interest: r2(interest),
+   252→    });
+   253→  }
+   254→
+   255→  const blendedAnnualRate =
+   256→    loanAmount > 0 ? (monthlyInterest * 12 / loanAmount) * 100 : 0;
+   257→
+   258→  return {
+   259→    monthlyInterest: r2(monthlyInterest),
+   260→    blendedAnnualRate: r2(blendedAnnualRate),
+   261→    totalRepayment: r2(loanAmount + monthlyInterest),
+   262→    tiers,
+   263→  };
+   264→}
+   265→
+   266→// ── Payday loan (single-payment flat-fee model) ─────────────────────────────
+   267→
+   268→export interface PaydayLoanInputs {
+   269→  loanAmount: number;
+   270→  fee: number; // flat dollar fee (convert from per-$100 in the component)
+   271→  termDays: number;
+   272→}
+   273→
+   274→export interface RolloverCost {
+   275→  /** Number of times the loan is rolled over */
+   276→  times: number;
+   277→  /** Cumulative fees paid (original + each rollover) */
+   278→  totalFees: number;
+   279→  /** Total amount repaid */
+   280→  totalRepayment: number;
+   281→  /** Total days from origination to final due date */
+   282→  totalDays: number;
+   283→}
+   284→
+   285→export interface PaydayLoanResult {
+   286→  /** Total amount due (principal + fee) */
+   287→  totalRepayment: number;
+   288→  /** The finance charge (fee) */
+   289→  financeCharge: number;
+   290→  /** Annualized percentage rate */
+   291→  apr: number;
+   292→  /** Cost per $100 borrowed */
+   293→  costPerHundred: number;
+   294→  /** Projected costs if rolled over 1, 2, and 4 times */
+   295→  rollovers: RolloverCost[];
+   296→}
+   297→
+   298→/**
+   299→ * Computes the cost and APR of a single-payment payday loan.
+   300→ *
+   301→ * APR formula: (fee / amount) / days × 365 × 100
+   302→ * This annualizes a short-term flat fee into a comparable rate.
+   303→ */
+   304→export function calculatePaydayLoan(
+   305→  inputs: PaydayLoanInputs,
+   306→): PaydayLoanResult {
+   307→  const { loanAmount, fee, termDays } = inputs;
+   308→
+   309→  if (loanAmount <= 0 || fee < 0 || termDays <= 0) {
+   310→    return {
+   311→      totalRepayment: 0,
+   312→      financeCharge: 0,
+   313→      apr: 0,
+   314→      costPerHundred: 0,
+   315→      rollovers: [],
+   316→    };
+   317→  }
+   318→
+   319→  const totalRepayment = loanAmount + fee;
+   320→  const apr = (fee / loanAmount / termDays) * 365 * 100;
+   321→  const costPerHundred = (fee / loanAmount) * 100;
+   322→
+   323→  const rollovers: RolloverCost[] = [1, 2, 4].map((n) => ({
+   324→    times: n,
+   325→    totalFees: r2(fee * (n + 1)),
+   326→    totalRepayment: r2(loanAmount + fee * (n + 1)),
+   327→    totalDays: termDays * (n + 1),
+   328→  }));
+   329→
+   330→  return {
+   331→    totalRepayment: r2(totalRepayment),
+   332→    financeCharge: r2(fee),
+   333→    apr: r2(apr),
+   334→    costPerHundred: r2(costPerHundred),
+   335→    rollovers,
+   336→  };
+   337→}
+   338→
+   339→// ── Loan with extra payments (unified, replaces calculateEarlyPayoff for UI) ──
+   340→
+   341→export interface LoanWithExtraInputs extends LoanInputs {
+   342→  extraMonthly?: number;
+   343→  extraStartMonth?: number;
+   344→}
+   345→
+   346→export interface LoanWithExtraResult {
+   347→  /** Base schedule without extra payments */
+   348→  baseResult: LoanResult;
+   349→  /** Schedule with extra payments applied */
+   350→  result: LoanResult;
+   351→  /** Number of months shortened */
+   352→  monthsSaved: number;
+   353→  /** Interest saved compared to base */
+   354→  interestSaved: number;
+   355→  /** Month the loan is fully paid off */
+   356→  actualPayoffMonth: number;
+   357→}
+   358→
+   359→/**
+   360→ * Computes an amortizing loan schedule with optional extra monthly payments
+   361→ * starting from a given month. Every calculator that supports early payoff
+   362→ * should use this single function.
+   363→ */
+   364→export function calculateLoanWithExtra(
+   365→  inputs: LoanWithExtraInputs,
+   366→): LoanWithExtraResult {
+   367→  const { loanAmount, apr, termMonths, extraMonthly = 0, extraStartMonth = 1 } =
+   368→    inputs;
+   369→
+   370→  const baseResult = calculateLoan({ loanAmount, apr, termMonths });
+   371→
+   372→  if (
+   373→    extraMonthly <= 0 ||
+   374→    loanAmount <= 0 ||
+   375→    apr < 0 ||
+   376→    termMonths <= 0
+   377→  ) {
+   378→    return {
+   379→      baseResult,
+   380→      result: baseResult,
+   381→      monthsSaved: 0,
+   382→      interestSaved: 0,
+   383→      actualPayoffMonth: baseResult.schedule.length,
+   384→    };
+   385→  }
+   386→
+   387→  const monthlyRate = apr / 100 / 12;
+   388→  const basePayment = baseResult.monthlyPayment;
+   389→
+   390→  const schedule: AmortizationRow[] = [];
+   391→  let balance = loanAmount;
+   392→
+   393→  for (let month = 1; month <= termMonths; month++) {
+   394→    const interest = balance * monthlyRate;
+   395→    const extra = month >= extraStartMonth ? extraMonthly : 0;
+   396→    const totalPayment = basePayment + extra;
+   397→    const principal = totalPayment - interest;
+   398→
+   399→    if (principal >= balance || month === termMonths) {
+   400→      const lastPrincipal = balance;
+   401→      const lastPayment = lastPrincipal + interest;
+   402→      schedule.push({
+   403→        month,
+   404→        payment: r2(lastPayment),
+   405→        principal: r2(lastPrincipal),
+   406→        interest: r2(interest),
+   407→        balance: 0,
+   408→      });
+   409→      break;
+   410→    }
+   411→
+   412→    balance -= principal;
+   413→
+   414→    schedule.push({
+   415→      month,
+   416→      payment: r2(totalPayment),
+   417→      principal: r2(principal),
+   418→      interest: r2(interest),
+   419→      balance: r2(balance),
+   420→    });
+   421→  }
+   422→
+   423→  const totalCost = r2(schedule.reduce((sum, row) => sum + row.payment, 0));
+   424→  const totalInterest = r2(totalCost - loanAmount);
+   425→  const actualPayoffMonth = schedule.length;
+   426→  const monthsSaved = baseResult.schedule.length - actualPayoffMonth;
+   427→  const interestSaved = r2(baseResult.totalInterest - totalInterest);
+   428→
+   429→  const result: LoanResult = {
+   430→    monthlyPayment: basePayment,
+   431→    totalInterest,
+   432→    totalCost,
+   433→    schedule,
+   434→  };
+   435→
+   436→  return { baseResult, result, monthsSaved, interestSaved, actualPayoffMonth };
+   437→}
+   438→
+   439→// ── Equipment / balloon loan ────────────────────────────────────────────────
+   440→
+   441→export interface BalloonLoanInputs {
+   442→  loanAmount: number;
+   443→  downPayment: number;
+   444→  balloonAmount: number;
+   445→  apr: number;
+   446→  termMonths: number;
+   447→}
+   448→
+   449→export interface BalloonLoanResult {
+   450→  /** Amount actually financed after down payment */
+   451→  financedAmount: number;
+   452→  downPayment: number;
+   453→  balloonAmount: number;
+   454→  monthlyPayment: number;
+   455→  totalInterest: number;
+   456→  /** Down payment + all monthly payments + balloon */
+   457→  totalCost: number;
+   458→  schedule: AmortizationRow[];
+   459→}
+   460→
+   461→/**
+   462→ * Computes an equipment/balloon loan.
+   463→ *
+   464→ * Convention: n regular monthly payments, then the balloon is paid as a
+   465→ * separate lump sum after the final payment.
+   466→ *
+   467→ * Formula:
+   468→ *   M = [P - B / (1 + r)^n] * r / (1 - (1 + r)^-n)
+   469→ *
+   470→ * P = financed amount, B = balloon, r = APR/12, n = months.
+   471→ * The balloon is discounted to present value before subtracting from P.
+   472→ * After n payments of M, the remaining balance equals B (within rounding).
+   473→ *
+   474→ * If balloonAmount >= PV(financedAmount), the payment is zero and the
+   475→ * full amount is due at maturity.
+   476→ */
+   477→export function calculateBalloonLoan(
+   478→  inputs: BalloonLoanInputs,
+   479→): BalloonLoanResult {
+   480→  const { loanAmount, downPayment, balloonAmount, apr, termMonths } = inputs;
+   481→
+   482→  const financedAmount = r2(loanAmount - downPayment);
+   483→
+   484→  if (financedAmount <= 0 || apr < 0 || termMonths <= 0) {
+   485→    return {
+   486→      financedAmount: Math.max(0, financedAmount),
+   487→      downPayment: r2(downPayment),
+   488→      balloonAmount: r2(balloonAmount),
+   489→      monthlyPayment: 0,
+   490→      totalInterest: 0,
+   491→      totalCost: r2(downPayment),
+   492→      schedule: [],
+   493→    };
+   494→  }
+   495→
+   496→  const monthlyRate = apr / 100 / 12;
+   497→
+   498→  // Discount balloon to present value
+   499→  const pvBalloon = balloonAmount / Math.pow(1 + monthlyRate, termMonths);
+   500→  const amortizingPrincipal = Math.max(0, financedAmount - pvBalloon);
+   501→
+   502→  // Monthly payment on the PV-adjusted amortizing portion
+   503→  let monthlyPayment: number;
+   504→  if (monthlyRate === 0) {
+   505→    monthlyPayment = amortizingPrincipal > 0 ? amortizingPrincipal / termMonths : 0;
+   506→  } else if (amortizingPrincipal <= 0) {
+   507→    monthlyPayment = 0;
+   508→  } else {
+   509→    const factor = Math.pow(1 + monthlyRate, termMonths);
+   510→    monthlyPayment = (amortizingPrincipal * monthlyRate * factor) / (factor - 1);
+   511→  }
+   512→  const roundedMonthly = r2(monthlyPayment);
+   513→
+   514→  // Build schedule: n rows of regular payments.
+   515→  // Keep internal balance at full precision to avoid cumulative rounding drift.
+   516→  const schedule: AmortizationRow[] = [];
+   517→  let balance = financedAmount;
+   518→
+   519→  for (let month = 1; month <= termMonths; month++) {
+   520→    const interest = balance * monthlyRate;
+   521→    const principal = roundedMonthly - interest;
+   522→
+   523→    if (principal >= balance) {
+   524→      // Paid off before term (unusual with balloon, but handle it)
+   525→      schedule.push({
+   526→        month,
+   527→        payment: r2(balance + interest),
+   528→        principal: r2(balance),
+   529→        interest: r2(interest),
+   530→        balance: 0,
+   531→      });
+   532→      break;
+   533→    }
+   534→
+   535→    balance -= principal;
+   536→
+   537→    schedule.push({
+   538→      month,
+   539→      payment: r2(roundedMonthly),
+   540→      principal: r2(principal),
+   541→      interest: r2(interest),
+   542→      balance: r2(balance),
+   543→    });
+   544→  }
+   545→
+   546→  // Reconciliation: the full-precision balance after n payments must
+   547→  // equal the balloon (within $1.00 from payment-rounding drift).
+   548→  const balloonDiff = Math.abs(balance - balloonAmount);
+   549→  if (balloonDiff > 1.00) {
+   550→    console.error(
+   551→      `[calculateBalloonLoan] Reconciliation failure: final balance (${balance.toFixed(2)}) != balloon (${balloonAmount}), diff=${balloonDiff.toFixed(2)}`
+   552→    );
+   553→  }
+   554→
+   555→  // Total cost = down payment + (n × monthly payment) + balloon
+   556→  const regularPaymentsTotal = r2(schedule.reduce((sum, row) => sum + row.payment, 0));
+   557→  const totalCost = r2(downPayment + regularPaymentsTotal + balloonAmount);
+   558→  const totalInterest = r2(totalCost - loanAmount);
+   559→
+   560→  return {
+   561→    financedAmount,
+   562→    downPayment: r2(downPayment),
+   563→    balloonAmount: r2(balloonAmount),
+   564→    monthlyPayment: roundedMonthly,
+   565→    totalInterest,
+   566→    totalCost,
+   567→    schedule,
+   568→  };
+   569→}
+   570→
+   571→// ── Merchant cash advance ──────────────────────────────────────────────────
+   572→
+   573→export interface MCAInputs {
+   574→  advanceAmount: number;
+   575→  factorRate: number; // e.g. 1.4
+   576→  repaymentMonths: number;
+   577→}
+   578→
+   579→export interface MCAResult {
+   580→  advanceAmount: number;
+   581→  totalPayback: number;
+   582→  financeCharge: number;
+   583→  /**
+   584→   * Simple annualized cost. NOT a true APR since MCAs are not loans.
+   585→   * Formula: (cost / advance) × (12 / months) × 100
+   586→   * Faster repayment = higher effective APR (opposite of a normal loan).
+   587→   */
+   588→  effectiveAPR: number;
+   589→  dailyPayment: number;
+   590→  weeklyPayment: number;
+   591→  /** Average monthly remittance (total payback / months) */
+   592→  monthlyPayment: number;
+   593→  repaymentMonths: number;
+   594→  /** Cost per dollar advanced */
+   595→  costPerDollar: number;
+   596→}
+   597→
+   598→/**
+   599→ * Computes the cost structure of a merchant cash advance.
+   600→ *
+   601→ * An MCA is a receivables purchase, not a loan. The total payback
+   602→ * is fixed (advance × factor rate), but the effective cost rises
+   603→ * the faster you repay because the same total fee is compressed
+   604→ * into fewer days.
+   605→ *
+   606→ * Day-count convention: 365/12 ≈ 30.4167 days per month for both
+   607→ * daily and weekly calculations. Weekly = daily × 7 exactly.
+   608→ */
+   609→export function calculateMCA(inputs: MCAInputs): MCAResult {
+   610→  const { advanceAmount, factorRate, repaymentMonths } = inputs;
+   611→
+   612→  if (advanceAmount <= 0 || factorRate <= 1 || repaymentMonths <= 0) {
+   613→    return {
+   614→      advanceAmount,
+   615→      totalPayback: 0,
+   616→      financeCharge: 0,
+   617→      effectiveAPR: 0,
+   618→      dailyPayment: 0,
+   619→      weeklyPayment: 0,
+   620→      monthlyPayment: 0,
+   621→      repaymentMonths,
+   622→      costPerDollar: 0,
+   623→    };
+   624→  }
+   625→
+   626→  const totalPayback = r2(advanceAmount * factorRate);
+   627→  const financeCharge = r2(totalPayback - advanceAmount);
+   628→  const costPerDollar = r2(financeCharge / advanceAmount);
+   629→
+   630→  // Simple annualized cost (the standard MCA disclosure approximation)
+   631→  const effectiveAPR = r2(
+   632→    (financeCharge / advanceAmount) * (12 / repaymentMonths) * 100,
+   633→  );
+   634→
+   635→  // Consistent day-count: 365/12 days per month
+   636→  const daysPerMonth = 365 / 12;
+   637→  const repaymentDays = repaymentMonths * daysPerMonth;
+   638→  const dailyPayment = r2(totalPayback / repaymentDays);
+   639→  const weeklyPayment = r2(dailyPayment * 7);
+   640→  const monthlyPayment = r2(totalPayback / repaymentMonths);
+   641→
+   642→  return {
+   643→    advanceAmount,
+   644→    totalPayback,
+   645→    financeCharge,
+   646→    effectiveAPR,
+   647→    dailyPayment,
+   648→    weeklyPayment,
+   649→    monthlyPayment,
+   650→    repaymentMonths,
+   651→    costPerDollar,
+   652→  };
+   653→}
+   654→
+   655→// ── Effective APR (when net proceeds differ from loan amount) ─────────
+   656→
+   657→/**
+   658→ * Computes the effective APR given net proceeds, the monthly payment,
+   659→ * and the term. Uses bisection to solve for the monthly rate r where:
+   660→ *   netProceeds = payment * [1 - (1+r)^(-n)] / r
+   661→ * then annualizes to a percentage.
+   662→ */
+   663→export function calculateEffectiveAPR(
+   664→  netProceeds: number,
+   665→  monthlyPayment: number,
+   666→  termMonths: number,
+   667→): number {
+   668→  if (netProceeds <= 0 || monthlyPayment <= 0 || termMonths <= 0) return 0;
+   669→
+   670→  // Edge case: zero rate
+   671→  if (monthlyPayment * termMonths <= netProceeds) return 0;
+   672→
+   673→  let lo = 0;
+   674→  let hi = 1; // 100% monthly = 1200% APR, well above any real loan
+   675→
+   676→  for (let i = 0; i < 100; i++) {
+   677→    const mid = (lo + hi) / 2;
+   678→    const factor = Math.pow(1 + mid, -termMonths);
+   679→    const pv = monthlyPayment * (1 - factor) / mid;
+   680→    if (pv > netProceeds) {
+   681→      lo = mid;
+   682→    } else {
+   683→      hi = mid;
+   684→    }
+   685→  }
+   686→
+   687→  const monthlyRate = (lo + hi) / 2;
+   688→  return r2(monthlyRate * 12 * 100);
+   689→}
+   690→
+   691→// ── Fixed-payment payoff (for debt consolidation comparison) ─────────────
+   692→
+   693→export interface FixedPaymentPayoff {
+   694→  /** Number of months until balance reaches zero */
+   695→  monthsToPayoff: number;
+   696→  /** Total interest paid over the payoff period */
+   697→  totalInterest: number;
+   698→  /** Total amount paid (principal + interest) */
+   699→  totalCost: number;
+   700→  /** True if the monthly payment does not cover monthly interest */
+   701→  neverPayoff: boolean;
+   702→}
+   703→
+   704→/**
+   705→ * Given a balance, APR, and fixed monthly payment, simulates
+   706→ * month-by-month until the balance is zero (or flags as never
+   707→ * paying off if the payment does not exceed monthly interest).
+   708→ *
+   709→ * Used by the debt consolidation calculator to evaluate each
+   710→ * existing debt at its current payment level.
+   711→ */
+   712→export function calculateFixedPaymentPayoff(
+   713→  balance: number,
+   714→  apr: number,
+   715→  monthlyPayment: number,
+   716→): FixedPaymentPayoff {
+   717→  if (balance <= 0) {
+   718→    return { monthsToPayoff: 0, totalInterest: 0, totalCost: 0, neverPayoff: false };
+   719→  }
+   720→  if (monthlyPayment <= 0) {
+   721→    return { monthsToPayoff: 0, totalInterest: 0, totalCost: 0, neverPayoff: true };
+   722→  }
+   723→
+   724→  const monthlyRate = apr / 100 / 12;
+   725→  const firstMonthInterest = balance * monthlyRate;
+   726→
+   727→  if (monthlyPayment <= firstMonthInterest) {
+   728→    return { monthsToPayoff: 0, totalInterest: 0, totalCost: 0, neverPayoff: true };
+   729→  }
+   730→
+   731→  let remaining = balance;
+   732→  let totalPayments = 0;
+   733→  let months = 0;
+   734→  const maxMonths = 600; // 50-year safety cap
+   735→
+   736→  while (remaining > 0 && months < maxMonths) {
+   737→    months++;
+   738→    const interest = remaining * monthlyRate;
+   739→    const principal = monthlyPayment - interest;
+   740→
+   741→    if (principal >= remaining) {
+   742→      // Final month: pay remaining balance + accrued interest
+   743→      totalPayments += remaining + interest;
+   744→      remaining = 0;
+   745→      break;
+   746→    }
+   747→
+   748→    remaining -= principal;
+   749→    totalPayments += monthlyPayment;
+   750→  }
+   751→
+   752→  // If still positive after 600 months, treat as never paying off
+   753→  if (remaining > 0) {
+   754→    return { monthsToPayoff: 0, totalInterest: 0, totalCost: 0, neverPayoff: true };
+   755→  }
+   756→
+   757→  const totalCost = r2(totalPayments);
+   758→  const totalInterest = r2(totalCost - balance);
+   759→
+   760→  return { monthsToPayoff: months, totalInterest, totalCost, neverPayoff: false };
+   761→}
+   762→
+   763→// ── Student loan payoff (fixed payment + extra + lump sum) ──────────────────
+   764→
+   765→export interface StudentLoanPayoffResult {
+   766→  /** Number of months until balance reaches zero */
+   767→  months: number;
+   768→  /** Total interest paid over the payoff period */
+   769→  totalInterest: number;
+   770→  /** Total amount paid (lump sum + all monthly payments) */
+   771→  totalPaid: number;
+   772→  /** Month-by-month amortization schedule */
+   773→  schedule: AmortizationRow[];
+   774→  /** True if the monthly payment does not cover monthly interest */
+   775→  neverPayoff: boolean;
+   776→  /** Starting balance after lump sum is applied */
+   777→  effectiveStartingBalance: number;
+   778→  /** Lump sum amount actually applied (capped at balance) */
+   779→  lumpSumApplied: number;
+   780→}
+   781→
+   782→/**
+   783→ * Given a balance, APR, fixed monthly payment, optional extra monthly payment,
+   784→ * and optional one-time lump sum applied in month 1, simulates month-by-month
+   785→ * until the balance is zero.
+   786→ *
+   787→ * Convention: the lump sum is applied to principal at the start of month 1,
+   788→ * before interest accrues, reducing the effective starting balance. The
+   789→ * amortization schedule then proceeds on the reduced balance with the total
+   790→ * monthly payment (base + extra).
+   791→ *
+   792→ * Guard: if the total monthly payment does not cover the first month's
+   793→ * interest on the effective balance, the loan will never pay off and
+   794→ * neverPayoff is set to true.
+   795→ */
+   796→export function calculateStudentLoanPayoff(
+   797→  balance: number,
+   798→  apr: number,
+   799→  monthlyPayment: number,
+   800→  extraMonthly: number = 0,
+   801→  lumpSum: number = 0,
+   802→): StudentLoanPayoffResult {
+   803→  if (balance <= 0) {
+   804→    return {
+   805→      months: 0, totalInterest: 0, totalPaid: 0, schedule: [],
+   806→      neverPayoff: false, effectiveStartingBalance: 0, lumpSumApplied: 0,
+   807→    };
+   808→  }
+   809→
+   810→  const monthlyRate = apr / 100 / 12;
+   811→
+   812→  // Apply lump sum first (month 1, before interest accrues)
+   813→  const effectiveLumpSum = Math.min(lumpSum, balance);
+   814→  const effectiveBalance = balance - effectiveLumpSum;
+   815→
+   816→  // Lump sum covers the entire balance
+   817→  if (effectiveBalance <= 0) {
+   818→    return {
+   819→      months: 0, totalInterest: 0, totalPaid: effectiveLumpSum, schedule: [],
+   820→      neverPayoff: false, effectiveStartingBalance: 0, lumpSumApplied: effectiveLumpSum,
+   821→    };
+   822→  }
+   823→
+   824→  // Guard: total monthly payment must exceed first month's interest
+   825→  const totalMonthly = monthlyPayment + extraMonthly;
+   826→  const firstMonthInterest = effectiveBalance * monthlyRate;
+   827→
+   828→  if (totalMonthly <= firstMonthInterest) {
+   829→    return {
+   830→      months: 0, totalInterest: 0, totalPaid: effectiveLumpSum, schedule: [],
+   831→      neverPayoff: true, effectiveStartingBalance: effectiveBalance, lumpSumApplied: effectiveLumpSum,
+   832→    };
+   833→  }
+   834→
+   835→  const schedule: AmortizationRow[] = [];
+   836→  let remaining = effectiveBalance;
+   837→  let totalInterest = 0;
+   838→  let totalPayments = effectiveLumpSum;
+   839→  const maxMonths = 600;
+   840→
+   841→  for (let month = 1; month <= maxMonths; month++) {
+   842→    const interest = remaining * monthlyRate;
+   843→    const principal = totalMonthly - interest;
+   844→
+   845→    if (principal >= remaining) {
+   846→      // Final month: pay exact remaining balance + interest
+   847→      const lastPayment = remaining + interest;
+   848→      totalInterest += interest;
+   849→      totalPayments += lastPayment;
+   850→      schedule.push({
+   851→        month,
+   852→        payment: r2(lastPayment),
+   853→        principal: r2(remaining),
+   854→        interest: r2(interest),
+   855→        balance: 0,
+   856→      });
+   857→      remaining = 0;
+   858→      break;
+   859→    }
+   860→
+   861→    remaining -= principal;
+   862→    totalInterest += interest;
+   863→    totalPayments += totalMonthly;
+   864→
+   865→    schedule.push({
+   866→      month,
+   867→      payment: r2(totalMonthly),
+   868→      principal: r2(principal),
+   869→      interest: r2(interest),
+   870→      balance: r2(remaining),
+   871→    });
+   872→  }
+   873→
+   874→  if (remaining > 0) {
+   875→    return {
+   876→      months: 0, totalInterest: 0, totalPaid: r2(totalPayments), schedule: [],
+   877→      neverPayoff: true, effectiveStartingBalance: effectiveBalance, lumpSumApplied: effectiveLumpSum,
+   878→    };
+   879→  }
+   880→
+   881→  return {
+   882→    months: schedule.length,
+   883→    totalInterest: r2(totalInterest),
+   884→    totalPaid: r2(totalPayments),
+   885→    schedule,
+   886→    neverPayoff: false,
+   887→    effectiveStartingBalance: effectiveBalance,
+   888→    lumpSumApplied: effectiveLumpSum,
+   889→  };
+   890→}
+   891→
+   892→// ── Reverse-solve: max principal from a given monthly payment ────────────────
+   893→
+   894→/**
+   895→ * Given a fixed monthly payment, APR, and term, computes the maximum
+   896→ * loan principal that payment can support.
+   897→ *
+   898→ * Formula (present value of an annuity):
+   899→ *   P = M × (1 − (1+r)^(−n)) / r
+   900→ *
+   901→ * where M = monthly payment, r = APR/100/12, n = term in months.
+   902→ * Returns 0 if inputs are invalid.
+   903→ */
+   904→export function reverseSolveMaxPrincipal(
+   905→  monthlyPayment: number,
+   906→  apr: number,
+   907→  termMonths: number,
+   908→): number {
+   909→  if (monthlyPayment <= 0 || apr < 0 || termMonths <= 0) return 0;
+   910→
+   911→  const monthlyRate = apr / 100 / 12;
+   912→
+   913→  if (monthlyRate === 0) {
+   914→    return r2(monthlyPayment * termMonths);
+   915→  }
+   916→
+   917→  const factor = Math.pow(1 + monthlyRate, -termMonths);
+   918→  return r2(monthlyPayment * (1 - factor) / monthlyRate);
+   919→}
+   920→
+   921→// ── Formatters ───────────────────────────────────────────────────────────────
+   922→
+   923→export function formatCurrency(value: number): string {
+   924→  return new Intl.NumberFormat("en-US", {
+   925→    style: "currency",
+   926→    currency: "USD",
+   927→    minimumFractionDigits: 2,
+   928→    maximumFractionDigits: 2,
+   929→  }).format(value);
+   930→}
+   931→
+   932→export function formatPercent(value: number): string {
+   933→  return `${value.toFixed(1)}%`;
+   934→}

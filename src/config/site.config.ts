@@ -384,6 +384,18 @@ export const calculatorPages = [
     primaryKeyword: "student loan payoff calculator",
     category: "loans",
   },
+  {
+    label: "Amortization Schedule Calculator",
+    href: "/loans/amortization-schedule-calculator",
+    description:
+      "Generate a full amortization schedule with extra payments. See every payment's interest and principal split, plus a printable month-by-month table.",
+    longDescription:
+      "Generate a full amortization schedule with extra payments. See every payment's interest and principal split, plus a printable month-by-month table.",
+    typesCopy:
+      "builds a full month-by-month amortization schedule for any fixed-rate loan with optional extra monthly, annual, and one-time payments, grouped by year with a printable view",
+    primaryKeyword: "amortization schedule calculator",
+    category: "loans",
+  },
 ] as const;
 
 // ─── Core site config ────────────────────────────────────────────────
