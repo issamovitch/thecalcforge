@@ -381,7 +381,7 @@ export default function NetWorthPage() {
             excluding home equity when assessing whether you can cover
             obligations without selling your home. A household with $300,000
             of home equity and $10,000 of other savings is in a very different
-            liquidity position from one with $300,000 of liquid investments
+            liquidity position from one with $310,000 of liquid investments
             and no home equity, even though both have the same total net
             worth. The two numbers together give a fuller picture.
           </p>
