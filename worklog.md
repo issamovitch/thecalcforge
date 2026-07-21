@@ -1832,3 +1832,36 @@ Stage Summary:
 - Other hubs (/auto, /debt, /home-buying, /income, /insurance, /savings): doubling fixed, not required to be ≤60
 - No H1, meta description, or body content changed — titles only
 - Orphan /title-loan-calculator page: already had no doubling (title has no suffix, OG title has single suffix), left unchanged
+
+---
+Task ID: fix-share-links-3
+Agent: Main Agent
+Task: Fix social share links with empty/wrong URLs (FIX 3 of 6)
+
+Work Log:
+- Read ShareButtons.tsx (src/components/calculators/ShareButtons.tsx) — the single shared component used by all 32 calculator components
+- Root cause 1 (empty URL): shareUrl fell back to `window.location.href` via `typeof window !== "undefined"` check in render body. During SSR, window is undefined so shareUrl = "". React does not auto-re-render after hydration, so if the user didn't interact with the calculator, the empty href persisted in the DOM
+- Root cause 2 (wrong title): pageTitle defaulted to literal string "CalcForge" when no `title` prop was passed. 17 of 32 calculators don't pass `title` (e.g., HELOC, Auto Loan, Personal Loan, Payday Loan, Down Payment, etc.), so their share titles were "CalcForge" instead of the page name. 3 calculators (LifeInsurance, AnnuityPayout, DisabilityInsurance) passed `title` WITH " - CalcForge" brand suffix, also wrong
+- Audited all 32 `<ShareButtons>` call sites via grep: confirmed 17 pass no `title`, 12 pass a clean `title`, 3 pass `title` with brand suffix
+- Fixed ShareButtons.tsx using `useSyncExternalStore` (React-recommended pattern for reading client-only external state without hydration mismatch):
+  - `useIsClient()`: returns false during SSR, true on client — gates all browser API access
+  - `useShareUrl(urlOverride)`: reads `window.location.href` fresh on every client render (so calculator URL params pushed via history.replaceState are always included); returns "" during SSR
+  - `usePageH1Title()`: reads `document.querySelector("h1")?.textContent` as the share title (the page name); falls back to `document.title` with brand suffix stripped; returns "" during SSR
+  - `stripBrand(raw)`: strips trailing " | CalcForge" or " - CalcForge" from any title string (handles en-dash, hyphen, pipe separators)
+  - `effectiveTitle`: prefers H1 from DOM, falls back to `title` prop (brand-stripped), falls back to "CalcForge"
+  - All 5 share link hrefs (X, Facebook, WhatsApp, Reddit, Email) and native share button use `shareUrl` and `effectiveTitle`
+  - `supportsNativeShare` gated behind `isClient` to avoid hydration mismatch
+- Lint: 0 new errors (11 pre-existing em-dash errors in title-loan-calculator/page.tsx, unchanged). Initial attempt used `setMounted(true)` in useEffect but `react-hooks/set-state-in-effect` rule flagged it; switched to `useSyncExternalStore` which is the React-recommended alternative
+- Verified with Python Playwright (headless Chromium) on /savings/emergency-fund-calculator:
+  - TEST 1 (default page, no params): all 5 share links have correct URL (http://localhost:3000/savings/emergency-fund-calculator) and correct title ("Emergency Fund Calculator" from H1, not "CalcForge"). No console errors.
+  - TEST 2 (with calculator params ?expenses=5000&months=6&current=1000&monthly=500&rate=4): all 5 share links include the FULL URL with params, percent-encoded. Summary text updates to reflect new calculation ($30,000 target, 4 years 5 months).
+  - Native share button: not present in headless Chromium (navigator.share undefined), as expected. On supporting browsers it calls navigator.share({ title: effectiveTitle, text: summaryText, url: shareUrl }).
+- Verified on /home-buying/heloc-calculator (previously had "CalcForge" title bug): H1 = "HELOC Calculator", all 5 share links now use "HELOC Calculator" as title and correct URL. Bug fixed.
+
+Stage Summary:
+- Single-file fix in ShareButtons.tsx covers all 32 calculator pages site-wide (no per-calculator changes needed)
+- Share URLs now use the current page's own URL including any active calculator parameters, percent-encoded
+- Share titles now use the page's H1 (page name), not "CalcForge" or a brand-suffixed string
+- All 6 share targets verified: X (text+url), Facebook (u), WhatsApp (text+url), Reddit (url+title), Email (subject+body+url), native share button (navigator.share with title+text+url)
+- Hydration-safe via useSyncExternalStore (getServerSnapshot returns "", getSnapshot returns real values on client)
+- URL params update in share links in real-time as the user adjusts calculator inputs (because calculator state changes trigger re-render of ShareButtons, which re-reads window.location.href)

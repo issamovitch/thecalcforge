@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -66,9 +67,9 @@ function ShareIcon({ className }: { className?: string }) {
 export interface ShareButtonsProps {
   /** Pre-built summary text, e.g. "$20,000 loan at 12% over 60 months = $444.89/mo. Calculate yours:" */
   summaryText: string;
-  /** Override the URL to share (defaults to window.location.href) */
+  /** Override the URL to share (defaults to window.location.href, captured client-side) */
   url?: string;
-  /** Optional page title for email subject and Reddit title */
+  /** Optional page title for email subject and Reddit title. If omitted, the page's H1 is used. */
   title?: string;
 }
 
@@ -78,18 +79,77 @@ function encode(text: string) {
   return encodeURIComponent(text);
 }
 
+/**
+ * Strip a trailing brand suffix (" | CalcForge" or " - CalcForge") from a title string.
+ * Ensures the share title is the page name only, not the brand.
+ */
+function stripBrand(raw: string): string {
+  return raw.replace(/\s*[|\u2013\-]\s*CalcForge\s*$/i, "").trim();
+}
+
+/* ─── Client-only store helpers (useSyncExternalStore) ─── */
+
+// No-op subscribe: we rely on parent re-renders (calculator state changes) to pick up
+// new values. This is the React-recommended pattern for reading infrequently-changing
+// external state without hydration mismatches or setState-in-effect.
+const subscribeNoop = () => () => {};
+
+/** Returns true on the client, false during SSR. Prevents hydration mismatches. */
+function useIsClient(): boolean {
+  return useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false
+  );
+}
+
+/**
+ * Returns the current page URL (including any calculator query params).
+ * Reads window.location.href fresh on every client render so that URL params
+ * pushed by the calculator (via history.replaceState) are always included.
+ * Returns "" during SSR to avoid hydration mismatch.
+ */
+function useShareUrl(urlOverride?: string): string {
+  return useSyncExternalStore(
+    subscribeNoop,
+    () => urlOverride || window.location.href,
+    () => ""
+  );
+}
+
+/**
+ * Returns the page's H1 text content (the page name), used as the share title.
+ * Falls back to document.title with the brand suffix stripped, then to "".
+ * Returns "" during SSR to avoid hydration mismatch.
+ */
+function usePageH1Title(): string {
+  return useSyncExternalStore(
+    subscribeNoop,
+    () => {
+      const h1 = document.querySelector("h1")?.textContent?.trim();
+      if (h1) return h1;
+      return stripBrand(document.title);
+    },
+    () => ""
+  );
+}
+
 /* ─── Component ─── */
 
 export default function ShareButtons({ summaryText, url, title }: ShareButtonsProps) {
-  const supportsNativeShare = typeof navigator !== "undefined" && !!navigator.share;
+  const isClient = useIsClient();
+  const shareUrl = useShareUrl(url);
+  const h1Title = usePageH1Title();
+  const supportsNativeShare = isClient && !!navigator.share;
 
-  const shareUrl = url || (typeof window !== "undefined" ? window.location.href : "");
+  // Prefer the page's H1 (captured client-side); fall back to the title prop (brand
+  // stripped); fall back to "CalcForge" only as a last resort.
+  const effectiveTitle = h1Title || (title ? stripBrand(title) : "") || "CalcForge";
   const fullText = `${summaryText} ${shareUrl}`;
-  const pageTitle = title || "CalcForge";
 
   const handleNativeShare = async () => {
     try {
-      await navigator.share({ title: pageTitle, text: summaryText, url: shareUrl });
+      await navigator.share({ title: effectiveTitle, text: summaryText, url: shareUrl });
     } catch {
       // User cancelled or share failed - no action needed
     }
@@ -113,12 +173,12 @@ export default function ShareButtons({ summaryText, url, title }: ShareButtonsPr
     },
     {
       name: "Share on Reddit",
-      href: `https://www.reddit.com/submit?url=${encode(shareUrl)}&title=${encode(pageTitle)}`,
+      href: `https://www.reddit.com/submit?url=${encode(shareUrl)}&title=${encode(effectiveTitle)}`,
       icon: <RedditIcon className="size-3.5" />,
     },
     {
       name: "Share via Email",
-      href: `mailto:?subject=${encode(pageTitle)}&body=${encode(fullText)}`,
+      href: `mailto:?subject=${encode(effectiveTitle)}&body=${encode(fullText)}`,
       icon: <EmailIcon className="size-3.5" />,
     },
   ];
