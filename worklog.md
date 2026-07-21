@@ -1780,3 +1780,31 @@ Stage Summary:
 - Savings hub now lists all 4 calculators (CD Early Withdrawal, Net Worth by Age, Savings Goal, Emergency Fund) with broadened intro
 - Site config + sitemap updated; lint clean; browser-verified end-to-end
 - Template/design/schema/share row/code conventions match existing savings pages exactly; no restyling
+
+---
+Task ID: fix-robots-1
+Agent: Main Agent
+Task: Fix robots.txt blocking real pages from Google (FIX 1 of 6)
+
+Work Log:
+- Read src/app/robots.ts — found it explicitly disallowed /debt, /auto, /home-buying, /insurance, /income (entire departments blocked)
+- Rewrote robots.ts to the clean 3-rule version: User-agent: * / Allow: / / Sitemap line, no Disallow rules
+- First deploy attempt returned HTTP 500 — Next.js error: "A conflicting public file and page file was found for path /robots.txt"
+- Found a static /home/z/my-project/public/robots.txt (legacy file with Googlebot/Bingbot/Twitterbot/facebookexternalhit rules, no sitemap line, no Disallow either) conflicting with the Next.js route
+- Deleted public/robots.txt so the src/app/robots.ts route is the sole source of truth
+- Verified /robots.txt now returns 200 with clean content
+- Verified /sitemap.xml returns 200 with all URLs
+- Counted sitemap: 45 total URLs = 1 home + 7 hubs + 32 calculators + 5 info pages
+- Cross-checked sitemap against site.config.ts: all 32 calculator hrefs match exactly, no orphans missing from sitemap
+- Found 2 orphaned duplicate page directories NOT in config or sitemap (leftover scaffolding, not a robots.txt issue): /loans/car-affordability-calculator (dup of /auto/car-affordability-calculator) and /title-loan-calculator (dup of /loans/title-loan-calculator) — these should be removed in a separate cleanup but do not affect this fix
+
+Stage Summary:
+- robots.txt fixed: was blocking /debt, /auto, /home-buying, /insurance, /income; now allows all crawlers to all pages
+- Root cause was a static public/robots.txt file conflicting with the Next.js route — deleted the static file
+- Final robots.txt content (served at /robots.txt, HTTP 200):
+    User-Agent: *
+    Allow: /
+
+    Sitemap: https://thecalcforge.com/sitemap.xml
+- Sitemap verified: 7 hubs (/loans, /debt, /auto, /home-buying, /insurance, /income, /savings) + 32 calculators + home + 5 info pages, all crawlable now
+- Note: user expected 33 calculators; actual canonical count is 32 (loans 9, debt 5, auto 3, home-buying 5, insurance 3, income 3, savings 4). The "33rd" may be one of two orphaned duplicate page directories that exist on disk but are not in site.config or sitemap.
