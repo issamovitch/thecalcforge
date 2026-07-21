@@ -44,7 +44,7 @@ const EX = {
 /* ─── SEO Metadata ─── */
 
 const pageUrl = `${siteConfig.url}/loans/title-loan-calculator`;
-const pageTitle = "Title Loan Calculator – Estimate Payments & Interest";
+const pageTitle = "Title Loan Calculator – Payments & Interest";
 const pageDescription =
   "Free title loan calculator to estimate monthly payments, total interest, and amortization. See how much a title loan costs before you borrow.";
 

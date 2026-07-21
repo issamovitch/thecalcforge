@@ -72,7 +72,7 @@ const S5_84 = calculateLoan({ loanAmount: 35000, apr: 6.5, termMonths: 84 });
 /* ─── SEO Metadata ─── */
 
 const pageUrl = `${siteConfig.url}/loans/auto-loan-calculator`;
-const pageTitle = "Auto Loan Calculator: Car Payments & Amortization";
+const pageTitle = "Auto Loan Calculator: Payments & Amortization";
 const pageDescription =
   "Free auto loan calculator with trade-in, negative equity rollover, sales tax, and extra payments. See your monthly car payment and full amortization schedule.";
 

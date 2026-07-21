@@ -15,7 +15,7 @@ import { FaqSection } from "@/components/shared/FaqSection";
 /* ─── SEO Metadata ─── */
 
 const pageUrl = `${siteConfig.url}/debt/dti-calculator`;
-const pageTitle = "DTI Calculator – Debt-to-Income Ratio | CalcForge";
+const pageTitle = "DTI Calculator – Debt-to-Income Ratio";
 const pageDescription =
   "Free debt-to-income (DTI) calculator. Enter your income and debts to get your front-end and back-end ratio and see if you meet lender thresholds.";
 

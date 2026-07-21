@@ -16,7 +16,7 @@ import { FaqSection } from "@/components/shared/FaqSection";
 
 const pageUrl = `${siteConfig.url}/insurance/life-insurance-calculator`;
 const pageTitle =
-  "Life Insurance Calculator \u2013 How Much Do You Need? | CalcForge";
+  "Life Insurance Calculator \u2013 How Much Coverage?";
 const pageDescription =
   "Free life insurance calculator. Estimate how much coverage you need using the DIME method: debts, income replacement, mortgage, and education costs.";
 

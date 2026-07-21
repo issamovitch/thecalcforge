@@ -10,12 +10,12 @@ const homeBuyingCalcs = calculatorPages.filter(
 );
 
 export const metadata: Metadata = {
-  title: "Home Buying Calculators | CalcForge",
+  title: "Home Buying Calculators",
   description:
     "Free home buying calculators. Estimate PMI, down payments, closing costs, and affordability to plan your home purchase with confidence.",
   alternates: { canonical: `${siteConfig.url}/home-buying` },
   openGraph: {
-    title: "Home Buying Calculators | CalcForge",
+    title: "Home Buying Calculators",
     description:
       "Free home buying calculators. Estimate PMI, down payments, closing costs, and affordability.",
     url: `${siteConfig.url}/home-buying`,

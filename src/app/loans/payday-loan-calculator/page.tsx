@@ -36,7 +36,7 @@ const EX = {
 /* ─── SEO Metadata ─── */
 
 const pageUrl = `${siteConfig.url}/loans/payday-loan-calculator`;
-const pageTitle = "Payday Loan APR Calculator – Estimate Fees & Total Cost";
+const pageTitle = "Payday Loan APR Calculator – Fees & Total Cost";
 const pageDescription =
   "Free payday loan APR calculator. Convert flat fees into annualized rates, see total repayment cost, and compare rollover scenarios before you borrow.";
 

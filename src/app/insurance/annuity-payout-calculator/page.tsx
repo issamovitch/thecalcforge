@@ -16,7 +16,7 @@ import { FaqSection } from "@/components/shared/FaqSection";
 
 const pageUrl = `${siteConfig.url}/insurance/annuity-payout-calculator`;
 const pageTitle =
-  "Annuity Payout Calculator \u2013 Monthly Income | CalcForge";
+  "Annuity Payout Calculator \u2013 Monthly Income";
 const pageDescription =
   "Free annuity payout calculator. See how much monthly income a fixed or immediate annuity pays based on your premium, age, and payout option.";
 

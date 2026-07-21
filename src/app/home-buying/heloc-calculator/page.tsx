@@ -16,7 +16,7 @@ import { FaqSection } from "@/components/shared/FaqSection";
 
 const pageUrl = `${siteConfig.url}/home-buying/heloc-calculator`;
 const pageTitle =
-  "HELOC Calculator \u2013 Home Equity Line Payment | CalcForge";
+  "HELOC Calculator \u2013 Home Equity Line Payment";
 const pageDescription =
   "Free HELOC calculator. Estimate how much you can borrow, interest-only draw payments, and full repayment-period payments on your home equity line of credit.";
 

@@ -65,7 +65,7 @@ const reverseLoan = loanFromPayment(500, APR, TERM);
 /* ─── SEO Metadata ─── */
 
 const pageUrl = `${siteConfig.url}/loans/personal-loan-calculator`;
-const pageTitle = "Personal Loan Calculator: Payments & Amortization";
+const pageTitle = "Personal Loan Calculator: Payment & Amortization";
 const pageDescription =
   "Free personal loan calculator with amortization, origination fee, and extra payments. See monthly payment, total cost, and effective APR.";
 

@@ -16,7 +16,7 @@ import { FaqSection } from "@/components/shared/FaqSection";
 
 const pageUrl = `${siteConfig.url}/savings/net-worth-calculator`;
 const pageTitle =
-  "Net Worth by Age Calculator – How Do You Compare? | CalcForge";
+  "Net Worth by Age Calculator – How You Compare";
 const pageDescription =
   "Free net worth calculator. Add your assets, subtract your debts, and compare your net worth to the U.S. median and average for your age group.";
 

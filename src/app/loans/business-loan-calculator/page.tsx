@@ -36,7 +36,7 @@ const EX = {
 /* ─── SEO Metadata ─── */
 
 const pageUrl = `${siteConfig.url}/loans/business-loan-calculator`;
-const pageTitle = "Business Loan Calculator: Free Payment, APR & Amortization";
+const pageTitle = "Business Loan Calculator: Payments & APR";
 const pageDescription =
   "Free business loan calculator for term loans, equipment financing, and merchant cash advances. Estimate payments, total cost, and effective APR at CalcForge.";
 

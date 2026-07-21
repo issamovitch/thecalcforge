@@ -72,7 +72,7 @@ const f = (n: number) =>
 
 const pageUrl = `${siteConfig.url}/loans/amortization-schedule-calculator`;
 const pageTitle =
-  "Amortization Schedule Calculator – With Extra Payments | CalcForge";
+  "Amortization Calculator With Extra Payments";
 const pageDescription =
   "Free amortization schedule calculator with extra payments. See every payment's interest and principal split, plus a printable full schedule.";
 

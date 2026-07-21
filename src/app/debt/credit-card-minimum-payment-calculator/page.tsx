@@ -16,7 +16,7 @@ import { FaqSection } from "@/components/shared/FaqSection";
 
 const pageUrl = `${siteConfig.url}/debt/credit-card-minimum-payment-calculator`;
 const pageTitle =
-  "Credit Card Minimum Payment Calculator | CalcForge";
+  "Credit Card Minimum Payment Calculator";
 const pageDescription =
   "See how your credit card minimum payment is calculated, how long payoff takes at minimums only, and the true cost. Compare minimum vs fixed payments.";
 

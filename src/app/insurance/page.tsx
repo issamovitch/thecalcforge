@@ -10,12 +10,12 @@ const insuranceCalcs = calculatorPages.filter(
 );
 
 export const metadata: Metadata = {
-  title: "Insurance Calculators | CalcForge",
+  title: "Insurance Calculators",
   description:
     "Free insurance calculators. Estimate disability insurance coverage needs, life insurance amounts, and annuity payouts to protect your financial future.",
   alternates: { canonical: `${siteConfig.url}/insurance` },
   openGraph: {
-    title: "Insurance Calculators | CalcForge",
+    title: "Insurance Calculators",
     description:
       "Free insurance calculators. Estimate disability insurance coverage needs, life insurance amounts, and annuity payouts.",
     url: `${siteConfig.url}/insurance`,

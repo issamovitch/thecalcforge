@@ -16,7 +16,7 @@ import { FaqSection } from "@/components/shared/FaqSection";
 
 const pageUrl = `${siteConfig.url}/debt/balance-transfer-calculator`;
 const pageTitle =
-  "Balance Transfer Calculator - Savings & Fees | CalcForge";
+  "Balance Transfer Calculator - Savings & Fees";
 const pageDescription =
   "Free balance transfer calculator. See if moving your balance to a 0% APR card saves money after the transfer fee, and how much faster you get debt-free.";
 

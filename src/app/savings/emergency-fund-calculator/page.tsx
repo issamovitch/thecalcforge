@@ -17,7 +17,7 @@ import { calculateEmergencyFund } from "@/lib/emergency-fund-math";
 
 const pageUrl = `${siteConfig.url}/savings/emergency-fund-calculator`;
 const pageTitle =
-  "Emergency Fund Calculator – How Much Do You Need? | CalcForge";
+  "Emergency Fund Calculator – How Much You Need";
 const pageDescription =
   "Free emergency fund calculator. See how much you need based on your monthly expenses, and how long it will take to build at your savings pace.";
 

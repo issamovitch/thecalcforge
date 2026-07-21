@@ -16,7 +16,7 @@ import { FaqSection } from "@/components/shared/FaqSection";
 
 const pageUrl = `${siteConfig.url}/home-buying/refinance-break-even-calculator`;
 const pageTitle =
-  "Refinance Break-Even Calculator \u2013 Is It Worth It | CalcForge";
+  "Refinance Break-Even Calculator \u2013 Is It Worth It";
 const pageDescription =
   "Free refinance break-even calculator. See how many months to recoup closing costs, your monthly savings, and whether refinancing your mortgage is worth it.";
 

@@ -16,7 +16,7 @@ import { FaqSection } from "@/components/shared/FaqSection";
 
 const pageUrl = `${siteConfig.url}/home-buying/down-payment-calculator`;
 const pageTitle =
-  "Down Payment Calculator \u2013 How Much to Put Down | CalcForge";
+  "Down Payment Calculator \u2013 How Much to Put Down";
 const pageDescription =
   "Free down payment calculator. See how much to put down on a house, your loan amount, whether you avoid PMI at 20%, and the cash you need at closing.";
 

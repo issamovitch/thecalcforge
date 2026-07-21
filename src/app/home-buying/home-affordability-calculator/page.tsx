@@ -16,7 +16,7 @@ import { FaqSection } from "@/components/shared/FaqSection";
 
 const pageUrl = `${siteConfig.url}/home-buying/home-affordability-calculator`;
 const pageTitle =
-  "Home Affordability Calculator \u2013 How Much House | CalcForge";
+  "Home Affordability Calculator \u2013 How Much House";
 const pageDescription =
   "Free home affordability calculator. See how much house you can afford based on income, debts, down payment, and rate, using the 28/36 lender rule.";
 

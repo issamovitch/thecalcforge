@@ -48,7 +48,7 @@ const S5_BUYOUT = Math.round((S1.res + 350) * 100) / 100;
 /* ─── SEO Metadata ─── */
 
 const pageUrl = `${siteConfig.url}/auto/auto-lease-payment-calculator`;
-const pageTitle = "Auto Lease Calculator \u2013 Monthly Lease Payment | CalcForge";
+const pageTitle = "Auto Lease Calculator \u2013 Monthly Lease Payment";
 
 export const metadata: Metadata = {
   title: pageTitle,

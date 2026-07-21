@@ -1808,3 +1808,27 @@ Stage Summary:
     Sitemap: https://thecalcforge.com/sitemap.xml
 - Sitemap verified: 7 hubs (/loans, /debt, /auto, /home-buying, /insurance, /income, /savings) + 32 calculators + home + 5 info pages, all crawlable now
 - Note: user expected 33 calculators; actual canonical count is 32 (loans 9, debt 5, auto 3, home-buying 5, insurance 3, income 3, savings 4). The "33rd" may be one of two orphaned duplicate page directories that exist on disk but are not in site.config or sitemap.
+
+---
+Task ID: fix-titles-2
+Agent: Main Agent
+Task: Fix doubled brand suffix in page titles (FIX 2 of 6)
+
+Work Log:
+- Root cause: layout.tsx has title.template = "%s | CalcForge", but calculator/hub pages set metadata.title as a full string already ending with "| CalcForge", causing the template to append a second suffix
+- Two source patterns discovered: some pages use actual en-dash character (–, UTF-8 E2 80 93) in title strings, others use literal \u2013 escape sequence (6 ASCII chars that JS renders as en-dash)
+- Hub pages (/auto, /home-buying, /insurance, /loans) had title in both metadata.title AND metadata.openGraph.title (2 occurrences each)
+- Group A (18 files): removed " | CalcForge" suffix from source string, template now adds it once
+- Group B (9 files): removed " | CalcForge" AND shortened descriptive part to fit ≤60 chars
+- Group C (6 files): shortened descriptive part only (no suffix in source, but rendered title was over 60 after template adds suffix)
+- Used Python script for bulk replacements (2 passes: one for actual en-dash chars, one for \u2013 escape sequences)
+- Used Edit with replace_all for hub pages with 2 occurrences each
+- Verified from source code: 0 doubled suffixes, 0 calculator/loans-hub titles over 60 chars
+- Lint: 0 new errors (11 pre-existing em-dash errors in title-loan-calculator/page.tsx, unchanged)
+
+Stage Summary:
+- All 33 changed files verified: no doubled "| CalcForge | CalcForge" anywhere on the site
+- All 32 calculator pages + /loans hub: titles ≤60 chars including the single "| CalcForge" suffix
+- Other hubs (/auto, /debt, /home-buying, /income, /insurance, /savings): doubling fixed, not required to be ≤60
+- No H1, meta description, or body content changed — titles only
+- Orphan /title-loan-calculator page: already had no doubling (title has no suffix, OG title has single suffix), left unchanged

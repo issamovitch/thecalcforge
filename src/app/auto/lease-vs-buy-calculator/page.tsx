@@ -116,7 +116,7 @@ const S5 = compare(35000, 7, 24, 2000, 55, 0.00125, 36, 3500, 6.5, 60, 24000);
 /* ─── SEO Metadata ─── */
 
 const pageUrl = `${siteConfig.url}/auto/lease-vs-buy-calculator`;
-const pageTitle = "Lease vs Buy Car Calculator \u2013 Compare Total Cost | CalcForge";
+const pageTitle = "Lease vs Buy Car Calculator \u2013 Compare Total Cost";
 
 export const metadata: Metadata = {
   title: pageTitle,

@@ -8,12 +8,12 @@ const EX = calculateLoan({ loanAmount: 5000, apr: 10, termMonths: 36 });
 
 /* ─── SEO Metadata ─── */
 export const metadata: Metadata = {
-  title: "Loan Calculators: Free Payment, APR & Amortization Tools",
+  title: "Loan Calculators: Payments, APR & Amortization",
   description:
     "Loan calculators to estimate payments, APR, and total cost for any loan type. Free amortization tools for title loans, payday loans, and more at CalcForge.",
   alternates: { canonical: `${siteConfig.url}/loans` },
   openGraph: {
-    title: "Loan Calculators: Free Payment, APR & Amortization Tools",
+    title: "Loan Calculators: Payments, APR & Amortization",
     description:
       "Loan calculators to estimate payments, APR, and total cost for any loan type. Free amortization tools at CalcForge.",
     url: `${siteConfig.url}/loans`,

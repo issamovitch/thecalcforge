@@ -16,7 +16,7 @@ import { FaqSection } from "@/components/shared/FaqSection";
 
 const pageUrl = `${siteConfig.url}/income/hourly-to-salary-calculator`;
 const pageTitle =
-  "Hourly to Salary Calculator \u2013 Annual Income From Your Wage | CalcForge";
+  "Hourly to Salary Calculator \u2013 Annual Income";
 const pageDescription =
   "Free hourly to salary calculator. Convert any hourly wage to annual salary, plus weekly, biweekly, and monthly gross pay based on your real hours.";
 

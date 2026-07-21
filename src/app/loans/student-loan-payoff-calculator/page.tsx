@@ -50,7 +50,7 @@ function formatYearsMonths(totalMonths: number): string {
 
 const pageUrl = `${siteConfig.url}/loans/student-loan-payoff-calculator`;
 const pageTitle =
-  "Student Loan Payoff Calculator – With Extra Payments | CalcForge";
+  "Student Loan Payoff Calculator – Extra Payments";
 const pageDescription =
   "Free student loan payoff calculator. See your payoff date, total interest, and how much time and money extra payments or a lump sum can save.";
 

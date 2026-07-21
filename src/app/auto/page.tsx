@@ -35,12 +35,12 @@ const autoHubCalculators = [
 
 /* ─── SEO Metadata ─── */
 export const metadata: Metadata = {
-  title: "Auto Calculators - Car Payments, Lease, Affordability | CalcForge",
+  title: "Auto Calculators - Car Payments, Lease, Affordability",
   description:
     "Free auto calculators for car payments, lease comparisons, affordability, and lease vs buy analysis. Plan your next vehicle purchase with confidence.",
   alternates: { canonical: `${siteConfig.url}/auto` },
   openGraph: {
-    title: "Auto Calculators - Car Payments, Lease, Affordability | CalcForge",
+    title: "Auto Calculators - Car Payments, Lease, Affordability",
     description:
       "Free auto calculators for car payments, lease comparisons, affordability, and lease vs buy analysis.",
     url: `${siteConfig.url}/auto`,

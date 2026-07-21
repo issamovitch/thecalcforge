@@ -16,7 +16,7 @@ import { FaqSection } from "@/components/shared/FaqSection";
 
 const pageUrl = `${siteConfig.url}/savings/cd-early-withdrawal-penalty-calculator`;
 const pageTitle =
-  "CD Early Withdrawal Penalty Calculator | CalcForge";
+  "CD Early Withdrawal Penalty Calculator";
 const pageDescription =
   "Free CD early withdrawal penalty calculator. See the penalty in dollars, your net proceeds, and whether breaking your CD early is worth it.";
 

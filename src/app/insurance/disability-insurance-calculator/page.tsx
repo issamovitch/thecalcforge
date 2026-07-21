@@ -16,7 +16,7 @@ import { FaqSection } from "@/components/shared/FaqSection";
 
 const pageUrl = `${siteConfig.url}/insurance/disability-insurance-calculator`;
 const pageTitle =
-  "Disability Insurance Calculator \u2013 Coverage Needs | CalcForge";
+  "Disability Insurance Calculator \u2013 Coverage Needs";
 const pageDescription =
   "Free disability insurance calculator. Estimate how much coverage you need to replace your income if you cannot work, based on salary and expenses.";
 

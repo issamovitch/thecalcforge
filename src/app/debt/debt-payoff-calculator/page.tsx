@@ -15,7 +15,7 @@ import { FaqSection } from "@/components/shared/FaqSection";
 /* ─── SEO Metadata ─── */
 
 const pageUrl = `${siteConfig.url}/debt/debt-payoff-calculator`;
-const pageTitle = "Debt Payoff Calculator – Snowball & Avalanche | CalcForge";
+const pageTitle = "Debt Payoff Calculator – Snowball & Avalanche";
 const pageDescription =
   "Free debt payoff calculator. Compare snowball vs avalanche, add extra payments, and see your exact debt-free date. Instant, accurate results.";
 

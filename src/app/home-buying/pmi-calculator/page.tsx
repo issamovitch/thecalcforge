@@ -16,7 +16,7 @@ import { FaqSection } from "@/components/shared/FaqSection";
 
 const pageUrl = `${siteConfig.url}/home-buying/pmi-calculator`;
 const pageTitle =
-  "PMI Calculator \u2013 Private Mortgage Insurance Cost | CalcForge";
+  "PMI Calculator \u2013 Private Mortgage Insurance Cost";
 const pageDescription =
   "Free PMI calculator. Estimate your monthly private mortgage insurance by credit score and down payment, and see when PMI drops off at 78-80% LTV.";
 

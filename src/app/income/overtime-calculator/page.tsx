@@ -16,7 +16,7 @@ import { FaqSection } from "@/components/shared/FaqSection";
 
 const pageUrl = `${siteConfig.url}/income/overtime-calculator`;
 const pageTitle =
-  "Overtime Pay Calculator \u2013 Time and a Half & Double Time | CalcForge";
+  "Overtime Pay Calculator \u2013 Time and a Half";
 const pageDescription =
   "Free overtime pay calculator. See your time and a half rate, double time, and total paycheck with overtime hours for any hourly wage.";
 

@@ -16,7 +16,7 @@ import { FaqSection } from "@/components/shared/FaqSection";
 
 const pageUrl = `${siteConfig.url}/debt/credit-card-payoff-calculator`;
 const pageTitle =
-  "Credit Card Payoff Calculator - Interest & Time | CalcForge";
+  "Credit Card Payoff Calculator - Interest & Time";
 const pageDescription =
   "Free credit card payoff calculator. See how long to clear your balance, total interest, and how much faster extra or fixed payments get you debt-free.";
 

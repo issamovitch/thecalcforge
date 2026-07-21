@@ -17,7 +17,7 @@ import { solveMonthly, solveTime } from "@/lib/savings-goal-math";
 
 const pageUrl = `${siteConfig.url}/savings/savings-goal-calculator`;
 const pageTitle =
-  "Savings Goal Calculator – Monthly Amount & Time to Goal | CalcForge";
+  "Savings Goal Calculator – Monthly & Time to Goal";
 const pageDescription =
   "Free savings goal calculator. See how much to save per month to hit any goal, or how long your current monthly savings will take to get there.";
 
