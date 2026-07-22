@@ -1,0 +1,932 @@
+     1→"use client";
+     2→
+     3→import { useState, useEffect, useCallback, useMemo, useRef, useSyncExternalStore } from "react";
+     4→import {
+     5→  Calculator, Copy, Check, Printer, RotateCcw, Info,
+     6→} from "lucide-react";
+     7→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+     8→import { Input } from "@/components/ui/input";
+     9→import { Label } from "@/components/ui/label";
+    10→import { Button } from "@/components/ui/button";
+    11→import { Checkbox } from "@/components/ui/checkbox";
+    12→import {
+    13→  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+    14→} from "@/components/ui/tooltip";
+    15→import { Slider } from "@/components/ui/slider";
+    16→import { toast } from "sonner";
+    17→import { formatCurrency, calculateLoan } from "@/lib/loan-math";
+    18→import ShareButtons from "@/components/calculators/ShareButtons";
+    19→
+    20→/* ─── Types ─── */
+    21→
+    22→type CreditBand = "excellent" | "good" | "fair" | "below_avg";
+    23→type DownPaymentMode = "pct" | "dollar";
+    24→
+    25→interface PMIInputs {
+    26→  homePrice: number;
+    27→  downPaymentPct: number;
+    28→  downPaymentDollar: number;
+    29→  downPaymentMode: DownPaymentMode;
+    30→  apr: number;
+    31→  termYears: 15 | 30;
+    32→  creditBand: CreditBand;
+    33→  showFHA: boolean;
+    34→}
+    35→
+    36→/* ─── Defaults ─── */
+    37→
+    38→export const DEFAULT_INPUTS: PMIInputs = {
+    39→  homePrice: 300000,
+    40→  downPaymentPct: 10,
+    41→  downPaymentDollar: 30000,
+    42→  downPaymentMode: "pct",
+    43→  apr: 6.5,
+    44→  termYears: 30,
+    45→  creditBand: "good",
+    46→  showFHA: false,
+    47→};
+    48→
+    49→/* ─── PMI Rate Table ─── */
+    50→
+    51→const PMI_RATES: Record<CreditBand, { min95: number; min90: number; min85: number; min80: number }> = {
+    52→  excellent:  { min95: 0.50, min90: 0.35, min85: 0.25, min80: 0.15 },
+    53→  good:       { min95: 0.80, min90: 0.55, min85: 0.35, min80: 0.25 },
+    54→  fair:       { min95: 1.10, min90: 0.80, min85: 0.50, min80: 0.35 },
+    55→  below_avg:  { min95: 1.50, min90: 1.10, min85: 0.70, min80: 0.45 },
+    56→};
+    57→
+    58→const CREDIT_BAND_LABELS: Record<CreditBand, string> = {
+    59→  excellent: "Excellent (760+)",
+    60→  good: "Good (720-759)",
+    61→  fair: "Fair (680-719)",
+    62→  below_avg: "Below Average (640-679)",
+    63→};
+    64→
+    65→function getPMIAnnualRate(ltvPct: number, band: CreditBand): number | null {
+    66→  if (ltvPct < 80) return null; // No PMI needed
+    67→  if (ltvPct >= 97) return null; // Rates vary significantly
+    68→  const tier = PMI_RATES[band];
+    69→  if (ltvPct >= 95) return tier.min95;
+    70→  if (ltvPct >= 90) return tier.min90;
+    71→  if (ltvPct >= 85) return tier.min85;
+    72→  return tier.min80;
+    73→}
+    74→
+    75→function r2(n: number): number {
+    76→  return Math.round(n * 100) / 100;
+    77→}
+    78→
+    79→function addMonths(date: Date, months: number): Date {
+    80→  const d = new Date(date);
+    81→  d.setMonth(d.getMonth() + months);
+    82→  return d;
+    83→}
+    84→
+    85→function formatDate(date: Date): string {
+    86→  return date.toLocaleDateString("en-US", {
+    87→    year: "numeric",
+    88→    month: "long",
+    89→  });
+    90→}
+    91→
+    92→/* ─── PMI Computation ─── */
+    93→
+    94→interface PMIResult {
+    95→  loanAmount: number;
+    96→  ltvPct: number;
+    97→  pmiAnnualRate: number | null;
+    98→  monthlyPMI: number;
+    99→  annualPMI: number;
+   100→  month80LTV: number | null;
+   101→  month78LTV: number | null;
+   102→  date80LTV: string | null;
+   103→  date78LTV: string | null;
+   104→  totalPMITo78: number;
+   105→  rateNote: string | null;
+   106→  // FHA
+   107→  fhaUpfrontMIP: number;
+   108→  fhaAnnualMIPRate: number;
+   109→  fhaMonthlyMIP: number;
+   110→  fhaAnnualMIP: number;
+   111→  fhaTotalMIP: number;
+   112→  fhaNote: string;
+   113→}
+   114→
+   115→function computePMI(inputs: PMIInputs, today: Date | null): PMIResult {
+   116→  const downPayment =
+   117→    inputs.downPaymentMode === "pct"
+   118→      ? (inputs.homePrice * inputs.downPaymentPct) / 100
+   119→      : inputs.downPaymentDollar;
+   120→  const loanAmount = r2(inputs.homePrice - downPayment);
+   121→  const ltvPct = inputs.homePrice > 0 ? r2((loanAmount / inputs.homePrice) * 100) : 0;
+   122→
+   123→  const termMonths = inputs.termYears * 12;
+   124→  const { schedule } = calculateLoan({ loanAmount, apr: inputs.apr, termMonths });
+   125→
+   126→  // Get PMI rate
+   127→  const pmiAnnualRate = getPMIAnnualRate(ltvPct, inputs.creditBand);
+   128→  let rateNote: string | null = null;
+   129→  if (ltvPct >= 97) {
+   130→    rateNote = "PMI rates vary significantly for LTV above 97%. Contact your lender for exact pricing.";
+   131→  }
+   132→
+   133→  const monthlyPMI = pmiAnnualRate !== null ? r2((loanAmount * pmiAnnualRate) / 100 / 12) : 0;
+   134→  const annualPMI = r2(monthlyPMI * 12);
+   135→
+   136→  // LTV drop-off calculation
+   137→  let month80LTV: number | null = null;
+   138→  let month78LTV: number | null = null;
+   139→  // today is null during SSR; startDate is left null so date80LTV/date78LTV are
+   140→  // null and not frozen in the prerendered HTML. After hydration the real date is used.
+   141→  const startDate = today ? new Date(today.getFullYear(), today.getMonth(), 1) : null;
+   142→
+   143→  for (const row of schedule) {
+   144→    const rowLTV = inputs.homePrice > 0 ? (row.balance / inputs.homePrice) * 100 : 0;
+   145→    if (month80LTV === null && rowLTV <= 80) {
+   146→      month80LTV = row.month;
+   147→    }
+   148→    if (month78LTV === null && rowLTV <= 78) {
+   149→      month78LTV = row.month;
+   150→      break;
+   151→    }
+   152→  }
+   153→
+   154→  const date80LTV = (month80LTV !== null && startDate) ? formatDate(addMonths(startDate, month80LTV - 1)) : null;
+   155→  const date78LTV = (month78LTV !== null && startDate) ? formatDate(addMonths(startDate, month78LTV - 1)) : null;
+   156→
+   157→  // Total PMI paid until 78% LTV
+   158→  let totalPMITo78 = 0;
+   159→  if (month78LTV !== null && pmiAnnualRate !== null) {
+   160→    for (let m = 0; m < month78LTV && m < schedule.length; m++) {
+   161→      totalPMITo78 += monthlyPMI;
+   162→    }
+   163→    totalPMITo78 = r2(totalPMITo78);
+   164→  }
+   165→
+   166→  // FHA MIP
+   167→  const fhaUpfrontMIP = r2(loanAmount * 0.0175);
+   168→  let fhaAnnualMIPRate: number;
+   169→  if (inputs.termYears === 30) {
+   170→    fhaAnnualMIPRate = ltvPct > 90 ? 0.55 : 0.50;
+   171→  } else {
+   172→    fhaAnnualMIPRate = ltvPct > 90 ? 0.40 : 0.15;
+   173→  }
+   174→  const fhaMonthlyMIP = r2((loanAmount * fhaAnnualMIPRate) / 100 / 12);
+   175→  const fhaAnnualMIP = r2(fhaMonthlyMIP * 12);
+   176→  const fhaTotalMIP = r2(fhaUpfrontMIP + fhaMonthlyMIP * termMonths);
+   177→  const fhaNote = "FHA MIP generally cannot be removed for the life of the loan (loans with <10% down originated after 2013).";
+   178→
+   179→  return {
+   180→    loanAmount,
+   181→    ltvPct,
+   182→    pmiAnnualRate,
+   183→    monthlyPMI,
+   184→    annualPMI,
+   185→    month80LTV,
+   186→    month78LTV,
+   187→    date80LTV,
+   188→    date78LTV,
+   189→    totalPMITo78,
+   190→    rateNote,
+   191→    fhaUpfrontMIP,
+   192→    fhaAnnualMIPRate,
+   193→    fhaMonthlyMIP,
+   194→    fhaAnnualMIP,
+   195→    fhaTotalMIP,
+   196→    fhaNote,
+   197→  };
+   198→}
+   199→
+   200→export const DEFAULT_RESULT = computePMI(DEFAULT_INPUTS, null);
+   201→
+   202→/* ─── Client-only date (prevents build-time date from being frozen in SSG HTML) ─── */
+   203→
+   204→const subscribeNoop = () => () => {};
+   205→function useClientToday(): Date | null {
+   206→  return useSyncExternalStore(
+   207→    subscribeNoop,
+   208→    () => new Date(),
+   209→    () => null
+   210→  );
+   211→}
+   212→
+   213→/* ─── Component ─── */
+   214→
+   215→export default function PMICalculator() {
+   216→  const today = useClientToday();
+   217→  const [inputs, setInputs] = useState<PMIInputs>(() => {
+   218→    if (typeof window === "undefined") return DEFAULT_INPUTS;
+   219→    const params = new URLSearchParams(window.location.search);
+   220→    const home = params.get("home");
+   221→    const down = params.get("down");
+   222→    const apr = params.get("apr");
+   223→    const term = params.get("term");
+   224→    const credit = params.get("credit");
+   225→    const fha = params.get("fha");
+   226→    if (!home && !down && !apr && !term && !credit && !fha)
+   227→      return DEFAULT_INPUTS;
+   228→    return {
+   229→      homePrice: home ? parseFloat(home) : DEFAULT_INPUTS.homePrice,
+   230→      downPaymentPct: down ? parseFloat(down) : DEFAULT_INPUTS.downPaymentPct,
+   231→      downPaymentDollar: DEFAULT_INPUTS.downPaymentDollar,
+   232→      downPaymentMode: DEFAULT_INPUTS.downPaymentMode,
+   233→      apr: apr ? parseFloat(apr) : DEFAULT_INPUTS.apr,
+   234→      termYears: term
+   235→        ? (parseInt(term, 10) === 15 ? 15 : 30)
+   236→        : DEFAULT_INPUTS.termYears,
+   237→      creditBand: credit
+   238→        ? (credit as CreditBand)
+   239→        : DEFAULT_INPUTS.creditBand,
+   240→      showFHA: fha === "1",
+   241→    };
+   242→  });
+   243→  const [copied, setCopied] = useState(false);
+   244→
+   245→  const result = useMemo(() => computePMI(inputs, today), [inputs, today]);
+   246→
+   247→  // Sync URL (skip initial mount)
+   248→  const isInitialMount = useRef(true);
+   249→  useEffect(() => {
+   250→    if (isInitialMount.current) {
+   251→      isInitialMount.current = false;
+   252→      return;
+   253→    }
+   254→    if (typeof window === "undefined") return;
+   255→    const params = new URLSearchParams();
+   256→    params.set("home", inputs.homePrice.toString());
+   257→    params.set("down", inputs.downPaymentPct.toString());
+   258→    params.set("apr", inputs.apr.toString());
+   259→    params.set("term", inputs.termYears.toString());
+   260→    params.set("credit", inputs.creditBand);
+   261→    params.set("fha", inputs.showFHA ? "1" : "0");
+   262→    window.history.replaceState(
+   263→      null,
+   264→      "",
+   265→      `${window.location.pathname}?${params.toString()}`,
+   266→    );
+   267→  }, [inputs]);
+   268→
+   269→  const handleReset = useCallback(() => {
+   270→    setInputs(DEFAULT_INPUTS);
+   271→    toast.success("Calculator reset to defaults");
+   272→  }, []);
+   273→
+   274→  const handleCopyLink = useCallback(async () => {
+   275→    try {
+   276→      await navigator.clipboard.writeText(window.location.href);
+   277→      setCopied(true);
+   278→      toast.success("Link copied to clipboard");
+   279→      setTimeout(() => setCopied(false), 2000);
+   280→    } catch {
+   281→      toast.error("Failed to copy link");
+   282→    }
+   283→  }, []);
+   284→
+   285→  const handlePrint = useCallback(() => {
+   286→    window.print();
+   287→  }, []);
+   288→
+   289→  const handleDownModeToggle = useCallback(() => {
+   290→    setInputs((prev) => {
+   291→      const newMode: DownPaymentMode = prev.downPaymentMode === "pct" ? "dollar" : "pct";
+   292→      const downPaymentDollar =
+   293→        newMode === "dollar"
+   294→          ? r2((prev.homePrice * prev.downPaymentPct) / 100)
+   295→          : prev.downPaymentDollar;
+   296→      return { ...prev, downPaymentMode: newMode, downPaymentDollar };
+   297→    });
+   298→  }, []);
+   299→
+   300→  const handleInputChange = useCallback(
+   301→    (field: keyof PMIInputs, value: string) => {
+   302→      const num = parseFloat(value);
+   303→      if (isNaN(num)) return;
+   304→      setInputs((prev) => ({ ...prev, [field]: num }));
+   305→    },
+   306→    [],
+   307→  );
+   308→
+   309→  // Sync dollar value when % changes
+   310→  const handleDownPctChange = useCallback(
+   311→    (val: number) => {
+   312→      setInputs((prev) => ({
+   313→        ...prev,
+   314→        downPaymentPct: val,
+   315→        downPaymentDollar: r2((prev.homePrice * val) / 100),
+   316→      }));
+   317→    },
+   318→    [],
+   319→  );
+   320→
+   321→  // Sync % value when dollar changes
+   322→  const handleDownDollarChange = useCallback(
+   323→    (val: number) => {
+   324→      setInputs((prev) => ({
+   325→        ...prev,
+   326→        downPaymentDollar: val,
+   327→        downPaymentPct: prev.homePrice > 0 ? r2((val / prev.homePrice) * 100) : 0,
+   328→      }));
+   329→    },
+   330→    [],
+   331→  );
+   332→
+   333→  const downPayment =
+   334→    inputs.downPaymentMode === "pct"
+   335→      ? r2((inputs.homePrice * inputs.downPaymentPct) / 100)
+   336→      : inputs.downPaymentDollar;
+   337→
+   338→  const hasPMI = result.ltvPct >= 80;
+   339→  const creditLabel =
+   340→    CREDIT_BAND_LABELS[inputs.creditBand] ?? inputs.creditBand;
+   341→
+   342→  return (
+   343→    <TooltipProvider delayDuration={300}>
+   344→      <style>{`@media print { .no-print { display: none !important; } }`}</style>
+   345→      <div className="space-y-6">
+   346→        {/* ─── Calculator Card ─── */}
+   347→        <Card className="print-break-inside">
+   348→          <CardHeader className="pb-4">
+   349→            <CardTitle className="flex items-center gap-2 text-xl">
+   350→              <Calculator className="size-5 text-ember" />
+   351→              PMI Calculator
+   352→            </CardTitle>
+   353→            <p className="text-sm text-muted-foreground">
+   354→              Estimate your Private Mortgage Insurance cost based on your
+   355→              down payment, credit score, and loan details.
+   356→            </p>
+   357→          </CardHeader>
+   358→          <CardContent>
+   359→            <div className="grid gap-6 lg:grid-cols-2">
+   360→              {/* ─── Inputs ─── */}
+   361→              <div className="space-y-5">
+   362→                {/* Home Price */}
+   363→                <div className="space-y-2">
+   364→                  <div className="flex items-center justify-between">
+   365→                    <Label htmlFor="home-price" className="text-sm font-medium">
+   366→                      Home Price
+   367→                    </Label>
+   368→                    <span className="text-sm font-semibold text-foreground">
+   369→                      {formatCurrency(inputs.homePrice)}
+   370→                    </span>
+   371→                  </div>
+   372→                  <div className="no-print">
+   373→                    <Slider
+   374→                      id="home-price"
+   375→                      min={50000}
+   376→                      max={2000000}
+   377→                      step={5000}
+   378→                      value={[inputs.homePrice]}
+   379→                      onValueChange={([v]) =>
+   380→                        setInputs((p) => {
+   381→                          const newDownDollar = p.downPaymentMode === "dollar"
+   382→                            ? Math.min(p.downPaymentDollar, v)
+   383→                            : r2((v * p.downPaymentPct) / 100);
+   384→                          return { ...p, homePrice: v, downPaymentDollar: newDownDollar };
+   385→                        })
+   386→                      }
+   387→                      aria-label="Home price"
+   388→                      className="w-full"
+   389→                    />
+   390→                    <div className="flex justify-between text-xs text-muted-foreground">
+   391→                      <span>$50,000</span>
+   392→                      <span>$2,000,000</span>
+   393→                    </div>
+   394→                    <Input
+   395→                      type="number"
+   396→                      min={50000}
+   397→                      max={2000000}
+   398→                      step={5000}
+   399→                      value={inputs.homePrice}
+   400→                      onChange={(e) => handleInputChange("homePrice", e.target.value)}
+   401→                      className="mt-1"
+   402→                    />
+   403→                  </div>
+   404→                </div>
+   405→
+   406→                {/* Down Payment */}
+   407→                <div className="space-y-2">
+   408→                  <div className="flex items-center justify-between">
+   409→                    <div className="flex items-center gap-1.5">
+   410→                      <Label htmlFor="down-payment" className="text-sm font-medium">
+   411→                        Down Payment
+   412→                      </Label>
+   413→                      <Tooltip>
+   414→                        <TooltipTrigger asChild>
+   415→                          <Info className="size-3.5 text-muted-foreground cursor-help" />
+   416→                        </TooltipTrigger>
+   417→                        <TooltipContent>
+   418→                          PMI is typically required when your down payment is
+   419→                          less than 20% of the home price. Toggle between
+   420→                          percentage and dollar amount.
+   421→                        </TooltipContent>
+   422→                      </Tooltip>
+   423→                    </div>
+   424→                    <span className="text-sm font-semibold text-foreground">
+   425→                      {inputs.downPaymentMode === "pct"
+   426→                        ? `${inputs.downPaymentPct}% (${formatCurrency(downPayment)})`
+   427→                        : `${formatCurrency(downPayment)} (${inputs.downPaymentPct}%)`}
+   428→                    </span>
+   429→                  </div>
+   430→                  <div className="no-print">
+   431→                    {inputs.downPaymentMode === "pct" ? (
+   432→                      <>
+   433→                        <Slider
+   434→                          id="down-payment"
+   435→                          min={0}
+   436→                          max={100}
+   437→                          step={1}
+   438→                          value={[inputs.downPaymentPct]}
+   439→                          onValueChange={([v]) => handleDownPctChange(v)}
+   440→                          aria-label="Down payment percentage"
+   441→                          className="w-full"
+   442→                        />
+   443→                        <div className="flex justify-between text-xs text-muted-foreground">
+   444→                          <span>0%</span>
+   445→                          <span>100%</span>
+   446→                        </div>
+   447→                        <Input
+   448→                          type="number"
+   449→                          min={0}
+   450→                          max={100}
+   451→                          step={1}
+   452→                          value={inputs.downPaymentPct}
+   453→                          onChange={(e) => {
+   454→                            const n = parseFloat(e.target.value);
+   455→                            if (!isNaN(n)) handleDownPctChange(n);
+   456→                          }}
+   457→                          className="mt-1"
+   458→                        />
+   459→                      </>
+   460→                    ) : (
+   461→                      <>
+   462→                        <Slider
+   463→                          id="down-payment"
+   464→                          min={0}
+   465→                          max={500000}
+   466→                          step={1000}
+   467→                          value={[inputs.downPaymentDollar]}
+   468→                          onValueChange={([v]) => handleDownDollarChange(v)}
+   469→                          aria-label="Down payment dollar amount"
+   470→                          className="w-full"
+   471→                        />
+   472→                        <div className="flex justify-between text-xs text-muted-foreground">
+   473→                          <span>$0</span>
+   474→                          <span>$500,000</span>
+   475→                        </div>
+   476→                        <Input
+   477→                          type="number"
+   478→                          min={0}
+   479→                          max={500000}
+   480→                          step={1000}
+   481→                          value={inputs.downPaymentDollar}
+   482→                          onChange={(e) => {
+   483→                            const n = parseFloat(e.target.value);
+   484→                            if (!isNaN(n)) handleDownDollarChange(n);
+   485→                          }}
+   486→                          className="mt-1"
+   487→                        />
+   488→                      </>
+   489→                    )}
+   490→                    <button
+   491→                      type="button"
+   492→                      onClick={handleDownModeToggle}
+   493→                      className="inline-flex items-center gap-1 text-xs text-ember hover:text-ember-hover transition-colors mt-1 cursor-pointer"
+   494→                    >
+   495→                      Switch to{" "}
+   496→                      {inputs.downPaymentMode === "pct" ? "dollar amount" : "percentage"}
+   497→                    </button>
+   498→                  </div>
+   499→                </div>
+   500→
+   501→                {/* Mortgage APR */}
+   502→                <div className="space-y-2">
+   503→                  <div className="flex items-center justify-between">
+   504→                    <div className="flex items-center gap-1.5">
+   505→                      <Label htmlFor="apr" className="text-sm font-medium">
+   506→                        Mortgage APR
+   507→                      </Label>
+   508→                      <Tooltip>
+   509→                        <TooltipTrigger asChild>
+   510→                          <Info className="size-3.5 text-muted-foreground cursor-help" />
+   511→                        </TooltipTrigger>
+   512→                        <TooltipContent>
+   513→                          The annual percentage rate on your mortgage. Used to
+   514→                          build the amortization schedule and determine when
+   515→                          LTV drops below 80% and 78%.
+   516→                        </TooltipContent>
+   517→                      </Tooltip>
+   518→                    </div>
+   519→                    <span className="text-sm font-semibold text-foreground">
+   520→                      {inputs.apr}%
+   521→                    </span>
+   522→                  </div>
+   523→                  <div className="no-print">
+   524→                    <Slider
+   525→                      id="apr"
+   526→                      min={0}
+   527→                      max={15}
+   528→                      step={0.125}
+   529→                      value={[inputs.apr]}
+   530→                      onValueChange={([v]) =>
+   531→                        setInputs((p) => ({ ...p, apr: r2(v) }))
+   532→                      }
+   533→                      aria-label="Mortgage APR"
+   534→                      className="w-full"
+   535→                    />
+   536→                    <div className="flex justify-between text-xs text-muted-foreground">
+   537→                      <span>0%</span>
+   538→                      <span>15%</span>
+   539→                    </div>
+   540→                    <Input
+   541→                      type="number"
+   542→                      min={0}
+   543→                      max={15}
+   544→                      step={0.125}
+   545→                      value={inputs.apr}
+   546→                      onChange={(e) => handleInputChange("apr", e.target.value)}
+   547→                      className="mt-1"
+   548→                    />
+   549→                  </div>
+   550→                </div>
+   551→
+   552→                {/* Loan Term */}
+   553→                <div className="space-y-2">
+   554→                  <div className="flex items-center justify-between">
+   555→                    <Label htmlFor="term" className="text-sm font-medium">
+   556→                      Loan Term
+   557→                    </Label>
+   558→                    <span className="text-sm font-semibold text-foreground">
+   559→                      {inputs.termYears} years
+   560→                    </span>
+   561→                  </div>
+   562→                  <div className="no-print flex gap-2">
+   563→                    <Button
+   564→                      type="button"
+   565→                      variant={inputs.termYears === 15 ? "default" : "outline"}
+   566→                      size="sm"
+   567→                      onClick={() => setInputs((p) => ({ ...p, termYears: 15 }))}
+   568→                      className="flex-1"
+   569→                    >
+   570→                      15 years
+   571→                    </Button>
+   572→                    <Button
+   573→                      type="button"
+   574→                      variant={inputs.termYears === 30 ? "default" : "outline"}
+   575→                      size="sm"
+   576→                      onClick={() => setInputs((p) => ({ ...p, termYears: 30 }))}
+   577→                      className="flex-1"
+   578→                    >
+   579→                      30 years
+   580→                    </Button>
+   581→                  </div>
+   582→                </div>
+   583→
+   584→                {/* Credit Score Band */}
+   585→                <div className="space-y-2">
+   586→                  <div className="flex items-center gap-1.5">
+   587→                    <Label htmlFor="credit-band" className="text-sm font-medium">
+   588→                      Credit Score Band
+   589→                    </Label>
+   590→                    <Tooltip>
+   591→                      <TooltipTrigger asChild>
+   592→                        <Info className="size-3.5 text-muted-foreground cursor-help" />
+   593→                      </TooltipTrigger>
+   594→                      <TooltipContent>
+   595→                        Higher credit scores generally qualify for lower PMI
+   596→                        rates. These are mid-range estimates.
+   597→                      </TooltipContent>
+   598→                    </Tooltip>
+   599→                    </div>
+   600→                  <div className="no-print">
+   601→                    <div className="grid grid-cols-2 gap-2">
+   602→                      {(Object.keys(CREDIT_BAND_LABELS) as CreditBand[]).map(
+   603→                        (band) => (
+   604→                          <Button
+   605→                            key={band}
+   606→                            type="button"
+   607→                            variant={inputs.creditBand === band ? "default" : "outline"}
+   608→                            size="sm"
+   609→                            onClick={() =>
+   610→                              setInputs((p) => ({ ...p, creditBand: band }))
+   611→                            }
+   612→                            className="text-xs w-full"
+   613→                          >
+   614→                            {CREDIT_BAND_LABELS[band]}
+   615→                          </Button>
+   616→                        ),
+   617→                      )}
+   618→                    </div>
+   619→                  </div>
+   620→                </div>
+   621→
+   622→                {/* FHA Comparison Toggle */}
+   623→                <div className="flex items-center gap-2 no-print">
+   624→                  <Checkbox
+   625→                    id="fha-toggle"
+   626→                    checked={inputs.showFHA}
+   627→                    onCheckedChange={(checked) =>
+   628→                      setInputs((p) => ({ ...p, showFHA: !!checked }))
+   629→                    }
+   630→                  />
+   631→                  <Label
+   632→                    htmlFor="fha-toggle"
+   633→                    className="text-sm font-medium cursor-pointer"
+   634→                  >
+   635→                    Show FHA MIP comparison
+   636→                  </Label>
+   637→                  <Tooltip>
+   638→                    <TooltipTrigger asChild>
+   639→                      <Info className="size-3.5 text-muted-foreground cursor-help" />
+   640→                    </TooltipTrigger>
+   641→                    <TooltipContent>
+   642→                      Compare conventional PMI with FHA Mortgage Insurance
+   643→                      Premium (MIP). FHA loans require both an upfront and
+   644→                      annual MIP.
+   645→                    </TooltipContent>
+   646→                  </Tooltip>
+   647→                </div>
+   648→              </div>
+   649→
+   650→              {/* ─── Results ─── */}
+   651→              <div className="space-y-4">
+   652→                {hasPMI ? (
+   653→                  <>
+   654→                    {/* Monthly PMI Highlight */}
+   655→                    <div className="rounded-lg bg-ember/10 border border-ember/20 p-4 text-center">
+   656→                      <p className="text-xs font-medium text-muted-foreground">
+   657→                        Estimated Monthly PMI
+   658→                      </p>
+   659→                      <p className="mt-1 text-3xl font-bold tracking-tight text-ember">
+   660→                        {formatCurrency(result.monthlyPMI)}
+   661→                      </p>
+   662→                      <p className="text-xs text-muted-foreground">
+   663→                        {result.pmiAnnualRate !== null
+   664→                          ? `at ${result.pmiAnnualRate}% annual rate`
+   665→                          : "rate varies at this LTV level"}
+   666→                      </p>
+   667→                    </div>
+   668→
+   669→                    {/* Rate note */}
+   670→                    {result.rateNote && (
+   671→                      <div className="rounded-md border border-yellow-300 bg-yellow-50 dark:bg-yellow-950/30 dark:border-yellow-800 p-3 text-xs text-yellow-800 dark:text-yellow-200">
+   672→                        {result.rateNote}
+   673→                      </div>
+   674→                    )}
+   675→
+   676→                    {/* Key Metrics */}
+   677→                    <div className="grid grid-cols-2 gap-3">
+   678→                      <ResultCard
+   679→                        label="Current LTV"
+   680→                        value={`${result.ltvPct.toFixed(2)}%`}
+   681→                        subtext={`${formatCurrency(result.loanAmount)} loan / ${formatCurrency(inputs.homePrice)} home`}
+   682→                      />
+   683→                      <ResultCard
+   684→                        label="Estimated PMI Rate"
+   685→                        value={
+   686→                          result.pmiAnnualRate !== null
+   687→                            ? `${result.pmiAnnualRate}%`
+   688→                            : "Varies"
+   689→                        }
+   690→                        subtext="annual rate of loan amount"
+   691→                      />
+   692→                      <ResultCard
+   693→                        label="Monthly PMI Cost"
+   694→                        value={formatCurrency(result.monthlyPMI)}
+   695→                        subtext="added to your mortgage"
+   696→                      />
+   697→                      <ResultCard
+   698→                        label="Annual PMI Cost"
+   699→                        value={formatCurrency(result.annualPMI)}
+   700→                        subtext="per year"
+   701→                      />
+   702→                    </div>
+   703→
+   704→                    {/* LTV Drop-off Section */}
+   705→                    <div className="rounded-md border bg-muted/30 p-4 space-y-3">
+   706→                      <p className="font-semibold text-sm">PMI Removal Timeline</p>
+   707→
+   708→                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   709→                        <div className="rounded-md border bg-card p-3">
+   710→                          <p className="text-xs font-medium text-muted-foreground">
+   711→                            80% LTV (Borrower-Request)
+   712→                          </p>
+   713→                          <p className="mt-0.5 text-base font-bold tracking-tight">
+   714→                            {result.month80LTV !== null
+   715→                              ? `Month ${result.month80LTV}`
+   716→                              : "Not reached"}
+   717→                          </p>
+   718→                          {result.date80LTV && (
+   719→                            <p className="text-[11px] text-muted-foreground">
+   720→                              {result.date80LTV}
+   721→                            </p>
+   722→                          )}
+   723→                        </div>
+   724→                        <div className="rounded-md border bg-card p-3">
+   725→                          <p className="text-xs font-medium text-muted-foreground">
+   726→                            78% LTV (Auto-Termination)
+   727→                          </p>
+   728→                          <p className="mt-0.5 text-base font-bold tracking-tight">
+   729→                            {result.month78LTV !== null
+   730→                              ? `Month ${result.month78LTV}`
+   731→                              : "Not reached"}
+   732→                          </p>
+   733→                          {result.date78LTV && (
+   734→                            <p className="text-[11px] text-muted-foreground">
+   735→                              {result.date78LTV}
+   736→                            </p>
+   737→                          )}
+   738→                        </div>
+   739→                      </div>
+   740→
+   741→                      <div className="rounded-md border border-ember/20 bg-ember/5 p-3 space-y-1">
+   742→                        <p className="text-xs font-medium text-muted-foreground">
+   743→                          Total PMI Paid Until 78% LTV
+   744→                        </p>
+   745→                        <p className="text-lg font-bold text-ember">
+   746→                          {formatCurrency(result.totalPMITo78)}
+   747→                        </p>
+   748→                        {result.month78LTV !== null && (
+   749→                          <p className="text-[11px] text-muted-foreground">
+   750→                            Over {result.month78LTV} months ({result.month78LTV > 12 ? `${Math.floor(result.month78LTV / 12)} yr${result.month78LTV > 24 ? "s" : ""} ${result.month78LTV % 12} mo` : `${result.month78LTV} months`})
+   751→                          </p>
+   752→                        )}
+   753→                      </div>
+   754→
+   755→                      <p className="text-[11px] text-muted-foreground">
+   756→                        The 80% LTV borrower-request removal requires a good
+   757→                        payment history and that the home value has not
+   758→                        declined. The 78% LTV automatic termination is
+   759→                        required by federal law once the scheduled balance
+   760→                        reaches that threshold.
+   761→                      </p>
+   762→                    </div>
+   763→
+   764→                    {/* FHA Comparison */}
+   765→                    {inputs.showFHA && (
+   766→                      <Card className="border-dashed">
+   767→                        <CardHeader className="pb-3 pt-4 px-4">
+   768→                          <CardTitle className="text-base">
+   769→                            FHA MIP Comparison
+   770→                          </CardTitle>
+   771→                        </CardHeader>
+   772→                        <CardContent className="px-4 pb-4 space-y-3">
+   773→                          <div className="grid grid-cols-2 gap-3">
+   774→                            <ResultCard
+   775→                              label="FHA Upfront MIP"
+   776→                              value={formatCurrency(result.fhaUpfrontMIP)}
+   777→                              subtext="1.75% of loan amount"
+   778→                            />
+   779→                            <ResultCard
+   780→                              label="FHA Annual MIP Rate"
+   781→                              value={`${result.fhaAnnualMIPRate}%`}
+   782→                              subtext={`${inputs.termYears}yr, LTV ${result.ltvPct > 90 ? ">" : "<="}90%`}
+   783→                            />
+   784→                            <ResultCard
+   785→                              label="FHA Monthly MIP"
+   786→                              value={formatCurrency(result.fhaMonthlyMIP)}
+   787→                              subtext="added to monthly payment"
+   788→                            />
+   789→                            <ResultCard
+   790→                              label="FHA Annual MIP"
+   791→                              value={formatCurrency(result.fhaAnnualMIP)}
+   792→                              subtext="per year"
+   793→                            />
+   794→                          </div>
+   795→
+   796→                          <div className="rounded-md border border-yellow-300 bg-yellow-50 dark:bg-yellow-950/30 dark:border-yellow-800 p-3 text-xs text-yellow-800 dark:text-yellow-200">
+   797→                            {result.fhaNote}
+   798→                          </div>
+   799→
+   800→                          <div className="rounded-md border bg-card p-3 space-y-2">
+   801→                            <p className="text-xs font-medium text-muted-foreground">
+   802→                              Side-by-Side Total Cost
+   803→                            </p>
+   804→                            <div className="grid grid-cols-2 gap-3">
+   805→                              <div>
+   806→                                <p className="text-[11px] text-muted-foreground">
+   807→                                  Conventional PMI (to 78% LTV)
+   808→                                </p>
+   809→                                <p className="text-base font-bold">
+   810→                                  {formatCurrency(result.totalPMITo78)}
+   811→                                </p>
+   812→                              </div>
+   813→                              <div>
+   814→                                <p className="text-[11px] text-muted-foreground">
+   815→                                  FHA MIP (full loan term)
+   816→                                </p>
+   817→                                <p className="text-base font-bold text-destructive">
+   818→                                  {formatCurrency(result.fhaTotalMIP)}
+   819→                                </p>
+   820→                              </div>
+   821→                            </div>
+   822→                          </div>
+   823→                        </CardContent>
+   824→                      </Card>
+   825→                    )}
+   826→
+   827→                    {/* Actions */}
+   828→                    <div className="flex flex-wrap items-center gap-3 no-print">
+   829→                      <div className="flex flex-wrap gap-2">
+   830→                        <Button
+   831→                          variant="outline"
+   832→                          size="sm"
+   833→                          onClick={handleCopyLink}
+   834→                          className="text-xs"
+   835→                        >
+   836→                          {copied ? (
+   837→                            <Check className="mr-1.5 size-3.5" />
+   838→                          ) : (
+   839→                            <Copy className="mr-1.5 size-3.5" />
+   840→                          )}
+   841→                          {copied ? "Copied" : "Copy Link"}
+   842→                        </Button>
+   843→                        <Button
+   844→                          variant="outline"
+   845→                          size="sm"
+   846→                          onClick={handlePrint}
+   847→                          className="text-xs"
+   848→                        >
+   849→                          <Printer className="mr-1.5 size-3.5" />
+   850→                          Print
+   851→                        </Button>
+   852→                        <Button
+   853→                          variant="outline"
+   854→                          size="sm"
+   855→                          onClick={handleReset}
+   856→                          className="text-xs"
+   857→                        >
+   858→                          <RotateCcw className="mr-1.5 size-3.5" />
+   859→                          Reset
+   860→                        </Button>
+   861→                      </div>
+   862→                      <ShareButtons
+   863→                        summaryText={`$${(inputs.homePrice / 1000).toFixed(0)}K home, ${inputs.downPaymentPct}% down, ${creditLabel.split(" ")[0]} credit = ${formatCurrency(result.monthlyPMI)}/mo PMI. Calculate yours:`}
+   864→                      />
+   865→                    </div>
+   866→
+   867→                    {/* Disclaimer */}
+   868→                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+   869→                      PMI rates are estimates and vary by insurer and lender.
+   870→                      Contact your lender for exact pricing.
+   871→                    </p>
+   872→                  </>
+   873→                ) : (
+   874→                  <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+   875→                    {inputs.homePrice > 0 && inputs.ltvPct !== undefined
+   876→                      ? "Your down payment is 20% or more, so no PMI is required."
+   877→                      : "Enter valid home details to see PMI estimates."}
+   878→                  </div>
+   879→                )}
+   880→              </div>
+   881→            </div>
+   882→          </CardContent>
+   883→        </Card>
+   884→
+   885→        {/* ─── Print-only footer ─── */}
+   886→        <PrintFooter />
+   887→      </div>
+   888→    </TooltipProvider>
+   889→  );
+   890→}
+   891→
+   892→/* ─── Sub-components ─── */
+   893→
+   894→function ResultCard({
+   895→  label,
+   896→  value,
+   897→  subtext,
+   898→}: {
+   899→  label: string;
+   900→  value: string;
+   901→  subtext: string;
+   902→}) {
+   903→  return (
+   904→    <div className="rounded-md border bg-card p-3">
+   905→      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+   906→      <p className="mt-0.5 text-lg font-bold tracking-tight">{value}</p>
+   907→      <p className="text-[11px] text-muted-foreground">{subtext}</p>
+   908→    </div>
+   909→  );
+   910→}
+   911→
+   912→function PrintFooter() {
+   913→  return (
+   914→    <div className="hidden print:block print:mt-6 print:pt-3 print:border-t print:border-gray-300 print:text-[8pt] print:text-gray-500 print:flex print:justify-between">
+   915→      <span>CalcForge - thecalcforge.com</span>
+   916→      <PrintDateAndUrl />
+   917→    </div>
+   918→  );
+   919→}
+   920→
+   921→function PrintDateAndUrl() {
+   922→  const text = useMemo(() => {
+   923→    if (typeof window === "undefined") return "";
+   924→    const d = new Date().toLocaleDateString("en-US", {
+   925→      year: "numeric",
+   926→      month: "long",
+   927→      day: "numeric",
+   928→    });
+   929→    return `${window.location.host}${window.location.pathname} - Printed ${d}`;
+   930→  }, []);
+   931→  return <span>{text}</span>;
+   932→}

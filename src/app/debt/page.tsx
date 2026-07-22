@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/config/site.config";
 import { HubPage, type HubCalculator, type HubFaqItem } from "@/components/hub/HubPage";
 
+export const dynamic = "force-static";
+
 /* ─── SEO Metadata ─── */
 export const metadata: Metadata = {
   title: "Debt Calculators: Payoff, DTI & Credit Card Tools",

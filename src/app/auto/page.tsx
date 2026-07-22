@@ -5,6 +5,8 @@ import { BreadcrumbJsonLd } from "@/components/seo/JsonLd";
 import { CalculatorCard } from "@/components/shared/CalculatorCard";
 import { Calculator } from "lucide-react";
 
+export const dynamic = "force-static";
+
 /* ─── Auto calculators shown on this hub ─── */
 const autoHubCalculators = [
   {

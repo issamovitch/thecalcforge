@@ -1,0 +1,894 @@
+     1→"use client";
+     2→
+     3→import { useState, useEffect, useCallback, useMemo, useRef, useSyncExternalStore } from "react";
+     4→import { Copy, Check, Printer, RotateCcw, CreditCard, ChevronDown, ChevronUp, Info, AlertTriangle } from "lucide-react";
+     5→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+     6→import { Input } from "@/components/ui/input";
+     7→import { Label } from "@/components/ui/label";
+     8→import { Button } from "@/components/ui/button";
+     9→import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+    10→import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+    11→import { Alert, AlertDescription } from "@/components/ui/alert";
+    12→import { toast } from "sonner";
+    13→import ShareButtons from "@/components/calculators/ShareButtons";
+    14→
+    15→/* ─── Types ─── */
+    16→
+    17→interface MinPayInputs {
+    18→  balance: number;
+    19→  apr: number;
+    20→  minFormula: "pct_balance" | "pct_plus_interest" | "one_pct_plus_interest";
+    21→  minPercent: number;
+    22→  floorAmount: number;
+    23→  fixedPayment: number;
+    24→}
+    25→
+    26→interface MinPayResult {
+    27→  firstMinimum: number;
+    28→  months: number;
+    29→  payoffDate: string;
+    30→  totalInterest: number;
+    31→  totalPaid: number;
+    32→  schedule: {
+    33→    month: number;
+    34→    minimum: number;
+    35→    interest: number;
+    36→    principal: number;
+    37→    balance: number;
+    38→  }[];
+    39→  warnings: string[];
+    40→}
+    41→
+    42→interface FixedPayoffResult {
+    43→  months: number;
+    44→  totalInterest: number;
+    45→  totalPaid: number;
+    46→  payoffDate: string;
+    47→}
+    48→
+    49→/* ─── Defaults ─── */
+    50→
+    51→export const DEFAULT_INPUTS: MinPayInputs = {
+    52→  balance: 5000,
+    53→  apr: 22.9,
+    54→  minFormula: "pct_balance",
+    55→  minPercent: 2,
+    56→  floorAmount: 25,
+    57→  fixedPayment: 200,
+    58→};
+    59→
+    60→/* ─── Formatters ─── */
+    61→
+    62→const fmtCurrency = (v: number) =>
+    63→  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
+    64→
+    65→const fmtPercent = (v: number) => `${v.toFixed(2)}%`;
+    66→
+    67→/* ─── Calculation Engine ─── */
+    68→
+    69→function computeMinimum(inputs: MinPayInputs, balance: number): number {
+    70→  const { apr, minFormula, minPercent, floorAmount } = inputs;
+    71→  const monthlyRate = (apr / 100) / 12;
+    72→
+    73→  switch (minFormula) {
+    74→    case "pct_balance":
+    75→      return Math.max(floorAmount, balance * (minPercent / 100));
+    76→    case "pct_plus_interest":
+    77→      return Math.max(floorAmount, balance * (minPercent / 100) + balance * monthlyRate);
+    78→    case "one_pct_plus_interest":
+    79→      return Math.max(floorAmount, balance * 0.01 + balance * monthlyRate);
+    80→    default:
+    81→      return Math.max(floorAmount, balance * (minPercent / 100));
+    82→  }
+    83→}
+    84→
+    85→function calculateMinimumPayoff(inputs: MinPayInputs, today: Date | null): MinPayResult {
+    86→  const { balance: startBalance, apr } = inputs;
+    87→  if (startBalance <= 0) {
+    88→    return { firstMinimum: 0, months: 0, payoffDate: "", totalInterest: 0, totalPaid: 0, schedule: [], warnings: [] };
+    89→  }
+    90→
+    91→  const warnings: string[] = [];
+    92→  const monthlyRate = (apr / 100) / 12;
+    93→  let balance = startBalance;
+    94→  let totalInterest = 0;
+    95→  let totalPaid = 0;
+    96→  let month = 0;
+    97→  const schedule: MinPayResult["schedule"] = [];
+    98→  let firstMinimum = 0;
+    99→
+   100→  while (balance > 0.005 && month < 1200) {
+   101→    month++;
+   102→    const interest = balance * monthlyRate;
+   103→    const owed = balance + interest;
+   104→    let minPayment = computeMinimum(inputs, balance);
+   105→    minPayment = Math.min(minPayment, owed);
+   106→
+   107→    if (month === 1) firstMinimum = minPayment;
+   108→
+   109→    const principal = minPayment - interest;
+   110→
+   111→    if (principal < 0) {
+   112→      warnings.push(
+   113→        `Minimum payment (${fmtCurrency(minPayment)}/mo) does not cover monthly interest (${fmtCurrency(interest)}/mo). Your balance will grow and this debt may never be paid off at minimum payments.`
+   114→      );
+   115→      break;
+   116→    }
+   117→
+   118→    balance = Math.max(0, balance - principal);
+   119→    totalInterest += interest;
+   120→    totalPaid += minPayment;
+   121→
+   122→    schedule.push({ month, minimum: minPayment, interest, principal, balance });
+   123→  }
+   124→
+   125→  if (month >= 1200 && balance > 0.005) {
+   126→    warnings.push("Payoff exceeds 100 years at minimum payments. Consider increasing your payment amount.");
+   127→  } else if (month > 120) {
+   128→    warnings.push("Paying only the minimum will take over 10 years. You could save significantly by paying more each month.");
+   129→  }
+   130→
+   131→  // today is null during SSR; payoffDate is left empty so no build-time date is
+   132→  // frozen in the prerendered HTML. After hydration the real date is used.
+   133→  const payoffDate = (month > 0 && today)
+   134→    ? new Date(today.getTime() + month * 30.44 * 86400000).toLocaleDateString("en-US", {
+   135→        year: "numeric",
+   136→        month: "long",
+   137→        day: "numeric",
+   138→      })
+   139→    : "";
+   140→
+   141→  return { firstMinimum, months: month, payoffDate, totalInterest, totalPaid, schedule, warnings };
+   142→}
+   143→
+   144→function calculateFixedPayoff(balance: number, apr: number, fixedPayment: number, today: Date | null): FixedPayoffResult {
+   145→  if (balance <= 0 || fixedPayment <= 0) {
+   146→    return { months: 0, totalInterest: 0, totalPaid: 0, payoffDate: "" };
+   147→  }
+   148→
+   149→  const monthlyRate = (apr / 100) / 12;
+   150→  let bal = balance;
+   151→  let totalInterest = 0;
+   152→  let totalPaid = 0;
+   153→  let month = 0;
+   154→
+   155→  while (bal > 0.005 && month < 1200) {
+   156→    month++;
+   157→    const interest = bal * monthlyRate;
+   158→    const owed = bal + interest;
+   159→    const payment = Math.min(fixedPayment, owed);
+   160→    const principal = payment - interest;
+   161→
+   162→    if (principal < 0) break;
+   163→
+   164→    bal = Math.max(0, bal - principal);
+   165→    totalInterest += interest;
+   166→    totalPaid += payment;
+   167→  }
+   168→
+   169→  // today is null during SSR; payoffDate is left empty so no build-time date is
+   170→  // frozen in the prerendered HTML. After hydration the real date is used.
+   171→  const payoffDate = (month > 0 && today)
+   172→    ? new Date(today.getTime() + month * 30.44 * 86400000).toLocaleDateString("en-US", {
+   173→        year: "numeric",
+   174→        month: "long",
+   175→        day: "numeric",
+   176→      })
+   177→    : "";
+   178→
+   179→  return { months: month, totalInterest, totalPaid, payoffDate };
+   180→}
+   181→
+   182→/* ─── Client-only date (prevents build-time date from being frozen in SSG HTML) ─── */
+   183→
+   184→const subscribeNoop = () => () => {};
+   185→function useClientToday(): Date | null {
+   186→  return useSyncExternalStore(
+   187→    subscribeNoop,
+   188→    () => new Date(),
+   189→    () => null
+   190→  );
+   191→}
+   192→
+   193→/* ─── Component ─── */
+   194→
+   195→export default function CreditCardMinimumPaymentCalculator() {
+   196→  const today = useClientToday();
+   197→  const [inputs, setInputs] = useState<MinPayInputs>(() => {
+   198→    if (typeof window === "undefined") return DEFAULT_INPUTS;
+   199→    const params = new URLSearchParams(window.location.search);
+   200→    const balance = params.get("balance");
+   201→    const apr = params.get("apr");
+   202→    if (!balance && !apr) return DEFAULT_INPUTS;
+   203→    return {
+   204→      balance: balance ? parseFloat(balance) : DEFAULT_INPUTS.balance,
+   205→      apr: apr ? parseFloat(apr) : DEFAULT_INPUTS.apr,
+   206→      minFormula: (params.get("formula") as MinPayInputs["minFormula"]) || DEFAULT_INPUTS.minFormula,
+   207→      minPercent: params.get("pct") ? parseFloat(params.get("pct")!) : DEFAULT_INPUTS.minPercent,
+   208→      floorAmount: params.get("floor") ? parseFloat(params.get("floor")!) : DEFAULT_INPUTS.floorAmount,
+   209→      fixedPayment: params.get("fixed") ? parseFloat(params.get("fixed")!) : DEFAULT_INPUTS.fixedPayment,
+   210→    };
+   211→  });
+   212→
+   213→  const [copied, setCopied] = useState(false);
+   214→  const [showSchedule, setShowSchedule] = useState(true);
+   215→
+   216→  const { minOnlyResult, fixedResult } = useMemo(() => {
+   217→    const minOnly = calculateMinimumPayoff(inputs, today);
+   218→    const fixed = calculateFixedPayoff(inputs.balance, inputs.apr, inputs.fixedPayment, today);
+   219→    return { minOnlyResult: minOnly, fixedResult: fixed };
+   220→  }, [inputs, today]);
+   221→
+   222→  const isInitialMount = useRef(true);
+   223→  useEffect(() => {
+   224→    if (isInitialMount.current) {
+   225→      isInitialMount.current = false;
+   226→      return;
+   227→    }
+   228→    if (typeof window === "undefined") return;
+   229→    const params = new URLSearchParams();
+   230→    params.set("balance", inputs.balance.toString());
+   231→    params.set("apr", inputs.apr.toString());
+   232→    params.set("formula", inputs.minFormula);
+   233→    params.set("pct", inputs.minPercent.toString());
+   234→    params.set("floor", inputs.floorAmount.toString());
+   235→    params.set("fixed", inputs.fixedPayment.toString());
+   236→    const newUrl = `${window.location.pathname}?${params.toString()}`;
+   237→    window.history.replaceState(null, "", newUrl);
+   238→  }, [inputs]);
+   239→
+   240→  const handleCopyLink = useCallback(async () => {
+   241→    try {
+   242→      await navigator.clipboard.writeText(window.location.href);
+   243→      setCopied(true);
+   244→      toast.success("Link copied to clipboard");
+   245→      setTimeout(() => setCopied(false), 2000);
+   246→    } catch {
+   247→      toast.error("Failed to copy link");
+   248→    }
+   249→  }, []);
+   250→
+   251→  const handlePrint = useCallback(() => {
+   252→    window.print();
+   253→  }, []);
+   254→
+   255→  const handleReset = useCallback(() => {
+   256→    setInputs(DEFAULT_INPUTS);
+   257→    toast.success("Calculator reset to defaults");
+   258→  }, []);
+   259→
+   260→  const updateInput = useCallback(<K extends keyof MinPayInputs>(key: K, value: number | string) => {
+   261→    setInputs((prev) => ({
+   262→      ...prev,
+   263→      [key]: typeof prev[key] === "number" && typeof value === "string"
+   264→        ? (parseFloat(value) || 0)
+   265→        : value,
+   266→    }));
+   267→  }, []);
+   268→
+   269→  const monthsSaved = minOnlyResult.months - fixedResult.months;
+   270→  const interestSaved = minOnlyResult.totalInterest - fixedResult.totalInterest;
+   271→
+   272→  const formulaDescriptions: Record<MinPayInputs["minFormula"], string> = {
+   273→    pct_balance: `Minimum = max(${fmtCurrency(inputs.floorAmount)}, ${inputs.minPercent}% of balance)`,
+   274→    pct_plus_interest: `Minimum = max(${fmtCurrency(inputs.floorAmount)}, ${inputs.minPercent}% of balance + monthly interest)`,
+   275→    one_pct_plus_interest: `Minimum = max(${fmtCurrency(inputs.floorAmount)}, 1% of balance + monthly interest)`,
+   276→  };
+   277→
+   278→  return (
+   279→    <TooltipProvider delayDuration={300}>
+   280→      <div className="space-y-6">
+   281→        {/* ─── Calculator Card ─── */}
+   282→        <Card className="print-break-inside">
+   283→          <CardHeader className="pb-4">
+   284→            <CardTitle className="flex items-center gap-2 text-xl">
+   285→              <CreditCard className="size-5 text-ember" />
+   286→              Credit Card Minimum Payment Calculator
+   287→            </CardTitle>
+   288→            <p className="text-sm text-muted-foreground">
+   289→              See how your minimum payment is calculated and how long it takes to
+   290→              pay off your balance when you pay only the declining minimum each month.
+   291→            </p>
+   292→          </CardHeader>
+   293→          <CardContent>
+   294→            <div className="grid gap-6 lg:grid-cols-2">
+   295→              {/* ─── Inputs ─── */}
+   296→              <div className="space-y-5">
+   297→                {/* Balance */}
+   298→                <div className="space-y-2">
+   299→                  <div className="flex items-center gap-1.5">
+   300→                    <Label htmlFor="minpay-balance" className="text-sm font-medium">
+   301→                      Balance
+   302→                    </Label>
+   303→                    <Tooltip>
+   304→                      <TooltipTrigger asChild>
+   305→                        <Info className="size-3.5 text-muted-foreground cursor-help no-print" />
+   306→                      </TooltipTrigger>
+   307→                      <TooltipContent side="top" className="max-w-[220px] text-xs">
+   308→                        Your current credit card statement balance.
+   309→                      </TooltipContent>
+   310→                    </Tooltip>
+   311→                  </div>
+   312→                  <div className="no-print relative">
+   313→                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+   314→                    <Input
+   315→                      id="minpay-balance"
+   316→                      type="number"
+   317→                      min={0}
+   318→                      step={100}
+   319→                      value={inputs.balance || ""}
+   320→                      onChange={(e) => updateInput("balance", e.target.value)}
+   321→                      placeholder="0"
+   322→                      className="pl-7 h-9"
+   323→                      aria-label="Current balance"
+   324→                    />
+   325→                  </div>
+   326→                  <p className="hidden print:block text-sm">
+   327→                    Balance: {fmtCurrency(inputs.balance)}
+   328→                  </p>
+   329→                </div>
+   330→
+   331→                {/* APR */}
+   332→                <div className="space-y-2">
+   333→                  <div className="flex items-center gap-1.5">
+   334→                    <Label htmlFor="minpay-apr" className="text-sm font-medium">
+   335→                      APR
+   336→                    </Label>
+   337→                    <Tooltip>
+   338→                      <TooltipTrigger asChild>
+   339→                        <Info className="size-3.5 text-muted-foreground cursor-help no-print" />
+   340→                      </TooltipTrigger>
+   341→                      <TooltipContent side="top" className="max-w-[240px] text-xs">
+   342→                        Annual Percentage Rate on your credit card. This is the
+   343→                        yearly interest rate used to calculate monthly interest charges.
+   344→                      </TooltipContent>
+   345→                    </Tooltip>
+   346→                  </div>
+   347→                  <div className="no-print relative">
+   348→                    <Input
+   349→                      id="minpay-apr"
+   350→                      type="number"
+   351→                      min={0}
+   352→                      max={99}
+   353→                      step={0.1}
+   354→                      value={inputs.apr || ""}
+   355→                      onChange={(e) => updateInput("apr", e.target.value)}
+   356→                      placeholder="0"
+   357→                      className="pr-7 h-9"
+   358→                      aria-label="Annual Percentage Rate"
+   359→                    />
+   360→                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+   361→                  </div>
+   362→                  <p className="hidden print:block text-sm">
+   363→                    APR: {fmtPercent(inputs.apr)}
+   364→                  </p>
+   365→                </div>
+   366→
+   367→                {/* Minimum Payment Formula */}
+   368→                <div className="space-y-2">
+   369→                  <Label className="text-sm font-medium">Minimum Payment Formula</Label>
+   370→                  <div className="grid grid-cols-3 gap-2 no-print">
+   371→                    <button
+   372→                      type="button"
+   373→                      onClick={() => setInputs((p) => ({ ...p, minFormula: "pct_balance" }))}
+   374→                      className={`flex items-center justify-center rounded-md border px-2 py-2 text-xs font-medium transition-colors ${
+   375→                        inputs.minFormula === "pct_balance"
+   376→                          ? "border-ember bg-ember/10 text-ember"
+   377→                          : "border-border bg-background text-muted-foreground hover:border-ember/30 hover:text-ember"
+   378→                      }`}
+   379→                      aria-pressed={inputs.minFormula === "pct_balance"}
+   380→                    >
+   381→                      % of Balance
+   382→                    </button>
+   383→                    <button
+   384→                      type="button"
+   385→                      onClick={() => setInputs((p) => ({ ...p, minFormula: "pct_plus_interest" }))}
+   386→                      className={`flex items-center justify-center rounded-md border px-2 py-2 text-xs font-medium transition-colors ${
+   387→                        inputs.minFormula === "pct_plus_interest"
+   388→                          ? "border-ember bg-ember/10 text-ember"
+   389→                          : "border-border bg-background text-muted-foreground hover:border-ember/30 hover:text-ember"
+   390→                      }`}
+   391→                      aria-pressed={inputs.minFormula === "pct_plus_interest"}
+   392→                    >
+   393→                      % + Interest
+   394→                    </button>
+   395→                    <button
+   396→                      type="button"
+   397→                      onClick={() => setInputs((p) => ({ ...p, minFormula: "one_pct_plus_interest" }))}
+   398→                      className={`flex items-center justify-center rounded-md border px-2 py-2 text-xs font-medium transition-colors ${
+   399→                        inputs.minFormula === "one_pct_plus_interest"
+   400→                          ? "border-ember bg-ember/10 text-ember"
+   401→                          : "border-border bg-background text-muted-foreground hover:border-ember/30 hover:text-ember"
+   402→                      }`}
+   403→                      aria-pressed={inputs.minFormula === "one_pct_plus_interest"}
+   404→                    >
+   405→                      1% + Interest
+   406→                    </button>
+   407→                  </div>
+   408→                  <p className="hidden print:block text-sm font-medium">
+   409→                    Formula: {formulaDescriptions[inputs.minFormula]}
+   410→                  </p>
+   411→                  <p className="text-[11px] text-muted-foreground no-print">
+   412→                    {formulaDescriptions[inputs.minFormula]}
+   413→                  </p>
+   414→                </div>
+   415→
+   416→                {/* Percentage / Floor row */}
+   417→                <div className="grid grid-cols-2 gap-3">
+   418→                  {/* Percentage */}
+   419→                  <div className="space-y-2">
+   420→                    <Label htmlFor="minpay-pct" className="text-sm font-medium">
+   421→                      Percentage (%)
+   422→                    </Label>
+   423→                    {inputs.minFormula === "one_pct_plus_interest" ? (
+   424→                      <Input
+   425→                        id="minpay-pct"
+   426→                        type="number"
+   427→                        value="1"
+   428→                        disabled
+   429→                        className="h-9 bg-muted/50 cursor-not-allowed"
+   430→                        aria-label="Percentage (fixed at 1%)"
+   431→                      />
+   432→                    ) : (
+   433→                      <div className="no-print">
+   434→                        <Input
+   435→                          id="minpay-pct"
+   436→                          type="number"
+   437→                          min={0.5}
+   438→                          max={10}
+   439→                          step={0.5}
+   440→                          value={inputs.minPercent || ""}
+   441→                          onChange={(e) => updateInput("minPercent", e.target.value)}
+   442→                          placeholder="2"
+   443→                          className="h-9"
+   444→                          aria-label="Minimum payment percentage"
+   445→                        />
+   446→                      </div>
+   447→                    )}
+   448→                    {inputs.minFormula === "one_pct_plus_interest" && (
+   449→                      <p className="text-[11px] text-muted-foreground">Fixed at 1%</p>
+   450→                    )}
+   451→                  </div>
+   452→
+   453→                  {/* Floor */}
+   454→                  <div className="space-y-2">
+   455→                    <div className="flex items-center gap-1.5">
+   456→                      <Label htmlFor="minpay-floor" className="text-sm font-medium">
+   457→                        Floor ($)
+   458→                      </Label>
+   459→                      <Tooltip>
+   460→                        <TooltipTrigger asChild>
+   461→                          <Info className="size-3.5 text-muted-foreground cursor-help no-print" />
+   462→                        </TooltipTrigger>
+   463→                        <TooltipContent side="top" className="max-w-[220px] text-xs">
+   464→                          The minimum dollar amount you must pay regardless of the
+   465→                          percentage calculation. Most cards set this between $25 and $35.
+   466→                        </TooltipContent>
+   467→                      </Tooltip>
+   468→                    </div>
+   469→                    <div className="no-print relative">
+   470→                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+   471→                      <Input
+   472→                        id="minpay-floor"
+   473→                        type="number"
+   474→                        min={0}
+   475→                        step={5}
+   476→                        value={inputs.floorAmount || ""}
+   477→                        onChange={(e) => updateInput("floorAmount", e.target.value)}
+   478→                        placeholder="25"
+   479→                        className="pl-7 h-9"
+   480→                        aria-label="Floor amount"
+   481→                      />
+   482→                    </div>
+   483→                    <p className="hidden print:block text-sm">
+   484→                      Floor: {fmtCurrency(inputs.floorAmount)}
+   485→                    </p>
+   486→                  </div>
+   487→                </div>
+   488→
+   489→                {/* Fixed Payment for Comparison */}
+   490→                <div className="space-y-2">
+   491→                  <div className="flex items-center gap-1.5">
+   492→                    <Label htmlFor="minpay-fixed" className="text-sm font-medium">
+   493→                      Fixed Payment (for comparison)
+   494→                    </Label>
+   495→                    <Tooltip>
+   496→                      <TooltipTrigger asChild>
+   497→                        <Info className="size-3.5 text-muted-foreground cursor-help no-print" />
+   498→                      </TooltipTrigger>
+   499→                      <TooltipContent side="top" className="max-w-[250px] text-xs">
+   500→                        A fixed monthly payment amount to compare against the declining
+   501→                        minimum. Shows how much time and money you could save by paying
+   502→                        the same amount each month instead of the shrinking minimum.
+   503→                      </TooltipContent>
+   504→                    </Tooltip>
+   505→                  </div>
+   506→                  <div className="no-print relative">
+   507→                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+   508→                    <Input
+   509→                      id="minpay-fixed"
+   510→                      type="number"
+   511→                      min={0}
+   512→                      step={25}
+   513→                      value={inputs.fixedPayment || ""}
+   514→                      onChange={(e) => updateInput("fixedPayment", e.target.value)}
+   515→                      placeholder="200"
+   516→                      className="pl-7 h-9"
+   517→                      aria-label="Fixed payment for comparison"
+   518→                    />
+   519→                  </div>
+   520→                  <p className="hidden print:block text-sm">
+   521→                    Fixed payment for comparison: {fmtCurrency(inputs.fixedPayment)}/mo
+   522→                  </p>
+   523→                </div>
+   524→
+   525→                {/* Warnings */}
+   526→                {minOnlyResult.warnings.length > 0 && (
+   527→                  <div className="space-y-2">
+   528→                    {minOnlyResult.warnings.map((w, i) => (
+   529→                      <Alert key={i} variant="destructive" className="py-2">
+   530→                        <AlertTriangle className="size-4" />
+   531→                        <AlertDescription className="text-xs">{w}</AlertDescription>
+   532→                      </Alert>
+   533→                    ))}
+   534→                  </div>
+   535→                )}
+   536→              </div>
+   537→
+   538→              {/* ─── Results ─── */}
+   539→              <div className="space-y-4">
+   540→                {inputs.balance > 0 ? (
+   541→                  <>
+   542→                    {/* Debt-Free Date Highlight */}
+   543→                    <div className="rounded-lg bg-ember/10 border border-ember/20 p-5 text-center">
+   544→                      <p className="text-sm font-medium text-muted-foreground mb-1">
+   545→                        Debt-Free Date (Minimum Only)
+   546→                      </p>
+   547→                      <p className="text-2xl sm:text-3xl font-bold tracking-tight text-ember">
+   548→                        {minOnlyResult.months > 0
+   549→                          ? minOnlyResult.payoffDate
+   550→                          : "Already debt-free!"}
+   551→                      </p>
+   552→                      <p className="text-xs text-muted-foreground mt-1">
+   553→                        {minOnlyResult.months > 0
+   554→                          ? `${minOnlyResult.months} month${minOnlyResult.months !== 1 ? "s" : ""} from now`
+   555→                          : "No balance to pay off"}
+   556→                      </p>
+   557→                    </div>
+   558→
+   559→                    {/* Months at minimum -- large number */}
+   560→                    <div className="text-center">
+   561→                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+   562→                        Months at Minimum Payment
+   563→                      </p>
+   564→                      <p className="mt-1 text-4xl font-bold tracking-tight">
+   565→                        {minOnlyResult.months > 0 ? minOnlyResult.months : "0"}
+   566→                      </p>
+   567→                      {minOnlyResult.months > 12 && (
+   568→                        <p className="text-xs text-muted-foreground mt-0.5">
+   569→                          \u2248 {(minOnlyResult.months / 12).toFixed(1)} years
+   570→                        </p>
+   571→                      )}
+   572→                    </div>
+   573→
+   574→                    {/* Comparison Box */}
+   575→                    <div className="rounded-lg bg-muted/30 p-4 space-y-2.5">
+   576→                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+   577→                        Minimum Only vs. Fixed {fmtCurrency(inputs.fixedPayment)}/mo
+   578→                      </p>
+   579→                      {/* Minimum Only Row */}
+   580→                      <div className="flex items-center justify-between text-sm">
+   581→                        <span className="text-muted-foreground">Minimum Only</span>
+   582→                        <span>
+   583→                          {minOnlyResult.months} mo, {fmtCurrency(minOnlyResult.totalInterest)} interest
+   584→                        </span>
+   585→                      </div>
+   586→                      {/* Fixed Row */}
+   587→                      <div className="flex items-center justify-between text-sm">
+   588→                        <span className="text-muted-foreground">Fixed {fmtCurrency(inputs.fixedPayment)}/mo</span>
+   589→                        <span>
+   590→                          {fixedResult.months} mo, {fmtCurrency(fixedResult.totalInterest)} interest
+   591→                        </span>
+   592→                      </div>
+   593→                      {/* Savings Line */}
+   594→                      {interestSaved > 0.005 && (
+   595→                        <div className="pt-1.5 border-t">
+   596→                          <p className="text-sm font-medium text-green-600 dark:text-green-400">
+   597→                            You save {monthsSaved >= 1 ? `${Math.round(monthsSaved)} month${Math.round(monthsSaved) !== 1 ? "s" : ""} and ` : ""}
+   598→                            {fmtCurrency(interestSaved)} in interest
+   599→                          </p>
+   600→                        </div>
+   601→                      )}
+   602→                    </div>
+   603→
+   604→                    {/* 2x2 ResultCard Grid */}
+   605→                    <div className="grid grid-cols-2 gap-3">
+   606→                      <ResultCard
+   607→                        label="First Minimum"
+   608→                        value={fmtCurrency(minOnlyResult.firstMinimum)}
+   609→                        subtext="Declines each month"
+   610→                      />
+   611→                      <ResultCard
+   612→                        label="Total Interest (Min)"
+   613→                        value={fmtCurrency(minOnlyResult.totalInterest)}
+   614→                        subtext={
+   615→                          minOnlyResult.totalPaid > 0
+   616→                            ? `${fmtPercent((minOnlyResult.totalInterest / minOnlyResult.totalPaid) * 100)} of total paid`
+   617→                            : "No payments"
+   618→                        }
+   619→                      />
+   620→                      <ResultCard
+   621→                        label="Total Paid (Min)"
+   622→                        value={fmtCurrency(minOnlyResult.totalPaid)}
+   623→                        subtext={`Principal ${fmtCurrency(inputs.balance)} + interest`}
+   624→                      />
+   625→                      <ResultCard
+   626→                        label="Monthly Payment (Fixed)"
+   627→                        value={fmtCurrency(inputs.fixedPayment)}
+   628→                        subtext="Same amount each month"
+   629→                      />
+   630→                    </div>
+   631→
+   632→                    {/* Actions */}
+   633→                    <div className="flex flex-wrap items-center gap-3 no-print">
+   634→                      <div className="flex flex-wrap gap-2">
+   635→                        <Button
+   636→                          variant="outline"
+   637→                          size="sm"
+   638→                          onClick={handleCopyLink}
+   639→                          className="text-xs"
+   640→                        >
+   641→                          {copied ? (
+   642→                            <Check className="mr-1.5 size-3.5" />
+   643→                          ) : (
+   644→                            <Copy className="mr-1.5 size-3.5" />
+   645→                          )}
+   646→                          {copied ? "Copied" : "Copy Link"}
+   647→                        </Button>
+   648→                        <Button
+   649→                          variant="outline"
+   650→                          size="sm"
+   651→                          onClick={handlePrint}
+   652→                          className="text-xs"
+   653→                        >
+   654→                          <Printer className="mr-1.5 size-3.5" />
+   655→                          Print
+   656→                        </Button>
+   657→                        <Button
+   658→                          variant="outline"
+   659→                          size="sm"
+   660→                          onClick={handleReset}
+   661→                          className="text-xs"
+   662→                        >
+   663→                          <RotateCcw className="mr-1.5 size-3.5" />
+   664→                          Reset
+   665→                        </Button>
+   666→                      </div>
+   667→                      <ShareButtons
+   668→                        summaryText={`Paying only minimums on a $${inputs.balance.toLocaleString()} balance takes ${minOnlyResult.months} months. Calculate yours:`}
+   669→                      />
+   670→                    </div>
+   671→
+   672→                    {/* Disclaimer */}
+   673→                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+   674→                      This calculator provides estimates for informational purposes
+   675→                      only. Actual minimum payment calculations vary by issuer and may
+   676→                      include fees. Always check your statement for your exact minimum
+   677→                      payment and terms.
+   678→                    </p>
+   679→                  </>
+   680→                ) : (
+   681→                  <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+   682→                    Enter a balance greater than zero to see results.
+   683→                  </div>
+   684→                )}
+   685→              </div>
+   686→            </div>
+   687→          </CardContent>
+   688→        </Card>
+   689→
+   690→        {/* ─── Comparison Table Card ─── */}
+   691→        {inputs.balance > 0 && minOnlyResult.months > 0 && (
+   692→          <Card className="print-break-inside">
+   693→            <CardHeader className="pb-3">
+   694→              <CardTitle className="text-lg flex items-center gap-2">
+   695→                <CreditCard className="size-4 text-ember" />
+   696→                Minimum Only vs. Fixed Payment
+   697→              </CardTitle>
+   698→            </CardHeader>
+   699→            <CardContent>
+   700→              <div className="overflow-x-auto">
+   701→                <Table>
+   702→                  <TableHeader>
+   703→                    <TableRow>
+   704→                      <TableHead>Metric</TableHead>
+   705→                      <TableHead className="text-center">Minimum Only</TableHead>
+   706→                      <TableHead className="text-center">
+   707→                        Fixed {fmtCurrency(inputs.fixedPayment)}/mo
+   708→                      </TableHead>
+   709→                    </TableRow>
+   710→                  </TableHeader>
+   711→                  <TableBody>
+   712→                    <TableRow>
+   713→                      <TableCell className="font-medium">Months</TableCell>
+   714→                      <TableCell className="text-center">
+   715→                        {minOnlyResult.months}
+   716→                      </TableCell>
+   717→                      <TableCell className="text-center font-medium text-ember">
+   718→                        {fixedResult.months}
+   719→                      </TableCell>
+   720→                    </TableRow>
+   721→                    <TableRow>
+   722→                      <TableCell className="font-medium">Total Interest</TableCell>
+   723→                      <TableCell className="text-center">
+   724→                        {fmtCurrency(minOnlyResult.totalInterest)}
+   725→                      </TableCell>
+   726→                      <TableCell className="text-center font-medium text-ember">
+   727→                        {fmtCurrency(fixedResult.totalInterest)}
+   728→                      </TableCell>
+   729→                    </TableRow>
+   730→                    <TableRow>
+   731→                      <TableCell className="font-medium">Total Paid</TableCell>
+   732→                      <TableCell className="text-center">
+   733→                        {fmtCurrency(minOnlyResult.totalPaid)}
+   734→                      </TableCell>
+   735→                      <TableCell className="text-center font-medium text-ember">
+   736→                        {fmtCurrency(fixedResult.totalPaid)}
+   737→                      </TableCell>
+   738→                    </TableRow>
+   739→                    <TableRow>
+   740→                      <TableCell className="font-medium">Payoff Date</TableCell>
+   741→                      <TableCell className="text-center text-sm">
+   742→                        {minOnlyResult.payoffDate}
+   743→                      </TableCell>
+   744→                      <TableCell className="text-center text-sm font-medium text-ember">
+   745→                        {fixedResult.payoffDate}
+   746→                      </TableCell>
+   747→                    </TableRow>
+   748→                  </TableBody>
+   749→                </Table>
+   750→              </div>
+   751→
+   752→              {/* Summary Box */}
+   753→              <div className="mt-4 rounded-lg bg-muted/30 p-4 space-y-1.5">
+   754→                {interestSaved > 0.005 ? (
+   755→                  <>
+   756→                    <p className="text-sm font-medium">
+   757→                      Paying a fixed{" "}
+   758→                      <span className="font-bold text-ember">
+   759→                        {fmtCurrency(inputs.fixedPayment)}/mo
+   760→                      </span>{" "}
+   761→                      saves you{" "}
+   762→                      <span className="font-bold text-green-600 dark:text-green-400">
+   763→                        {fmtCurrency(interestSaved)}
+   764→                      </span>{" "}
+   765→                      in interest
+   766→                    </p>
+   767→                    {monthsSaved >= 1 && (
+   768→                      <p className="text-xs text-muted-foreground">
+   769→                        and {Math.round(monthsSaved)} month{Math.round(monthsSaved) !== 1 ? "s" : ""}{" "}
+   770→                        faster than paying only the declining minimum.
+   771→                      </p>
+   772→                    )}
+   773→                    <p className="text-xs text-muted-foreground mt-1">
+   774→                      Because the minimum payment shrinks as your balance drops, you pay
+   775→                      mostly interest in early months. A fixed payment keeps your
+   776→                      principal reduction consistent.
+   777→                    </p>
+   778→                  </>
+   779→                ) : fixedResult.months === 0 ? (
+   780→                  <p className="text-sm font-medium">
+   781→                    Enter a fixed payment greater than zero to see comparison savings.
+   782→                  </p>
+   783→                ) : (
+   784→                  <p className="text-sm font-medium">
+   785→                    No additional savings from the fixed payment with current settings.
+   786→                  </p>
+   787→                )}
+   788→              </div>
+   789→            </CardContent>
+   790→          </Card>
+   791→        )}
+   792→
+   793→        {/* ─── Collapsible Schedule Card ─── */}
+   794→        {inputs.balance > 0 && minOnlyResult.schedule.length > 0 && (
+   795→          <Card className="print-break-inside">
+   796→            <CardHeader className="pb-3">
+   797→              <button
+   798→                type="button"
+   799→                onClick={() => setShowSchedule(!showSchedule)}
+   800→                className="no-print flex w-full items-center justify-between text-left"
+   801→                aria-expanded={showSchedule}
+   802→              >
+   803→                <CardTitle className="text-lg">
+   804→                  Month-by-Month Minimum Payment Schedule
+   805→                </CardTitle>
+   806→                {showSchedule ? (
+   807→                  <ChevronUp className="size-5 text-muted-foreground" />
+   808→                ) : (
+   809→                  <ChevronDown className="size-5 text-muted-foreground" />
+   810→                )}
+   811→              </button>
+   812→              <CardTitle className="hidden print:block text-lg">
+   813→                Month-by-Month Minimum Payment Schedule
+   814→              </CardTitle>
+   815→            </CardHeader>
+   816→            <CardContent className={showSchedule ? "" : "hidden print:block"}>
+   817→              <div className="max-h-96 overflow-y-auto custom-scrollbar rounded-md border">
+   818→                <Table>
+   819→                  <TableHeader>
+   820→                    <TableRow>
+   821→                      <TableHead className="w-20">Month</TableHead>
+   822→                      <TableHead className="text-right">Minimum</TableHead>
+   823→                      <TableHead className="text-right">Interest</TableHead>
+   824→                      <TableHead className="text-right">Principal</TableHead>
+   825→                      <TableHead className="text-right">Balance</TableHead>
+   826→                    </TableRow>
+   827→                  </TableHeader>
+   828→                  <TableBody>
+   829→                    {minOnlyResult.schedule.map((row) => (
+   830→                      <TableRow key={row.month}>
+   831→                        <TableCell className="font-medium">{row.month}</TableCell>
+   832→                        <TableCell className="text-right">{fmtCurrency(row.minimum)}</TableCell>
+   833→                        <TableCell className="text-right text-muted-foreground">{fmtCurrency(row.interest)}</TableCell>
+   834→                        <TableCell className="text-right">{fmtCurrency(row.principal)}</TableCell>
+   835→                        <TableCell className="text-right font-medium">{fmtCurrency(row.balance)}</TableCell>
+   836→                      </TableRow>
+   837→                    ))}
+   838→                  </TableBody>
+   839→                </Table>
+   840→              </div>
+   841→              <div className="mt-3 flex flex-wrap justify-end gap-x-6 gap-y-1 text-sm font-medium">
+   842→                <span>
+   843→                  Total Paid:{" "}
+   844→                  <span className="text-ember">{fmtCurrency(minOnlyResult.totalPaid)}</span>
+   845→                </span>
+   846→                <span>
+   847→                  Total Interest:{" "}
+   848→                  <span className="text-destructive">{fmtCurrency(minOnlyResult.totalInterest)}</span>
+   849→                </span>
+   850→              </div>
+   851→            </CardContent>
+   852→          </Card>
+   853→        )}
+   854→
+   855→        {/* ─── Print-only footer ─── */}
+   856→        <PrintFooter />
+   857→      </div>
+   858→    </TooltipProvider>
+   859→  );
+   860→}
+   861→
+   862→/* ─── Sub-components ─── */
+   863→
+   864→function ResultCard({ label, value, subtext }: { label: string; value: string; subtext: string }) {
+   865→  return (
+   866→    <div className="rounded-md border bg-card p-3">
+   867→      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+   868→      <p className="mt-0.5 text-lg font-bold tracking-tight">{value}</p>
+   869→      <p className="text-[11px] text-muted-foreground">{subtext}</p>
+   870→    </div>
+   871→  );
+   872→}
+   873→
+   874→function PrintFooter() {
+   875→  return (
+   876→    <div className="hidden print:block print:mt-6 print:pt-3 print:border-t print:border-gray-300 print:text-[8pt] print:text-gray-500 print:flex print:justify-between">
+   877→      <span>CalcForge - thecalcforge.com</span>
+   878→      <PrintDateAndUrl />
+   879→    </div>
+   880→  );
+   881→}
+   882→
+   883→function PrintDateAndUrl() {
+   884→  const text = useMemo(() => {
+   885→    if (typeof window === "undefined") return "";
+   886→    const d = new Date().toLocaleDateString("en-US", {
+   887→      year: "numeric",
+   888→      month: "long",
+   889→      day: "numeric",
+   890→    });
+   891→    return `${window.location.host}${window.location.pathname} - Printed ${d}`;
+   892→  }, []);
+   893→  return <span>{text}</span>;
+   894→}

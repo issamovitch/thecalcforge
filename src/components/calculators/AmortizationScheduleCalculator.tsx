@@ -48,14 +48,15 @@ interface AmortInputs {
 
 /* ─── Defaults ─── */
 
-const NOW = new Date();
-
+// SSR-safe neutral default (January 2025). The real current month/year is applied
+// client-side in the useState initializer (where window is available) so the
+// prerendered HTML does not freeze the build date as the default loan start date.
 export const DEFAULT_INPUTS: AmortInputs = {
   loanAmount: 250000,
   apr: 6.5,
   termYears: 30,
-  startMonth: NOW.getMonth(),
-  startYear: NOW.getFullYear(),
+  startMonth: 0,
+  startYear: 2025,
   extraMonthly: 0,
   extraAnnual: 0,
   oneTimeAmount: 0,
@@ -72,6 +73,10 @@ const MONTH_NAMES = [
 export default function AmortizationScheduleCalculator() {
   const [inputs, setInputs] = useState<AmortInputs>(() => {
     if (typeof window === "undefined") return DEFAULT_INPUTS;
+    // On the client, default startMonth/startYear to the real current month/year
+    // (not the SSR neutral default) so the schedule starts from today.
+    const now = new Date();
+    const clientDefault = { ...DEFAULT_INPUTS, startMonth: now.getMonth(), startYear: now.getFullYear() };
     const params = new URLSearchParams(window.location.search);
     const loanAmount = params.get("amount");
     const apr = params.get("rate");
@@ -86,18 +91,18 @@ export default function AmortizationScheduleCalculator() {
       !loanAmount && !apr && !termYears && !extraMonthly &&
       !extraAnnual && !oneTimeAmount
     ) {
-      return DEFAULT_INPUTS;
+      return clientDefault;
     }
     return {
-      loanAmount: loanAmount ? parseFloat(loanAmount) : DEFAULT_INPUTS.loanAmount,
-      apr: apr ? parseFloat(apr) : DEFAULT_INPUTS.apr,
-      termYears: termYears ? parseFloat(termYears) : DEFAULT_INPUTS.termYears,
-      startMonth: startMonth ? parseInt(startMonth, 10) : DEFAULT_INPUTS.startMonth,
-      startYear: startYear ? parseInt(startYear, 10) : DEFAULT_INPUTS.startYear,
-      extraMonthly: extraMonthly ? parseFloat(extraMonthly) : DEFAULT_INPUTS.extraMonthly,
-      extraAnnual: extraAnnual ? parseFloat(extraAnnual) : DEFAULT_INPUTS.extraAnnual,
-      oneTimeAmount: oneTimeAmount ? parseFloat(oneTimeAmount) : DEFAULT_INPUTS.oneTimeAmount,
-      oneTimeMonth: oneTimeMonth ? parseInt(oneTimeMonth, 10) : DEFAULT_INPUTS.oneTimeMonth,
+      loanAmount: loanAmount ? parseFloat(loanAmount) : clientDefault.loanAmount,
+      apr: apr ? parseFloat(apr) : clientDefault.apr,
+      termYears: termYears ? parseFloat(termYears) : clientDefault.termYears,
+      startMonth: startMonth ? parseInt(startMonth, 10) : clientDefault.startMonth,
+      startYear: startYear ? parseInt(startYear, 10) : clientDefault.startYear,
+      extraMonthly: extraMonthly ? parseFloat(extraMonthly) : clientDefault.extraMonthly,
+      extraAnnual: extraAnnual ? parseFloat(extraAnnual) : clientDefault.extraAnnual,
+      oneTimeAmount: oneTimeAmount ? parseFloat(oneTimeAmount) : clientDefault.oneTimeAmount,
+      oneTimeMonth: oneTimeMonth ? parseInt(oneTimeMonth, 10) : clientDefault.oneTimeMonth,
     };
   });
   const [copied, setCopied] = useState(false);

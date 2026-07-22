@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner";
 import ShareButtons from "@/components/calculators/ShareButtons";
 import { calculateEmergencyFund, DEFAULT_EXPENSE_LINES, type ExpenseLine } from "@/lib/emergency-fund-math";
+import { useClientToday } from "@/lib/use-client-today";
 
 /* ─── Defaults (match the worked example in the page content) ─── */
 
@@ -117,7 +118,9 @@ export default function EmergencyFundCalculator() {
   const linesTotal = lines.reduce((s, l) => s + (l.amount || 0), 0);
 
   /* ─── Results (live, computed inline per render) ─── */
-  const today = new Date();
+  // today is null during SSR and first client render (prevents build-time date
+  // from being frozen in SSG HTML). After hydration, it's the real current date.
+  const today = useClientToday();
   const expenses = itemized ? linesTotal : inputs.expenses;
   const result = calculateEmergencyFund(
     {
@@ -127,7 +130,7 @@ export default function EmergencyFundCalculator() {
       monthlySavings: inputs.monthly,
       annualRate: inputs.rate / 100,
     },
-    today
+    today ?? new Date(0)
   );
 
   /* ─── Update handlers ─── */
@@ -500,7 +503,7 @@ export default function EmergencyFundCalculator() {
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {result.months} total monthly compounding periods
-                    {result.targetDate ? (
+                    {today && result.targetDate ? (
                       <>
                         {" "}&middot; reached around{" "}
                         <strong className="inline-flex items-center gap-1">

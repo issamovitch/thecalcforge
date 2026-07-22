@@ -13,6 +13,8 @@ import AdSlot from "@/components/monetization/AdSlot";
 import { FaqSection } from "@/components/shared/FaqSection";
 import { solveMonthly, solveTime } from "@/lib/savings-goal-math";
 
+export const dynamic = "force-static";
+
 /* ─── SEO Metadata ─── */
 
 const pageUrl = `${siteConfig.url}/savings/savings-goal-calculator`;

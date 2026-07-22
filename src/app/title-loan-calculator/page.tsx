@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/table";
 import { ArrowRight } from "lucide-react";
 
+export const dynamic = "force-static";
+
 /* ─── SEO Metadata ─── */
 export const metadata: Metadata = {
   title: "Title Loan Calculator",

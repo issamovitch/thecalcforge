@@ -5,6 +5,8 @@ import { BreadcrumbJsonLd } from "@/components/seo/JsonLd";
 import { CalculatorCard } from "@/components/shared/CalculatorCard";
 import { Calculator } from "lucide-react";
 
+export const dynamic = "force-static";
+
 const homeBuyingCalcs = calculatorPages.filter(
   (p) => p.category === "home-buying",
 );

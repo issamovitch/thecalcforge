@@ -18,6 +18,8 @@ import { Separator } from "@/components/ui/separator";
 import AdSlot from "@/components/monetization/AdSlot";
 import { FaqSection } from "@/components/shared/FaqSection";
 
+export const dynamic = "force-static";
+
 /* ─── Build-time computed examples (single source of truth) ─── */
 
 function financed(price: number, taxPct: number, tradeIn: number, down: number) {

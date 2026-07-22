@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import ShareButtons from "@/components/calculators/ShareButtons";
+import { useClientToday } from "@/lib/use-client-today";
 
 /* ─── Types ─── */
 
@@ -77,7 +78,7 @@ const fmtPercent = (v: number) => `${v.toFixed(2)}%`;
 
 /* ─── Calculation Engine ─── */
 
-function runSchedule(cards: CardEntry[], monthlyBudget: number, snowball: boolean): PayoffResult {
+function runSchedule(cards: CardEntry[], monthlyBudget: number, snowball: boolean, today: Date | null): PayoffResult {
   const active = cards.filter((c) => c.balance > 0);
   if (active.length === 0) {
     return { months: 0, payoffDate: "", totalInterest: 0, totalPaid: 0, schedule: [], warnings: [] };
@@ -166,14 +167,16 @@ function runSchedule(cards: CardEntry[], monthlyBudget: number, snowball: boolea
     schedule.push(row);
   }
 
-  const now = new Date();
-  const debtFree = new Date(now.getFullYear(), now.getMonth() + month, 1);
-  const payoffDate = debtFree.toLocaleDateString("en-US", { year: "numeric", month: "long" });
+  // today is null during SSR; payoffDate is left empty so no build-time date is
+  // frozen in the prerendered HTML. After hydration the real date is used.
+  const payoffDate = today
+    ? new Date(today.getFullYear(), today.getMonth() + month, 1).toLocaleDateString("en-US", { year: "numeric", month: "long" })
+    : "";
 
   return { months: month, payoffDate, totalInterest, totalPaid, schedule, warnings };
 }
 
-function calculateResults(inputs: CCInputs): { minOnly: PayoffResult; active: PayoffResult } {
+function calculateResults(inputs: CCInputs, today: Date | null): { minOnly: PayoffResult; active: PayoffResult } {
   const { cards, mode, fixedPayment, targetMonths, snowball } = inputs;
   const active = cards.filter((c) => c.balance > 0);
 
@@ -183,11 +186,11 @@ function calculateResults(inputs: CCInputs): { minOnly: PayoffResult; active: Pa
   const totalMins = active.reduce((s, c) => s + c.minimumPayment, 0);
 
   // Min-only result: budget = sum of minimums only
-  const minOnly = runSchedule(cards, totalMins, snowball);
+  const minOnly = runSchedule(cards, totalMins, snowball, today);
 
   if (mode === "fixed") {
     const budget = totalMins + fixedPayment;
-    const activeResult = runSchedule(cards, budget, snowball);
+    const activeResult = runSchedule(cards, budget, snowball, today);
     return { minOnly, active: activeResult };
   }
 
@@ -198,7 +201,7 @@ function calculateResults(inputs: CCInputs): { minOnly: PayoffResult; active: Pa
 
   for (let i = 0; i < 100; i++) {
     const mid = (lo + hi) / 2;
-    const r = runSchedule(cards, mid, snowball);
+    const r = runSchedule(cards, mid, snowball, null);
     if (r.months <= targetMonths) {
       result = mid;
       hi = mid;
@@ -207,13 +210,14 @@ function calculateResults(inputs: CCInputs): { minOnly: PayoffResult; active: Pa
     }
   }
 
-  const activeResult = runSchedule(cards, result, snowball);
+  const activeResult = runSchedule(cards, result, snowball, today);
   return { minOnly, active: activeResult };
 }
 
 /* ─── Component ─── */
 
 export default function CreditCardPayoffCalculator() {
+  const today = useClientToday();
   const [inputs, setInputs] = useState<CCInputs>(() => {
     if (typeof window === "undefined") return DEFAULT_INPUTS;
     const params = new URLSearchParams(window.location.search);
@@ -247,9 +251,9 @@ export default function CreditCardPayoffCalculator() {
   const [showSchedule, setShowSchedule] = useState(true);
 
   const { minOnlyResult, activeResult } = useMemo(() => {
-    const { minOnly, active } = calculateResults(inputs);
+    const { minOnly, active } = calculateResults(inputs, today);
     return { minOnlyResult: minOnly, activeResult: active };
-  }, [inputs]);
+  }, [inputs, today]);
 
   const isInitialMount = useRef(true);
   useEffect(() => {

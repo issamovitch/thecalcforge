@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { siteConfig, calculatorPages } from "@/config/site.config";
 
+export const dynamic = "force-static";
+
 const departments = [
   { slug: "loans", name: "Loan Calculators", description: "Estimate monthly payments, total interest, and amortization schedules for any loan type.", icon: "Landmark", href: "/loans" },
   { slug: "debt", name: "Debt Calculators", description: "Build payoff strategies, compare snowball vs. avalanche, and see your debt-free date.", icon: "CreditCard", href: "/debt" },

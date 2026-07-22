@@ -1,0 +1,1036 @@
+     1→"use client";
+     2→
+     3→import { useState, useEffect, useCallback, useMemo, useRef, useSyncExternalStore } from "react";
+     4→import {
+     5→  Copy, Check, Printer, RotateCcw,
+     6→  ChevronDown, ChevronUp, Info, Plus, X,
+     7→  AlertTriangle, Target, Zap,
+     8→} from "lucide-react";
+     9→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+    10→import { Input } from "@/components/ui/input";
+    11→import { Label } from "@/components/ui/label";
+    12→import { Button } from "@/components/ui/button";
+    13→import {
+    14→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    15→} from "@/components/ui/table";
+    16→import {
+    17→  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+    18→} from "@/components/ui/tooltip";
+    19→import { Alert, AlertDescription } from "@/components/ui/alert";
+    20→import { toast } from "sonner";
+    21→import ShareButtons from "@/components/calculators/ShareButtons";
+    22→
+    23→/* ─── Types ─── */
+    24→
+    25→export interface DebtEntry {
+    26→  id: string;
+    27→  name: string;
+    28→  balance: number;
+    29→  apr: number;
+    30→  minimumPayment: number;
+    31→}
+    32→
+    33→interface DebtInputs {
+    34→  debts: DebtEntry[];
+    35→  method: "snowball" | "avalanche";
+    36→  extraPayment: number;
+    37→}
+    38→
+    39→interface MonthEntry {
+    40→  month: number;
+    41→  debts: {
+    42→    id: string;
+    43→    name: string;
+    44→    payment: number;
+    45→    interest: number;
+    46→    principal: number;
+    47→    balance: number;
+    48→  }[];
+    49→}
+    50→
+    51→interface PayoffResult {
+    52→  totalMonths: number;
+    53→  debtFreeDate: string;
+    54→  totalInterest: number;
+    55→  totalPaid: number;
+    56→  payoffOrder: string[];
+    57→  schedule: MonthEntry[];
+    58→  warnings: string[];
+    59→}
+    60→
+    61→/* ─── Defaults ─── */
+    62→
+    63→const genId = () => Math.random().toString(36).slice(2, 9);
+    64→
+    65→export const DEFAULT_DEBTS: DebtEntry[] = [
+    66→  { id: genId(), name: "Credit Card A", balance: 4500, apr: 22.9, minimumPayment: 135 },
+    67→  { id: genId(), name: "Credit Card B", balance: 2200, apr: 18.9, minimumPayment: 66 },
+    68→  { id: genId(), name: "Personal Loan", balance: 8000, apr: 9.5, minimumPayment: 168 },
+    69→];
+    70→
+    71→export const DEFAULT_INPUTS: DebtInputs = {
+    72→  debts: DEFAULT_DEBTS,
+    73→  method: "snowball",
+    74→  extraPayment: 200,
+    75→};
+    76→
+    77→/* ─── Formatters ─── */
+    78→
+    79→const fmtCurrency = (v: number) =>
+    80→  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
+    81→
+    82→const fmtPercent = (v: number) => `${(v / 100).toFixed(2)}%`;
+    83→
+    84→/* ─── Calculation Engine ─── */
+    85→
+    86→function calculatePayoff(inputs: DebtInputs, today: Date | null): PayoffResult {
+    87→  const { debts, method, extraPayment } = inputs;
+    88→
+    89→  const activeDebts = debts.filter((d) => d.balance > 0);
+    90→  if (activeDebts.length === 0) {
+    91→    return {
+    92→      totalMonths: 0,
+    93→      debtFreeDate: "",
+    94→      totalInterest: 0,
+    95→      totalPaid: 0,
+    96→      payoffOrder: [],
+    97→      schedule: [],
+    98→      warnings: [],
+    99→    };
+   100→  }
+   101→
+   102→  // Check warnings: minimum payment < monthly interest
+   103→  const warnings: string[] = [];
+   104→  for (const d of activeDebts) {
+   105→    const monthlyInterest = d.balance * (d.apr / 100) / 12;
+   106→    if (d.minimumPayment <= monthlyInterest && d.minimumPayment < d.balance) {
+   107→      warnings.push(
+   108→        `"${d.name}" minimum payment (${fmtCurrency(d.minimumPayment)}/mo) may not cover monthly interest (${fmtCurrency(monthlyInterest)}/mo). This debt may never be paid off.`
+   109→      );
+   110→    }
+   111→  }
+   112→
+   113→  // Sort debts based on method
+   114→  const sortedDebts = [...activeDebts].sort((a, b) => {
+   115→    if (method === "snowball") {
+   116→      return a.balance - b.balance; // lowest balance first
+   117→    } else {
+   118→      return b.apr - a.apr; // highest APR first
+   119→    }
+   120→  });
+   121→
+   122→  // Build working state
+   123→  const balances: number[] = sortedDebts.map((d) => d.balance);
+   124→  const aprs: number[] = sortedDebts.map((d) => d.apr);
+   125→  const mins: number[] = sortedDebts.map((d) => d.minimumPayment);
+   126→  const names: string[] = sortedDebts.map((d) => d.name);
+   127→  const ids: string[] = sortedDebts.map((d) => d.id);
+   128→
+   129→  const schedule: MonthEntry[] = [];
+   130→  const payoffOrder: string[] = [];
+   131→  let totalInterest = 0;
+   132→  let totalPaid = 0;
+   133→  let month = 0;
+   134→  const maxMonths = 1200; // 100 years cap
+   135→
+   136→  // Freed minimums from debts already paid off (persists across months)
+   137→  let freedMinimums = 0;
+   138→
+   139→  while (month < maxMonths) {
+   140→    if (balances.every((b) => b < 0.005)) break;
+   141→
+   142→    month++;
+   143→    // Extra pool = user's extra + all freed minimums from previously paid-off debts
+   144→    let extra = extraPayment + freedMinimums;
+   145→    let appliedExtra = false; // has extra been applied to the current priority debt?
+   146→
+   147→    const monthData: MonthEntry = { month, debts: [] };
+   148→
+   149→    for (let i = 0; i < sortedDebts.length; i++) {
+   150→      const bal = balances[i];
+   151→
+   152→      // Already paid off — its minimum is already in freedMinimums
+   153→      if (bal < 0.005) {
+   154→        monthData.debts.push({ id: ids[i], name: names[i], payment: 0, interest: 0, principal: 0, balance: 0 });
+   155→        continue;
+   156→      }
+   157→
+   158→      const interest = bal * (aprs[i] / 100) / 12;
+   159→      const owed = bal + interest;
+   160→      const minPay = Math.min(mins[i], owed);
+   161→
+   162→      let payment = minPay;
+   163→
+   164→      // Apply extra to the first (priority) unpaid debt
+   165→      if (!appliedExtra && extra > 0) {
+   166→        const remaining = owed - payment;
+   167→        const extraToApply = Math.min(extra, Math.max(0, remaining));
+   168→        payment += extraToApply;
+   169→        extra -= extraToApply;
+   170→        appliedExtra = true;
+   171→      }
+   172→
+   173→      const principal = payment - interest;
+   174→      const newBal = Math.max(0, bal - principal);
+   175→
+   176→      totalInterest += interest;
+   177→      totalPaid += payment;
+   178→      balances[i] = newBal;
+   179→
+   180→      monthData.debts.push({
+   181→        id: ids[i],
+   182→        name: names[i],
+   183→        payment,
+   184→        interest,
+   185→        principal: Math.max(0, principal),
+   186→        balance: newBal,
+   187→      });
+   188→
+   189→      // If this debt is fully paid off:
+   190→      // Free its minimum for future months only.
+   191→      // This month's remaining budget is already in `extra` from the
+   192→      // unspent portion (e.g., priority debt didn't need all the extra).
+   193→      // Reset appliedExtra so the next unpaid debt becomes the new priority.
+   194→      if (newBal < 0.005) {
+   195→        freedMinimums += mins[i];
+   196→        appliedExtra = false;
+   197→        if (!payoffOrder.includes(names[i])) {
+   198→          payoffOrder.push(names[i]);
+   199→        }
+   200→      }
+   201→    }
+   202→
+   203→    schedule.push(monthData);
+   204→  }
+   205→
+   206→  // today is null during SSR; debtFreeDate is left empty so no build-time date is
+   207→  // frozen in the prerendered HTML. After hydration the real date is used.
+   208→  const dateStr = today
+   209→    ? new Date(today.getFullYear(), today.getMonth() + month, 1).toLocaleDateString("en-US", {
+   210→        year: "numeric",
+   211→        month: "long",
+   212→      })
+   213→    : "";
+   214→
+   215→  return {
+   216→    totalMonths: month,
+   217→    debtFreeDate: dateStr,
+   218→    totalInterest,
+   219→    totalPaid,
+   220→    payoffOrder,
+   221→    schedule,
+   222→    warnings,
+   223→  };
+   224→}
+   225→
+   226→/* ─── Client-only date (prevents build-time date from being frozen in SSG HTML) ─── */
+   227→
+   228→const subscribeNoop = () => () => {};
+   229→function useClientToday(): Date | null {
+   230→  return useSyncExternalStore(
+   231→    subscribeNoop,
+   232→    () => new Date(),
+   233→    () => null
+   234→  );
+   235→}
+   236→
+   237→/* ─── Component ─── */
+   238→
+   239→export default function DebtPayoffCalculator() {
+   240→  const today = useClientToday();
+   241→  const [inputs, setInputs] = useState<DebtInputs>(() => {
+   242→    if (typeof window === "undefined") return DEFAULT_INPUTS;
+   243→    const params = new URLSearchParams(window.location.search);
+   244→
+   245→    // Check if any debt params exist
+   246→    const hasParams = params.get("d1name") || params.get("d1bal");
+   247→    if (!hasParams) return DEFAULT_INPUTS;
+   248→
+   249→    // Parse debt entries from URL
+   250→    const debts: DebtEntry[] = [];
+   251→    for (let i = 1; i <= 10; i++) {
+   252→      const name = params.get(`d${i}name`);
+   253→      const bal = params.get(`d${i}bal`);
+   254→      if (!name && !bal) break;
+   255→      debts.push({
+   256→        id: genId(),
+   257→        name: name || `Debt ${i}`,
+   258→        balance: bal ? parseFloat(bal) : 0,
+   259→        apr: params.get(`d${i}apr`) ? parseFloat(params.get(`d${i}apr`)!) : 0,
+   260→        minimumPayment: params.get(`d${i}min`) ? parseFloat(params.get(`d${i}min`)!) : 0,
+   261→      });
+   262→    }
+   263→    if (debts.length === 0) return DEFAULT_INPUTS;
+   264→
+   265→    const method = params.get("method") === "avalanche" ? "avalanche" : "snowball";
+   266→    const extraPayment = params.get("extra") ? parseFloat(params.get("extra")!) : DEFAULT_INPUTS.extraPayment;
+   267→
+   268→    return { debts, method, extraPayment };
+   269→  });
+   270→
+   271→  const [copied, setCopied] = useState(false);
+   272→  const [showSchedule, setShowSchedule] = useState(true);
+   273→
+   274→  // Calculate results for both methods
+   275→  const snowballResult = useMemo(
+   276→    () => calculatePayoff({ ...inputs, method: "snowball" }, today),
+   277→    [inputs, today],
+   278→  );
+   279→
+   280→  const avalancheResult = useMemo(
+   281→    () => calculatePayoff({ ...inputs, method: "avalanche" }, today),
+   282→    [inputs, today],
+   283→  );
+   284→
+   285→  // Active result based on selected method
+   286→  const activeResult = inputs.method === "snowball" ? snowballResult : avalancheResult;
+   287→
+   288→  // Sync URL query string when inputs change (skip initial render)
+   289→  const isInitialMount = useRef(true);
+   290→  useEffect(() => {
+   291→    if (isInitialMount.current) {
+   292→      isInitialMount.current = false;
+   293→      return;
+   294→    }
+   295→    if (typeof window === "undefined") return;
+   296→    const params = new URLSearchParams();
+   297→    inputs.debts.forEach((d, i) => {
+   298→      if (d.name) params.set(`d${i + 1}name`, d.name);
+   299→      params.set(`d${i + 1}bal`, d.balance.toString());
+   300→      params.set(`d${i + 1}apr`, d.apr.toString());
+   301→      params.set(`d${i + 1}min`, d.minimumPayment.toString());
+   302→    });
+   303→    params.set("method", inputs.method);
+   304→    params.set("extra", inputs.extraPayment.toString());
+   305→    const newUrl = `${window.location.pathname}?${params.toString()}`;
+   306→    window.history.replaceState(null, "", newUrl);
+   307→  }, [inputs]);
+   308→
+   309→  const handleCopyLink = useCallback(async () => {
+   310→    try {
+   311→      await navigator.clipboard.writeText(window.location.href);
+   312→      setCopied(true);
+   313→      toast.success("Link copied to clipboard");
+   314→      setTimeout(() => setCopied(false), 2000);
+   315→    } catch {
+   316→      toast.error("Failed to copy link");
+   317→    }
+   318→  }, []);
+   319→
+   320→  const handlePrint = useCallback(() => {
+   321→    window.print();
+   322→  }, []);
+   323→
+   324→  const handleReset = useCallback(() => {
+   325→    setInputs(DEFAULT_INPUTS);
+   326→    toast.success("Calculator reset to defaults");
+   327→  }, []);
+   328→
+   329→  const updateDebt = useCallback((id: string, field: keyof Omit<DebtEntry, "id">, value: string) => {
+   330→    setInputs((prev) => ({
+   331→      ...prev,
+   332→      debts: prev.debts.map((d) => {
+   333→        if (d.id !== id) return d;
+   334→        if (field === "name") return { ...d, name: value };
+   335→        const num = parseFloat(value);
+   336→        return { ...d, [field]: isNaN(num) ? 0 : num };
+   337→      }),
+   338→    }));
+   339→  }, []);
+   340→
+   341→  const addDebt = useCallback(() => {
+   342→    setInputs((prev) => ({
+   343→      ...prev,
+   344→      debts: [
+   345→        ...prev.debts,
+   346→        { id: genId(), name: `Debt ${prev.debts.length + 1}`, balance: 0, apr: 0, minimumPayment: 0 },
+   347→      ],
+   348→    }));
+   349→  }, []);
+   350→
+   351→  const removeDebt = useCallback((id: string) => {
+   352→    setInputs((prev) => ({
+   353→      ...prev,
+   354→      debts: prev.debts.filter((d) => d.id !== id),
+   355→    }));
+   356→  }, []);
+   357→
+   358→  const totalBalance = useMemo(
+   359→    () => inputs.debts.reduce((sum, d) => sum + d.balance, 0),
+   360→    [inputs.debts],
+   361→  );
+   362→
+   363→  const hasValidDebts = inputs.debts.some((d) => d.balance > 0);
+   364→
+   365→  // Comparison differences
+   366→  const interestDiff = snowballResult.totalInterest - avalancheResult.totalInterest;
+   367→  const monthDiff = snowballResult.totalMonths - avalancheResult.totalMonths;
+   368→
+   369→  return (
+   370→    <TooltipProvider delayDuration={300}>
+   371→      <div className="space-y-6">
+   372→        {/* ─── Calculator Card ─── */}
+   373→        <Card className="print-break-inside">
+   374→          <CardHeader className="pb-4">
+   375→            <CardTitle className="flex items-center gap-2 text-xl">
+   376→              <Target className="size-5 text-ember" />
+   377→              Debt Payoff Calculator
+   378→            </CardTitle>
+   379→            <p className="text-sm text-muted-foreground">
+   380→              Compare the Debt Snowball and Debt Avalanche methods to find the
+   381→              fastest and cheapest way to become debt-free. Add your debts,
+   382→              choose a strategy, and see your personalized payoff plan.
+   383→            </p>
+   384→          </CardHeader>
+   385→          <CardContent>
+   386→            <div className="grid gap-6 lg:grid-cols-2">
+   387→              {/* ─── Inputs ─── */}
+   388→              <div className="space-y-5">
+   389→                {/* Debt Rows */}
+   390→                <div className="space-y-3">
+   391→                  <div className="flex items-center justify-between">
+   392→                    <Label className="text-sm font-medium">Your Debts</Label>
+   393→                    <span className="text-xs text-muted-foreground">
+   394→                      Total: {fmtCurrency(totalBalance)}
+   395→                    </span>
+   396→                  </div>
+   397→
+   398→                  {inputs.debts.map((debt, idx) => (
+   399→                    <div
+   400→                      key={debt.id}
+   401→                      className="rounded-lg border bg-card p-3 sm:p-4 space-y-3"
+   402→                    >
+   403→                      {/* Row header: name + remove */}
+   404→                      <div className="flex items-center gap-2">
+   405→                        <span className="flex size-6 items-center justify-center rounded-full bg-ember/10 text-xs font-semibold text-ember">
+   406→                          {idx + 1}
+   407→                        </span>
+   408→                        <Input
+   409→                          type="text"
+   410→                          value={debt.name}
+   411→                          onChange={(e) => updateDebt(debt.id, "name", e.target.value)}
+   412→                          placeholder="Debt name"
+   413→                          className="flex-1 h-8 text-sm no-print"
+   414→                          aria-label={`Debt ${idx + 1} name`}
+   415→                        />
+   416→                        <span className="hidden sm:inline text-sm font-medium min-w-0 truncate max-w-[120px] print:inline">
+   417→                          {debt.name || `Debt ${idx + 1}`}
+   418→                        </span>
+   419→                        {inputs.debts.length > 1 && (
+   420→                          <Button
+   421→                            variant="ghost"
+   422→                            size="sm"
+   423→                            className="size-7 p-0 text-muted-foreground hover:text-destructive no-print"
+   424→                            onClick={() => removeDebt(debt.id)}
+   425→                            aria-label={`Remove ${debt.name || `debt ${idx + 1}`}`}
+   426→                          >
+   427→                            <X className="size-4" />
+   428→                          </Button>
+   429→                        )}
+   430→                      </div>
+   431→
+   432→                      {/* Fields: 2-col on mobile, 4-col on sm+ */}
+   433→                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 no-print">
+   434→                        <div className="space-y-1">
+   435→                          <Label className="text-[11px] text-muted-foreground">Balance ($)</Label>
+   436→                          <Input
+   437→                            type="number"
+   438→                            min={0}
+   439→                            step={100}
+   440→                            value={debt.balance || ""}
+   441→                            onChange={(e) => updateDebt(debt.id, "balance", e.target.value)}
+   442→                            placeholder="0"
+   443→                            className="h-8 text-sm"
+   444→                            aria-label={`Debt ${idx + 1} balance`}
+   445→                          />
+   446→                        </div>
+   447→                        <div className="space-y-1">
+   448→                          <div className="flex items-center gap-1">
+   449→                            <Label className="text-[11px] text-muted-foreground">APR (%)</Label>
+   450→                            <Tooltip>
+   451→                              <TooltipTrigger asChild>
+   452→                                <Info className="size-3 text-muted-foreground cursor-help" />
+   453→                              </TooltipTrigger>
+   454→                              <TooltipContent side="top" className="max-w-[200px] text-xs">
+   455→                                Annual Percentage Rate: the yearly interest rate on this debt.
+   456→                              </TooltipContent>
+   457→                            </Tooltip>
+   458→                          </div>
+   459→                          <Input
+   460→                            type="number"
+   461→                            min={0}
+   462→                            step={0.1}
+   463→                            value={debt.apr || ""}
+   464→                            onChange={(e) => updateDebt(debt.id, "apr", e.target.value)}
+   465→                            placeholder="0"
+   466→                            className="h-8 text-sm"
+   467→                            aria-label={`Debt ${idx + 1} APR`}
+   468→                          />
+   469→                        </div>
+   470→                        <div className="space-y-1 sm:col-span-2">
+   471→                          <div className="flex items-center gap-1">
+   472→                            <Label className="text-[11px] text-muted-foreground">Min. Payment ($/mo)</Label>
+   473→                            <Tooltip>
+   474→                              <TooltipTrigger asChild>
+   475→                                <Info className="size-3 text-muted-foreground cursor-help" />
+   476→                              </TooltipTrigger>
+   477→                              <TooltipContent side="top" className="max-w-[220px] text-xs">
+   478→                                The minimum required monthly payment. When this debt is paid off,
+   479→                                its minimum payment is redirected to the next priority debt.
+   480→                              </TooltipContent>
+   481→                            </Tooltip>
+   482→                          </div>
+   483→                          <Input
+   484→                            type="number"
+   485→                            min={0}
+   486→                            step={10}
+   487→                            value={debt.minimumPayment || ""}
+   488→                            onChange={(e) => updateDebt(debt.id, "minimumPayment", e.target.value)}
+   489→                            placeholder="0"
+   490→                            className="h-8 text-sm"
+   491→                            aria-label={`Debt ${idx + 1} minimum payment`}
+   492→                          />
+   493→                        </div>
+   494→                      </div>
+   495→                    </div>
+   496→                  ))}
+   497→
+   498→                  {/* Add Debt Button */}
+   499→                  <Button
+   500→                    variant="outline"
+   501→                    size="sm"
+   502→                    onClick={addDebt}
+   503→                    className="w-full border-dashed text-muted-foreground hover:border-ember/40 hover:text-ember no-print"
+   504→                  >
+   505→                    <Plus className="mr-1.5 size-4" />
+   506→                    Add Debt
+   507→                  </Button>
+   508→                </div>
+   509→
+   510→                {/* Method Toggle */}
+   511→                <div className="space-y-2">
+   512→                  <Label className="text-sm font-medium">Payoff Strategy</Label>
+   513→                  <div className="grid grid-cols-2 gap-2 no-print">
+   514→                    <button
+   515→                      type="button"
+   516→                      onClick={() => setInputs((p) => ({ ...p, method: "snowball" }))}
+   517→                      className={`flex items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors ${
+   518→                        inputs.method === "snowball"
+   519→                          ? "border-ember bg-ember/10 text-ember"
+   520→                          : "border-border bg-background text-muted-foreground hover:border-ember/30 hover:text-ember"
+   521→                      }`}
+   522→                      aria-pressed={inputs.method === "snowball"}
+   523→                    >
+   524→                      <Target className="size-4" />
+   525→                      Snowball
+   526→                    </button>
+   527→                    <button
+   528→                      type="button"
+   529→                      onClick={() => setInputs((p) => ({ ...p, method: "avalanche" }))}
+   530→                      className={`flex items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors ${
+   531→                        inputs.method === "avalanche"
+   532→                          ? "border-ember bg-ember/10 text-ember"
+   533→                          : "border-border bg-background text-muted-foreground hover:border-ember/30 hover:text-ember"
+   534→                      }`}
+   535→                      aria-pressed={inputs.method === "avalanche"}
+   536→                    >
+   537→                      <Zap className="size-4" />
+   538→                      Avalanche
+   539→                    </button>
+   540→                  </div>
+   541→                  {/* Print-only method label */}
+   542→                  <p className="hidden print:block text-sm font-medium">
+   543→                    Strategy: {inputs.method === "snowball" ? "Debt Snowball" : "Debt Avalanche"}
+   544→                  </p>
+   545→                  <p className="text-[11px] text-muted-foreground">
+   546→                    {inputs.method === "snowball"
+   547→                      ? "Pays off the smallest balance first for quick psychological wins."
+   548→                      : "Targets the highest interest rate first to minimize total interest paid."}
+   549→                  </p>
+   550→                </div>
+   551→
+   552→                {/* Extra Monthly Payment */}
+   553→                <div className="space-y-2">
+   554→                  <div className="flex items-center justify-between">
+   555→                    <div className="flex items-center gap-1.5">
+   556→                      <Label htmlFor="extra-payment" className="text-sm font-medium">
+   557→                        Extra Monthly Payment
+   558→                      </Label>
+   559→                      <Tooltip>
+   560→                        <TooltipTrigger asChild>
+   561→                          <Info className="size-3.5 text-muted-foreground cursor-help no-print" />
+   562→                        </TooltipTrigger>
+   563→                        <TooltipContent side="top" className="max-w-[280px] text-xs">
+   564→                          An additional amount you can pay each month on top of
+   565→                          all minimum payments. This is applied to the priority
+   566→                          debt first. As debts are paid off, their minimum
+   567→                          payments also roll over to the next debt.
+   568→                        </TooltipContent>
+   569→                      </Tooltip>
+   570→                    </div>
+   571→                    <span className="text-sm font-semibold text-foreground">
+   572→                      {fmtCurrency(inputs.extraPayment)}
+   573→                    </span>
+   574→                  </div>
+   575→                  <div className="no-print">
+   576→                    <Input
+   577→                      id="extra-payment"
+   578→                      type="number"
+   579→                      min={0}
+   580→                      step={25}
+   581→                      value={inputs.extraPayment || ""}
+   582→                      onChange={(e) => {
+   583→                        const num = parseFloat(e.target.value);
+   584→                        setInputs((p) => ({
+   585→                          ...p,
+   586→                          extraPayment: isNaN(num) ? 0 : num,
+   587→                        }));
+   588→                      }}
+   589→                      placeholder="0"
+   590→                      aria-label="Extra monthly payment"
+   591→                    />
+   592→                  </div>
+   593→                  <p className="hidden print:block text-sm">
+   594→                    Extra monthly payment: {fmtCurrency(inputs.extraPayment)}
+   595→                  </p>
+   596→                </div>
+   597→
+   598→                {/* Warnings */}
+   599→                {activeResult.warnings.length > 0 && (
+   600→                  <div className="space-y-2">
+   601→                    {activeResult.warnings.map((w, i) => (
+   602→                      <Alert key={i} variant="destructive" className="py-2">
+   603→                        <AlertTriangle className="size-4" />
+   604→                        <AlertDescription className="text-xs">{w}</AlertDescription>
+   605→                      </Alert>
+   606→                    ))}
+   607→                  </div>
+   608→                )}
+   609→              </div>
+   610→
+   611→              {/* ─── Results ─── */}
+   612→              <div className="space-y-4">
+   613→                {hasValidDebts ? (
+   614→                  <>
+   615→                    {/* Debt Free Date Highlight */}
+   616→                    <div className="rounded-lg bg-ember/10 border border-ember/20 p-5 text-center">
+   617→                      <p className="text-sm font-medium text-muted-foreground mb-1">
+   618→                        Debt Free Date
+   619→                      </p>
+   620→                      <p className="text-2xl sm:text-3xl font-bold tracking-tight text-ember">
+   621→                        {activeResult.totalMonths > 0
+   622→                          ? activeResult.debtFreeDate
+   623→                          : "Already debt-free!"}
+   624→                      </p>
+   625→                      <p className="text-xs text-muted-foreground mt-1">
+   626→                        {activeResult.totalMonths > 0
+   627→                          ? `${activeResult.totalMonths} month${activeResult.totalMonths !== 1 ? "s" : ""} from now`
+   628→                          : "No active debt balances"}
+   629→                      </p>
+   630→                    </div>
+   631→
+   632→                    {/* Breakdown Grid */}
+   633→                    <div className="grid grid-cols-2 gap-3">
+   634→                      <ResultCard
+   635→                        label="Total Months"
+   636→                        value={activeResult.totalMonths.toString()}
+   637→                        subtext={
+   638→                          activeResult.totalMonths > 12
+   639→                            ? `≈ ${(activeResult.totalMonths / 12).toFixed(1)} years`
+   640→                            : activeResult.totalMonths <= 1
+   641→                              ? "Less than 1 month"
+   642→                              : `${activeResult.totalMonths} months`
+   643→                        }
+   644→                      />
+   645→                      <ResultCard
+   646→                        label="Total Interest"
+   647→                        value={fmtCurrency(activeResult.totalInterest)}
+   648→                        subtext={`${fmtPercent((activeResult.totalInterest / activeResult.totalPaid) * 100)} of total paid`}
+   649→                      />
+   650→                      <ResultCard
+   651→                        label="Total Paid"
+   652→                        value={fmtCurrency(activeResult.totalPaid)}
+   653→                        subtext={`Principal ${fmtCurrency(totalBalance)} + interest`}
+   654→                      />
+   655→                      <ResultCard
+   656→                        label="Monthly Payment"
+   657→                        value={fmtCurrency(
+   658→                          inputs.debts.reduce((s, d) => s + d.minimumPayment, 0) +
+   659→                            inputs.extraPayment,
+   660→                        )}
+   661→                        subtext="All minimums + extra"
+   662→                      />
+   663→                    </div>
+   664→
+   665→                    {/* Actions */}
+   666→                    <div className="flex flex-wrap items-center gap-3 no-print">
+   667→                      <div className="flex flex-wrap gap-2">
+   668→                        <Button
+   669→                          variant="outline"
+   670→                          size="sm"
+   671→                          onClick={handleCopyLink}
+   672→                          className="text-xs"
+   673→                        >
+   674→                          {copied ? (
+   675→                            <Check className="mr-1.5 size-3.5" />
+   676→                          ) : (
+   677→                            <Copy className="mr-1.5 size-3.5" />
+   678→                          )}
+   679→                          {copied ? "Copied" : "Copy Link"}
+   680→                        </Button>
+   681→                        <Button
+   682→                          variant="outline"
+   683→                          size="sm"
+   684→                          onClick={handlePrint}
+   685→                          className="text-xs"
+   686→                        >
+   687→                          <Printer className="mr-1.5 size-3.5" />
+   688→                          Print
+   689→                        </Button>
+   690→                        <Button
+   691→                          variant="outline"
+   692→                          size="sm"
+   693→                          onClick={handleReset}
+   694→                          className="text-xs"
+   695→                        >
+   696→                          <RotateCcw className="mr-1.5 size-3.5" />
+   697→                          Reset
+   698→                        </Button>
+   699→                      </div>
+   700→                      <ShareButtons
+   701→                        summaryText={`Debt-free in ${activeResult.totalMonths} months. Total interest: ${fmtCurrency(activeResult.totalInterest)}. Calculate your payoff:`}
+   702→                      />
+   703→                    </div>
+   704→
+   705→                    {/* Disclaimer */}
+   706→                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+   707→                      This calculator provides estimates for informational purposes
+   708→                      only. Actual payoff timelines depend on payment processing,
+   709→                      fees, and changes to your APR. Always check your statements
+   710→                      for accurate balances and rates.
+   711→                    </p>
+   712→                  </>
+   713→                ) : (
+   714→                  <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+   715→                    Enter at least one debt with a balance to see results.
+   716→                  </div>
+   717→                )}
+   718→              </div>
+   719→            </div>
+   720→          </CardContent>
+   721→        </Card>
+   722→
+   723→        {/* ─── Comparison Card ─── */}
+   724→        {hasValidDebts && activeResult.totalMonths > 0 && (
+   725→          <Card className="print-break-inside">
+   726→            <CardHeader className="pb-3">
+   727→              <CardTitle className="text-lg flex items-center gap-2">
+   728→                <Target className="size-4 text-ember" />
+   729→                Snowball vs. Avalanche Comparison
+   730→              </CardTitle>
+   731→            </CardHeader>
+   732→            <CardContent>
+   733→              <div className="overflow-x-auto">
+   734→                <Table>
+   735→                  <TableHeader>
+   736→                    <TableRow>
+   737→                      <TableHead>Metric</TableHead>
+   738→                      <TableHead className="text-center">
+   739→                        <span className="flex items-center justify-center gap-1.5">
+   740→                          <Target className="size-3.5" />
+   741→                          Snowball
+   742→                        </span>
+   743→                      </TableHead>
+   744→                      <TableHead className="text-center">
+   745→                        <span className="flex items-center justify-center gap-1.5">
+   746→                          <Zap className="size-3.5" />
+   747→                          Avalanche
+   748→                        </span>
+   749→                      </TableHead>
+   750→                    </TableRow>
+   751→                  </TableHeader>
+   752→                  <TableBody>
+   753→                    <TableRow>
+   754→                      <TableCell className="font-medium">Months to Payoff</TableCell>
+   755→                      <TableCell className="text-center">
+   756→                        {snowballResult.totalMonths}
+   757→                      </TableCell>
+   758→                      <TableCell className="text-center">
+   759→                        {avalancheResult.totalMonths}
+   760→                      </TableCell>
+   761→                    </TableRow>
+   762→                    <TableRow>
+   763→                      <TableCell className="font-medium">Total Interest</TableCell>
+   764→                      <TableCell className="text-center">
+   765→                        {fmtCurrency(snowballResult.totalInterest)}
+   766→                      </TableCell>
+   767→                      <TableCell className="text-center">
+   768→                        {fmtCurrency(avalancheResult.totalInterest)}
+   769→                      </TableCell>
+   770→                    </TableRow>
+   771→                    <TableRow>
+   772→                      <TableCell className="font-medium">Total Paid</TableCell>
+   773→                      <TableCell className="text-center">
+   774→                        {fmtCurrency(snowballResult.totalPaid)}
+   775→                      </TableCell>
+   776→                      <TableCell className="text-center">
+   777→                        {fmtCurrency(avalancheResult.totalPaid)}
+   778→                      </TableCell>
+   779→                    </TableRow>
+   780→                    <TableRow>
+   781→                      <TableCell className="font-medium">Debt Free Date</TableCell>
+   782→                      <TableCell className="text-center text-sm">
+   783→                        {snowballResult.debtFreeDate}
+   784→                      </TableCell>
+   785→                      <TableCell className="text-center text-sm">
+   786→                        {avalancheResult.debtFreeDate}
+   787→                      </TableCell>
+   788→                    </TableRow>
+   789→                  </TableBody>
+   790→                </Table>
+   791→              </div>
+   792→
+   793→              {/* Comparison Summary */}
+   794→              <div className="mt-4 rounded-lg bg-muted/30 p-4 space-y-1.5">
+   795→                {interestDiff > 0.005 ? (
+   796→                  <>
+   797→                    <p className="text-sm font-medium">
+   798→                      <Zap className="inline size-3.5 text-ember mr-1" />
+   799→                      Avalanche saves{" "}
+   800→                      <span className="font-bold text-ember">
+   801→                        {fmtCurrency(interestDiff)}
+   802→                      </span>{" "}
+   803→                      in interest
+   804→                    </p>
+   805→                    {Math.abs(monthDiff) >= 1 && (
+   806→                      <p className="text-xs text-muted-foreground">
+   807→                        and {Math.abs(monthDiff)} month{Math.abs(monthDiff) !== 1 ? "s" : ""}{" "}
+   808→                        {monthDiff > 0 ? "faster" : "slower"} than Snowball.
+   809→                      </p>
+   810→                    )}
+   811→                    <p className="text-xs text-muted-foreground">
+   812→                      Avalanche is mathematically optimal for minimizing total cost.
+   813→                    </p>
+   814→                  </>
+   815→                ) : interestDiff < -0.005 ? (
+   816→                  <>
+   817→                    <p className="text-sm font-medium">
+   818→                      <Target className="inline size-3.5 text-ember mr-1" />
+   819→                      Snowball saves{" "}
+   820→                      <span className="font-bold text-ember">
+   821→                        {fmtCurrency(Math.abs(interestDiff))}
+   822→                      </span>{" "}
+   823→                      in interest
+   824→                    </p>
+   825→                    {Math.abs(monthDiff) >= 1 && (
+   826→                      <p className="text-xs text-muted-foreground">
+   827→                        and {Math.abs(monthDiff)} month{Math.abs(monthDiff) !== 1 ? "s" : ""}{" "}
+   828→                        {monthDiff < 0 ? "faster" : "slower"} than Avalanche.
+   829→                      </p>
+   830→                    )}
+   831→                  </>
+   832→                ) : (
+   833→                  <p className="text-sm font-medium">
+   834→                    Both methods cost the same:{" "}
+   835→                    <span className="text-ember">
+   836→                      {fmtCurrency(snowballResult.totalInterest)}
+   837→                    </span>{" "}
+   838→                    in total interest over {snowballResult.totalMonths} months.
+   839→                  </p>
+   840→                )}
+   841→                {inputs.extraPayment === 0 && (
+   842→                  <p className="text-xs text-muted-foreground mt-1">
+   843→                    Without extra payments, both methods result in the same total
+   844→                    cost: only the payoff order differs.
+   845→                  </p>
+   846→                )}
+   847→              </div>
+   848→            </CardContent>
+   849→          </Card>
+   850→        )}
+   851→
+   852→        {/* ─── Payoff Order ─── */}
+   853→        {hasValidDebts && activeResult.totalMonths > 0 && activeResult.payoffOrder.length > 0 && (
+   854→          <Card className="print-break-inside">
+   855→            <CardHeader className="pb-3">
+   856→              <CardTitle className="text-lg">
+   857→                Payoff Order ({inputs.method === "snowball" ? "Snowball" : "Avalanche"})
+   858→              </CardTitle>
+   859→            </CardHeader>
+   860→            <CardContent>
+   861→              <ol className="space-y-2">
+   862→                {activeResult.payoffOrder.map((name, idx) => {
+   863→                  const debt = inputs.debts.find((d) => d.name === name);
+   864→                  return (
+   865→                    <li key={`${name}-${idx}`} className="flex items-center gap-3">
+   866→                      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-ember/10 text-xs font-bold text-ember">
+   867→                        {idx + 1}
+   868→                      </span>
+   869→                      <div className="flex-1 min-w-0">
+   870→                        <p className="text-sm font-medium truncate">{name}</p>
+   871→                        {debt && (
+   872→                          <p className="text-xs text-muted-foreground">
+   873→                            {fmtCurrency(debt.balance)} @ {fmtPercent(debt.apr)}
+   874→                          </p>
+   875→                        )}
+   876→                      </div>
+   877→                      <div className="text-right shrink-0">
+   878→                        {(() => {
+   879→                          const paidMonth = activeResult.schedule.find((m) =>
+   880→                            m.debts.some((d) => d.name === name && d.balance < 0.005 && d.payment > 0)
+   881→                          );
+   882→                          return paidMonth ? (
+   883→                            <span className="text-xs font-medium text-muted-foreground">
+   884→                              Month {paidMonth.month}
+   885→                            </span>
+   886→                          ) : null;
+   887→                        })()}
+   888→                      </div>
+   889→                    </li>
+   890→                  );
+   891→                })}
+   892→              </ol>
+   893→            </CardContent>
+   894→          </Card>
+   895→        )}
+   896→
+   897→        {/* ─── Full Schedule ─── */}
+   898→        {hasValidDebts && activeResult.schedule.length > 0 && (
+   899→          <Card className="print-break-inside">
+   900→            <CardHeader className="pb-3">
+   901→              <button
+   902→                type="button"
+   903→                onClick={() => setShowSchedule(!showSchedule)}
+   904→                className="no-print flex w-full items-center justify-between text-left"
+   905→                aria-expanded={showSchedule}
+   906→              >
+   907→                <CardTitle className="text-lg">
+   908→                  Month-by-Month Payoff Schedule
+   909→                </CardTitle>
+   910→                {showSchedule ? (
+   911→                  <ChevronUp className="size-5 text-muted-foreground" />
+   912→                ) : (
+   913→                  <ChevronDown className="size-5 text-muted-foreground" />
+   914→                )}
+   915→              </button>
+   916→              {/* Print-only title */}
+   917→              <CardTitle className="hidden print:block text-lg">
+   918→                Month-by-Month Payoff Schedule
+   919→              </CardTitle>
+   920→            </CardHeader>
+   921→            <CardContent className={showSchedule ? "" : "hidden print:block"}>
+   922→              <div className="amortization-scroll max-h-96 overflow-y-auto custom-scrollbar rounded-md border">
+   923→                <Table>
+   924→                  <TableHeader>
+   925→                    <TableRow>
+   926→                      <TableHead className="w-20">Month</TableHead>
+   927→                      <TableHead>Debt</TableHead>
+   928→                      <TableHead className="text-right">Payment</TableHead>
+   929→                      <TableHead className="text-right">Interest</TableHead>
+   930→                      <TableHead className="text-right">Principal</TableHead>
+   931→                      <TableHead className="text-right">Balance</TableHead>
+   932→                    </TableRow>
+   933→                  </TableHeader>
+   934→                  <TableBody>
+   935→                    {activeResult.schedule.map((m) =>
+   936→                      m.debts
+   937→                        .filter((d) => d.payment > 0 || m.month <= 1 || m.month === activeResult.totalMonths)
+   938→                        .map((d) => (
+   939→                          <TableRow key={`${m.month}-${d.id}`}>
+   940→                            {d === m.debts.filter((dd) => dd.payment > 0 || m.month <= 1 || m.month === activeResult.totalMonths)[0] ? (
+   941→                              <TableCell
+   942→                                className="font-medium align-top"
+   943→                                rowSpan={
+   944→                                  m.debts.filter((dd) => dd.payment > 0 || m.month <= 1 || m.month === activeResult.totalMonths).length
+   945→                                }
+   946→                              >
+   947→                                {m.month}
+   948→                              </TableCell>
+   949→                            ) : null}
+   950→                            <TableCell className="text-sm align-top">
+   951→                              {d.name}
+   952→                            </TableCell>
+   953→                            <TableCell className="text-right align-top">
+   954→                              {d.payment > 0 ? fmtCurrency(d.payment) : "-"}
+   955→                            </TableCell>
+   956→                            <TableCell className="text-right align-top text-muted-foreground">
+   957→                              {d.interest > 0 ? fmtCurrency(d.interest) : "-"}
+   958→                            </TableCell>
+   959→                            <TableCell className="text-right align-top">
+   960→                              {d.principal > 0 ? fmtCurrency(d.principal) : "-"}
+   961→                            </TableCell>
+   962→                            <TableCell className="text-right align-top font-medium">
+   963→                              {fmtCurrency(d.balance)}
+   964→                            </TableCell>
+   965→                          </TableRow>
+   966→                        )),
+   967→                    )}
+   968→                  </TableBody>
+   969→                </Table>
+   970→              </div>
+   971→              <div className="mt-3 flex flex-wrap justify-end gap-x-6 gap-y-1 text-sm font-medium">
+   972→                <span>
+   973→                  Total Paid:{" "}
+   974→                  <span className="text-ember">
+   975→                    {fmtCurrency(activeResult.totalPaid)}
+   976→                  </span>
+   977→                </span>
+   978→                <span>
+   979→                  Total Interest:{" "}
+   980→                  <span className="text-destructive">
+   981→                    {fmtCurrency(activeResult.totalInterest)}
+   982→                  </span>
+   983→                </span>
+   984→              </div>
+   985→            </CardContent>
+   986→          </Card>
+   987→        )}
+   988→
+   989→        {/* ─── Print-only footer ─── */}
+   990→        <PrintFooter />
+   991→      </div>
+   992→    </TooltipProvider>
+   993→  );
+   994→}
+   995→
+   996→/* ─── Sub-components ─── */
+   997→
+   998→function ResultCard({
+   999→  label,
+  1000→  value,
+  1001→  subtext,
+  1002→}: {
+  1003→  label: string;
+  1004→  value: string;
+  1005→  subtext: string;
+  1006→}) {
+  1007→  return (
+  1008→    <div className="rounded-md border bg-card p-3">
+  1009→      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+  1010→      <p className="mt-0.5 text-lg font-bold tracking-tight">{value}</p>
+  1011→      <p className="text-[11px] text-muted-foreground">{subtext}</p>
+  1012→    </div>
+  1013→  );
+  1014→}
+  1015→
+  1016→function PrintFooter() {
+  1017→  return (
+  1018→    <div className="hidden print:block print:mt-6 print:pt-3 print:border-t print:border-gray-300 print:text-[8pt] print:text-gray-500 print:flex print:justify-between">
+  1019→      <span>CalcForge - thecalcforge.com</span>
+  1020→      <PrintDateAndUrl />
+  1021→    </div>
+  1022→  );
+  1023→}
+  1024→
+  1025→function PrintDateAndUrl() {
+  1026→  const text = useMemo(() => {
+  1027→    if (typeof window === "undefined") return "";
+  1028→    const d = new Date().toLocaleDateString("en-US", {
+  1029→      year: "numeric",
+  1030→      month: "long",
+  1031→      day: "numeric",
+  1032→    });
+  1033→    return `${window.location.host}${window.location.pathname} - Printed ${d}`;
+  1034→  }, []);
+  1035→  return <span>{text}</span>;
+  1036→}

@@ -16,6 +16,8 @@ import { Separator } from "@/components/ui/separator";
 import AdSlot from "@/components/monetization/AdSlot";
 import { FaqSection } from "@/components/shared/FaqSection";
 
+export const dynamic = "force-static";
+
 /* ─── Helper: compute max price from a given monthly payment ─── */
 
 function maxPriceFromPayment(

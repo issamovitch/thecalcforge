@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import ShareButtons from "@/components/calculators/ShareButtons";
+import { useClientToday } from "@/lib/use-client-today";
 
 /* ─── Types ─── */
 
@@ -82,7 +83,7 @@ function computeMinimum(inputs: MinPayInputs, balance: number): number {
   }
 }
 
-function calculateMinimumPayoff(inputs: MinPayInputs): MinPayResult {
+function calculateMinimumPayoff(inputs: MinPayInputs, today: Date | null): MinPayResult {
   const { balance: startBalance, apr } = inputs;
   if (startBalance <= 0) {
     return { firstMinimum: 0, months: 0, payoffDate: "", totalInterest: 0, totalPaid: 0, schedule: [], warnings: [] };
@@ -128,8 +129,10 @@ function calculateMinimumPayoff(inputs: MinPayInputs): MinPayResult {
     warnings.push("Paying only the minimum will take over 10 years. You could save significantly by paying more each month.");
   }
 
-  const payoffDate = month > 0
-    ? new Date(Date.now() + month * 30.44 * 86400000).toLocaleDateString("en-US", {
+  // today is null during SSR; payoffDate is left empty so no build-time date is
+  // frozen in the prerendered HTML. After hydration the real date is used.
+  const payoffDate = (month > 0 && today)
+    ? new Date(today.getTime() + month * 30.44 * 86400000).toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
         day: "numeric",
@@ -139,7 +142,7 @@ function calculateMinimumPayoff(inputs: MinPayInputs): MinPayResult {
   return { firstMinimum, months: month, payoffDate, totalInterest, totalPaid, schedule, warnings };
 }
 
-function calculateFixedPayoff(balance: number, apr: number, fixedPayment: number): FixedPayoffResult {
+function calculateFixedPayoff(balance: number, apr: number, fixedPayment: number, today: Date | null): FixedPayoffResult {
   if (balance <= 0 || fixedPayment <= 0) {
     return { months: 0, totalInterest: 0, totalPaid: 0, payoffDate: "" };
   }
@@ -164,8 +167,10 @@ function calculateFixedPayoff(balance: number, apr: number, fixedPayment: number
     totalPaid += payment;
   }
 
-  const payoffDate = month > 0
-    ? new Date(Date.now() + month * 30.44 * 86400000).toLocaleDateString("en-US", {
+  // today is null during SSR; payoffDate is left empty so no build-time date is
+  // frozen in the prerendered HTML. After hydration the real date is used.
+  const payoffDate = (month > 0 && today)
+    ? new Date(today.getTime() + month * 30.44 * 86400000).toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
         day: "numeric",
@@ -178,6 +183,7 @@ function calculateFixedPayoff(balance: number, apr: number, fixedPayment: number
 /* ─── Component ─── */
 
 export default function CreditCardMinimumPaymentCalculator() {
+  const today = useClientToday();
   const [inputs, setInputs] = useState<MinPayInputs>(() => {
     if (typeof window === "undefined") return DEFAULT_INPUTS;
     const params = new URLSearchParams(window.location.search);
@@ -198,10 +204,10 @@ export default function CreditCardMinimumPaymentCalculator() {
   const [showSchedule, setShowSchedule] = useState(true);
 
   const { minOnlyResult, fixedResult } = useMemo(() => {
-    const minOnly = calculateMinimumPayoff(inputs);
-    const fixed = calculateFixedPayoff(inputs.balance, inputs.apr, inputs.fixedPayment);
+    const minOnly = calculateMinimumPayoff(inputs, today);
+    const fixed = calculateFixedPayoff(inputs.balance, inputs.apr, inputs.fixedPayment, today);
     return { minOnlyResult: minOnly, fixedResult: fixed };
-  }, [inputs]);
+  }, [inputs, today]);
 
   const isInitialMount = useRef(true);
   useEffect(() => {

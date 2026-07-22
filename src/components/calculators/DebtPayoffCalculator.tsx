@@ -19,6 +19,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import ShareButtons from "@/components/calculators/ShareButtons";
+import { useClientToday } from "@/lib/use-client-today";
 
 /* ─── Types ─── */
 
@@ -83,7 +84,7 @@ const fmtPercent = (v: number) => `${(v / 100).toFixed(2)}%`;
 
 /* ─── Calculation Engine ─── */
 
-function calculatePayoff(inputs: DebtInputs): PayoffResult {
+function calculatePayoff(inputs: DebtInputs, today: Date | null): PayoffResult {
   const { debts, method, extraPayment } = inputs;
 
   const activeDebts = debts.filter((d) => d.balance > 0);
@@ -203,13 +204,14 @@ function calculatePayoff(inputs: DebtInputs): PayoffResult {
     schedule.push(monthData);
   }
 
-  // Calculate debt-free date
-  const now = new Date();
-  const debtFreeDate = new Date(now.getFullYear(), now.getMonth() + month, 1);
-  const dateStr = debtFreeDate.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-  });
+  // today is null during SSR; debtFreeDate is left empty so no build-time date is
+  // frozen in the prerendered HTML. After hydration the real date is used.
+  const dateStr = today
+    ? new Date(today.getFullYear(), today.getMonth() + month, 1).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+      })
+    : "";
 
   return {
     totalMonths: month,
@@ -225,6 +227,7 @@ function calculatePayoff(inputs: DebtInputs): PayoffResult {
 /* ─── Component ─── */
 
 export default function DebtPayoffCalculator() {
+  const today = useClientToday();
   const [inputs, setInputs] = useState<DebtInputs>(() => {
     if (typeof window === "undefined") return DEFAULT_INPUTS;
     const params = new URLSearchParams(window.location.search);
@@ -260,13 +263,13 @@ export default function DebtPayoffCalculator() {
 
   // Calculate results for both methods
   const snowballResult = useMemo(
-    () => calculatePayoff({ ...inputs, method: "snowball" }),
-    [inputs],
+    () => calculatePayoff({ ...inputs, method: "snowball" }, today),
+    [inputs, today],
   );
 
   const avalancheResult = useMemo(
-    () => calculatePayoff({ ...inputs, method: "avalanche" }),
-    [inputs],
+    () => calculatePayoff({ ...inputs, method: "avalanche" }, today),
+    [inputs, today],
   );
 
   // Active result based on selected method

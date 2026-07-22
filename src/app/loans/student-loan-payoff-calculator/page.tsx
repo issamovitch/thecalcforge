@@ -17,6 +17,8 @@ import { Separator } from "@/components/ui/separator";
 import AdSlot from "@/components/monetization/AdSlot";
 import { FaqSection } from "@/components/shared/FaqSection";
 
+export const dynamic = "force-static";
+
 /* ─── Build-time computed examples (single source of truth) ─── */
 
 const BAL = 30000;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import {
   Calculator, Copy, Check, Printer, RotateCcw,
   Info, PlusCircle, Trash2, AlertTriangle, TrendingDown,
@@ -233,6 +233,14 @@ export default function DebtConsolidationCalculator() {
   }, [inputs]);
 
   const comparison = useMemo(() => runComparison(inputs), [inputs]);
+
+  // Client-only date for the print footer (prevents build-time date from being
+  // frozen in the prerendered HTML).
+  const printDate = useSyncExternalStore(
+    () => () => {},
+    () => new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+    () => ""
+  );
 
   /* ─── Debt row handlers ─── */
 
@@ -917,7 +925,7 @@ export default function DebtConsolidationCalculator() {
           <p>
             CalcForge Debt Consolidation Calculator
             {" "}&middot;{" "}
-            {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+            {printDate}
             {" "}&middot;{" "}
             https://thecalcforge.com/loans/debt-consolidation-calculator
           </p>

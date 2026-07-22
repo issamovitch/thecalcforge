@@ -3,6 +3,8 @@ import { siteConfig, calculatorPages } from "@/config/site.config";
 import { HubPage, type HubCalculator, type HubFaqItem } from "@/components/hub/HubPage";
 import { calculateLoan, formatCurrency, formatPercent } from "@/lib/loan-math";
 
+export const dynamic = "force-static";
+
 /* ─── Computed example (module scope, static generation) ─── */
 const EX = calculateLoan({ loanAmount: 5000, apr: 10, termMonths: 36 });
 

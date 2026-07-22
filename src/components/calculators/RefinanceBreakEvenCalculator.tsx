@@ -85,9 +85,10 @@ function r2(n: number): number {
 }
 
 function monthsToText(m: number): string {
-  if (m < 12) return `${m} month${m !== 1 ? "s" : ""}`;
-  const yrs = Math.floor(m / 12);
-  const mos = m % 12;
+  const months = Math.round(m);
+  if (months < 12) return `${months} month${months !== 1 ? "s" : ""}`;
+  const yrs = Math.floor(months / 12);
+  const mos = months % 12;
   if (mos === 0) return `${yrs} year${yrs !== 1 ? "s" : ""}`;
   return `${yrs} yr${yrs !== 1 ? "s" : ""} ${mos} mo`;
 }

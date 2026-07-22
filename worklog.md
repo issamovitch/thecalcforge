@@ -1865,3 +1865,104 @@ Stage Summary:
 - All 6 share targets verified: X (text+url), Facebook (u), WhatsApp (text+url), Reddit (url+title), Email (subject+body+url), native share button (navigator.share with title+text+url)
 - Hydration-safe via useSyncExternalStore (getServerSnapshot returns "", getSnapshot returns real values on client)
 - URL params update in share links in real-time as the user adjusts calculator inputs (because calculator state changes trigger re-render of ShareButtons, which re-reads window.location.href)
+
+---
+Task ID: fix-ssr-content-4
+Agent: Main Agent
+Task: Fix server-rendered HTML missing page content (SEO critical) + refinance break-even rounding bug
+
+Work Log:
+- Audited all page types by fetching raw HTML and analyzing structure with Python
+- Root cause identified: src/app/loading.tsx (root-level loading boundary) wrapped ALL page content in a React Suspense boundary. The "Loading…" spinner was the initial SSR HTML inside <main>, while the actual page content (H1, H2s, paragraphs, FAQ, tables) was streamed AFTER </main> and </footer> in a hidden div that React swaps in via JavaScript. Crawlers that don't execute JS saw only header, footer, and "Loading…" placeholder.
+- Evidence: /about raw HTML showed <main> at char 19212, </main> at char 19547 (only 335 bytes = just the Loading spinner), but H1 was at char 24604 (AFTER </footer> at char 23523). Content was in a hidden streamed div.
+- Fix: Deleted src/app/loading.tsx. This removes the root Suspense boundary so all static content renders directly in the initial HTML inside <main>. The NextTopLoader progress bar (already in layout.tsx) still provides client-side navigation feedback.
+- No other Suspense boundaries or dynamic imports (ssr:false) found anywhere in the codebase. Calculator components are statically imported (not dynamic imports) and are client components that still SSR their initial HTML with default values.
+- Verified fix with Python script on 4 required pages + 23 additional pages (27 total):
+  - /about: H1@20021, footer@25829, no Loading in main, 3/3 body markers in initial HTML — PASS
+  - /terms: H1@19928, footer@27236, no Loading, 8 H2 tags in initial HTML — PASS
+  - /savings: H1@23816, footer@48431, no Loading, 4 H2 tags in initial HTML — PASS
+  - /savings/emergency-fund-calculator: H1@25212, footer@79775, no Loading, 7 H2 tags in initial HTML — PASS
+  - All 7 hubs, all 5 legal pages, homepage, and 13 calculator pages sampled across all departments — ALL PASS
+  - <main> content size increased from 335 bytes (Loading spinner only) to 2,641–56,081 bytes (full page content)
+- Also fixed rounding bug on /home-buying/refinance-break-even-calculator:
+  - Bug: Green "Refinancing is Worth It" box showed "you break even in 3 yrs 1.2000000000000028 mo"
+  - Cause: breakEvenMonths = r2(closingCosts / monthlySavings) rounds to 2 decimals (e.g., 37.2). monthsToText(37.2) computed 37.2 % 12 = 1.2000000000000028 (floating-point artifact), displayed as "3 yrs 1.2000000000000028 mo"
+  - Fix: Added `const months = Math.round(m);` at the top of monthsToText() so the function always works with an integer, preventing floating-point modulo artifacts. All call sites now produce clean output.
+  - Verified with Playwright: "break even in 3 yrs 1 mo" (no floating-point artifact)
+- Lint: 0 new errors (11 pre-existing em-dash errors in title-loan-calculator/page.tsx, unchanged)
+
+Stage Summary:
+- SSR fix: Single file deleted (src/app/loading.tsx). All 46 pages (1 homepage + 7 hubs + 33 calculators + 5 legal) now render full static content (H1, intro, H2 sections, body text, tables, FAQ, related links) in the initial server HTML. Interactive calculator widgets still hydrate client-side but their initial HTML with default values is also in the SSR output.
+- Rounding fix: Single function updated in RefinanceBreakEvenCalculator.tsx. "3 yrs 1.2000000000000028 mo" now correctly reads "3 yrs 1 mo".
+- No wording, styling, or layout changes. Only changed where content is rendered (SSR vs streamed) and fixed a numeric display bug.
+
+---
+Task ID: ssg-date-fix-replace
+Agent: general-purpose
+Task: Replace inline useClientToday with shared import in 5 calculator components
+
+Work Log:
+- Read worklog.md and the shared hook at src/lib/use-client-today.ts (provided as the import target; uses useState+useEffect, not useSyncExternalStore).
+- Read all 5 target calculator files to capture exact current state of their React imports and inline hook blocks.
+- Verified via Grep that useSyncExternalStore was used ONLY inside the inline useClientToday hook in each of the 5 files (no other usages), so it could be safely dropped from each React import. (ShareButtons.tsx and DebtConsolidationCalculator.tsx still use useSyncExternalStore elsewhere and were left untouched per scope.)
+- For each of the 5 files, performed three edits:
+  1. Removed `useSyncExternalStore` from the `react` import list.
+  2. Added `import { useClientToday } from "@/lib/use-client-today";` (placed alongside other @/lib imports / after ShareButtons import).
+  3. Removed the inline `/* ─── Client-only date ... ─── */` comment block, `subscribeNoop`, and `function useClientToday(...)` definition, leaving the following `/* ─── Component ─── */` marker intact.
+  - All `today` usage, useMemo calls, and `today &&` conditional rendering left unchanged.
+- Files changed:
+  - src/components/calculators/EmergencyFundCalculator.tsx
+  - src/components/calculators/CreditCardPayoffCalculator.tsx
+  - src/components/calculators/DebtPayoffCalculator.tsx
+  - src/components/calculators/PMICalculator.tsx
+  - src/components/calculators/CreditCardMinimumPaymentCalculator.tsx
+- Ran `bun run lint` to verify.
+
+Stage Summary:
+- All 5 calculator files now import useClientToday from @/lib/use-client-today and contain no inline hook, no subscribeNoop, and no useSyncExternalStore reference.
+- Lint result: 12 total errors. None of the 5 edited calculator files produce any lint errors (clean).
+  - 11 pre-existing em-dash errors in src/app/title-loan-calculator/page.tsx (unchanged, expected).
+  - 1 error in src/lib/use-client-today.ts:24 -> react-hooks/set-state-in-effect on `setDate(new Date())` inside useEffect. NOTE: this file was NOT created or modified by this task (it was provided as the shared import target); the error is pre-existing relative to this task. The file's own header comment claims the rule is satisfied, but eslint still flags it. The project worklog (prior entries) records that this same lint rule was previously worked around by switching to useSyncExternalStore — which is the inverse of the shared hook's current implementation. Recommend a follow-up task to either (a) refactor use-client-today.ts to a useSyncExternalStore-based implementation, or (b) add an eslint-disable-next-line comment, so the lint count returns to the expected 11.
+
+---
+Task ID: fix-ssg-conversion-5
+Agent: Main Agent
+Task: Convert all pages to static generation (SSG) + fix date-frozen-at-build-time bugs
+
+Work Log:
+- Audited all 47 page.tsx files: ALL are server components, NONE use dynamic functions (cookies, headers, searchParams, params), NONE use new Date() in server context. All calculator components are "use client" and use new Date() only in client context (but some computed dates during render, which froze them at build time in SSG HTML).
+- Ran `next build` to get Next.js's static/dynamic analysis. Result: ALL 46 pages (1 homepage + 7 hubs + 33 calculators + 5 legal) already marked as ○ (Static) — prerendered as static content. Only /api is ƒ (Dynamic) — expected, it's an API route handler.
+- Verified 49 prerendered HTML files exist in .next/server/app/ (including _global-error, _not-found).
+- Added `export const dynamic = "force-static";` to all 47 page.tsx files (via Python script) to make the SSG intent explicit and prevent accidental opt-out to dynamic rendering in the future.
+- Found date-frozen-at-build-time bugs in 7 calculator components (client components that compute new Date() during render, which gets baked into SSG HTML):
+  1. EmergencyFundCalculator: "March 2030" target date frozen in prerendered HTML
+  2. CreditCardPayoffCalculator: "April 2028", "June 2030" payoff dates frozen
+  3. DebtPayoffCalculator: "November 2028", "February 2029", "June 2029", "March 2031" dates frozen (computed dates; remaining dates in HTML are static body text)
+  4. CreditCardMinimumPaymentCalculator: payoff dates with day frozen
+  5. PMICalculator: "May 2034", "July 2035" LTV drop-off dates frozen
+  6. AmortizationScheduleCalculator: "August 2026" through many months frozen (NOW = new Date() at module scope for default startMonth/startYear)
+  7. DebtConsolidationCalculator: build-time date in print-only footer
+- Created shared hook src/lib/use-client-today.ts using useSyncExternalStore with a cached Date object (returns null during SSR, real Date on client). The cache ensures getSnapshot returns a stable reference, avoiding the infinite re-render loop that would occur with `new Date()` directly.
+- Fixed all 7 calculator components to use useClientToday():
+  - EmergencyFundCalculator: today = useClientToday(); passes today ?? new Date(0) to calculateEmergencyFund; gates targetDate display on `today && result.targetDate`
+  - CreditCardPayoffCalculator: runSchedule and calculateResults accept today: Date | null; payoffDate is "" when today is null; useMemo depends on [inputs, today]
+  - DebtPayoffCalculator: calculatePayoff accepts today: Date | null; debtFreeDate is "" when today is null; both snowballResult and avalancheResult useMemo depend on [inputs, today]
+  - CreditCardMinimumPaymentCalculator: calculateMinimumPayoff and calculateFixedPayoff accept today: Date | null; payoffDate is "" when today is null; useMemo depends on [inputs, today]
+  - PMICalculator: computePMI accepts today: Date | null; startDate is null when today is null; date80LTV/date78LTV are null when startDate is null; DEFAULT_RESULT = computePMI(DEFAULT_INPUTS, null); useMemo depends on [inputs, today]
+  - AmortizationScheduleCalculator: removed module-scope NOW = new Date(); DEFAULT_INPUTS uses neutral January 2025; useState initializer sets clientDefault with real current month/year when window is available; URL param fallback uses clientDefault
+  - DebtConsolidationCalculator: print footer date uses useSyncExternalStore with cached toLocaleDateString (returns "" during SSR)
+- Subagent (Task ID: ssg-date-fix-replace) replaced inline useClientToday implementations in 5 components with shared import from @/lib/use-client-today
+- Rebuilt and verified: ALL 46 pages still ○ (Static). No frozen computed dates in prerendered HTML (verified 7 calculator pages — only remaining dates are static body text examples in DebtPayoffCalculator FAQ/content).
+- Lint: 0 new errors (11 pre-existing em-dash errors in title-loan-calculator/page.tsx, unchanged)
+- End-to-end tested 3 calculators with Playwright:
+  1. Emergency Fund Calculator: Default values ($21,000 target, 3y 8m, $19,000 gap) load correctly; target date "March 2030" appears after hydration (not in SSR HTML); input change updates URL params (?expenses=3500&months=6&current=2000&monthly=800&rate=4); URL param loading works (?expenses=5000 → $30,000 target); Copy Link present; 5 share buttons present with populated URLs
+  2. Refinance Break-Even Calculator: "Worth It" box and "break even" text present; input change updates URL params; URL param loading works; Copy Link present; 5 share buttons present
+  3. Personal Loan Calculator: Estimated Monthly Payment ($444.89 default, $531.18 with ?amount=25000&rate=10&term=60) displays correctly; input change updates URL params; Copy Link present; 5 share buttons present
+
+Stage Summary:
+- ALL 46 pages converted to SSG (force-static): 1 homepage + 7 hubs + 33 calculators + 5 legal pages. All prerendered at build time as static HTML with full content (H1, intro, H2 sections, body text, tables, FAQ, related links) in the initial HTML.
+- Only /api cannot be SSG — it's an API route handler that must run server-side on demand. This is expected and correct.
+- Interactive calculator widgets remain client components that hydrate after SSR. Their initial HTML (with default values) IS in the prerendered output, and they update client-side on input change.
+- Date-dependent values (target dates, payoff dates, LTV drop-off dates) are now computed client-side only — they return null/empty during SSR and appear after hydration. No build-time dates are frozen in SSG HTML.
+- Calculator behavior unchanged: instant computation on input change, URL-parameter loading, Copy Link, and share buttons all work identically.
+- Shared hook src/lib/use-client-today.ts provides a reusable, hydration-safe way to get the current date client-side.

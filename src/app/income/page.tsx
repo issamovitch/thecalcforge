@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { siteConfig, calculatorPages } from "@/config/site.config";
 import { HubPage, type HubCalculator, type HubFaqItem } from "@/components/hub/HubPage";
 
+export const dynamic = "force-static";
+
 /* ─── SEO Metadata ─── */
 export const metadata: Metadata = {
   title: "Income Calculators: Overtime Pay, Salary & Wage Tools",

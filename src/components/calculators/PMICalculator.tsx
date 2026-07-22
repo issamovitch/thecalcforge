@@ -16,6 +16,7 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { formatCurrency, calculateLoan } from "@/lib/loan-math";
 import ShareButtons from "@/components/calculators/ShareButtons";
+import { useClientToday } from "@/lib/use-client-today";
 
 /* ─── Types ─── */
 
@@ -112,7 +113,7 @@ interface PMIResult {
   fhaNote: string;
 }
 
-function computePMI(inputs: PMIInputs): PMIResult {
+function computePMI(inputs: PMIInputs, today: Date | null): PMIResult {
   const downPayment =
     inputs.downPaymentMode === "pct"
       ? (inputs.homePrice * inputs.downPaymentPct) / 100
@@ -136,8 +137,9 @@ function computePMI(inputs: PMIInputs): PMIResult {
   // LTV drop-off calculation
   let month80LTV: number | null = null;
   let month78LTV: number | null = null;
-  const now = new Date();
-  const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  // today is null during SSR; startDate is left null so date80LTV/date78LTV are
+  // null and not frozen in the prerendered HTML. After hydration the real date is used.
+  const startDate = today ? new Date(today.getFullYear(), today.getMonth(), 1) : null;
 
   for (const row of schedule) {
     const rowLTV = inputs.homePrice > 0 ? (row.balance / inputs.homePrice) * 100 : 0;
@@ -150,8 +152,8 @@ function computePMI(inputs: PMIInputs): PMIResult {
     }
   }
 
-  const date80LTV = month80LTV !== null ? formatDate(addMonths(startDate, month80LTV - 1)) : null;
-  const date78LTV = month78LTV !== null ? formatDate(addMonths(startDate, month78LTV - 1)) : null;
+  const date80LTV = (month80LTV !== null && startDate) ? formatDate(addMonths(startDate, month80LTV - 1)) : null;
+  const date78LTV = (month78LTV !== null && startDate) ? formatDate(addMonths(startDate, month78LTV - 1)) : null;
 
   // Total PMI paid until 78% LTV
   let totalPMITo78 = 0;
@@ -196,11 +198,12 @@ function computePMI(inputs: PMIInputs): PMIResult {
   };
 }
 
-export const DEFAULT_RESULT = computePMI(DEFAULT_INPUTS);
+export const DEFAULT_RESULT = computePMI(DEFAULT_INPUTS, null);
 
 /* ─── Component ─── */
 
 export default function PMICalculator() {
+  const today = useClientToday();
   const [inputs, setInputs] = useState<PMIInputs>(() => {
     if (typeof window === "undefined") return DEFAULT_INPUTS;
     const params = new URLSearchParams(window.location.search);
@@ -229,7 +232,7 @@ export default function PMICalculator() {
   });
   const [copied, setCopied] = useState(false);
 
-  const result = useMemo(() => computePMI(inputs), [inputs]);
+  const result = useMemo(() => computePMI(inputs, today), [inputs, today]);
 
   // Sync URL (skip initial mount)
   const isInitialMount = useRef(true);
