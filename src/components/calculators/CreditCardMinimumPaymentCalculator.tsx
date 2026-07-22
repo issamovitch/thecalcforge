@@ -51,7 +51,7 @@ interface FixedPayoffResult {
 
 export const DEFAULT_INPUTS: MinPayInputs = {
   balance: 5000,
-  apr: 22.9,
+  apr: 22,
   minFormula: "pct_balance",
   minPercent: 2,
   floorAmount: 25,
@@ -556,7 +556,7 @@ export default function CreditCardMinimumPaymentCalculator() {
                       </p>
                       {minOnlyResult.months > 12 && (
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          \u2248 {(minOnlyResult.months / 12).toFixed(1)} years
+                          {"\u2248"} {(minOnlyResult.months / 12).toFixed(1)} years
                         </p>
                       )}
                     </div>

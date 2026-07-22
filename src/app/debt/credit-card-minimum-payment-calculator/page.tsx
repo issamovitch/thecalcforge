@@ -66,7 +66,7 @@ const faqs = [
   {
     question: "What happens if I only pay the minimum on my credit card?",
     answer:
-      "You avoid late fees and protect your credit score, but you maximize the total interest paid. At typical rates, paying only the minimum can take 15 to 25 years to pay off a balance, and total interest often equals or exceeds the original charges. The balance declines very slowly because most of each payment covers that month's interest charge.",
+      "You avoid late fees and protect your credit score, but you maximize the total interest paid. At typical rates, paying only the minimum can take decades to pay off a balance, and at high APRs with a percentage-of-balance formula it can stretch far longer than a mortgage. Total interest often equals, exceeds, or even dwarfs the original charges. The balance declines very slowly because most of each payment covers that month's interest charge.",
   },
   {
     question: "Can my minimum payment go up?",
@@ -223,16 +223,16 @@ export default function CreditCardMinimumPaymentCalculatorPage() {
                 <strong>Month 1:</strong> Balance $5,000. Minimum = 2% of
                 $5,000 = $100.00. Interest = $5,000 x (22% / 12) = $91.67.
                 Principal = $100.00 - $91.67 = $8.33. New balance: $4,991.67.{"\n\n"}
-                <strong>Month 12:</strong> Balance is approximately $4,770.
-                Minimum = 2% of $4,770 = $95.40. Interest = $4,770 x (22% /
-                12) = $87.45. Principal = $95.40 - $87.45 = $7.95.{"\n\n"}
-                After 5 years (60 months), the balance is still roughly $3,200.
+                <strong>Month 12:</strong> Balance is approximately $4,901.
+                Minimum = 2% of $4,901 = about $98. Interest = $4,901 x (22% /
+                12) = about $90. Principal = about $8.{"\n\n"}
+                After 5 years (60 months), the balance is still roughly $4,524.
                 That means in five full years of making every payment on time,
-                you have retired only $1,800 of the original $5,000
+                you have retired only about $476 of the original $5,000
                 balance.{"\n\n"}
-                <strong>Total payoff:</strong> approximately 267 months (22+
-                years) and total interest of roughly $6,100. You would end up
-                paying over $11,000 for a $5,000 charge.
+                <strong>Total payoff:</strong> approximately 968 months (over
+                80 years) and total interest of roughly $43,400. You would end
+                up paying over $48,000 for a $5,000 charge.
               </p>
             </CardContent>
           </Card>
@@ -268,17 +268,20 @@ export default function CreditCardMinimumPaymentCalculatorPage() {
                 2% Minimum Comparison at 22% APR
               </p>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                <strong>$5,000 balance:</strong> Payoff takes approximately 267
-                months (22 years). Total interest paid is roughly $6,100, for a
-                total cost of about $11,100.{"\n\n"}
-                <strong>$10,000 balance:</strong> Payoff takes approximately 326
-                months (27 years). Total interest paid is roughly $13,200, for
-                a total cost of about $23,200.{"\n\n"}
-                The larger balance takes 59 additional months to pay off and
-                accumulates more than double the interest. The reason is that at
-                a 2% minimum, the ratio of interest to principal stays high
-                throughout the schedule, and a larger starting balance means
-                more months spent in that high-interest phase.
+                <strong>$5,000 balance:</strong> Payoff takes approximately 968
+                months (over 80 years). Total interest paid is roughly $43,400,
+                for a total cost of about $48,400.{"\n\n"}
+                <strong>$10,000 balance:</strong> At the same 2% minimum and
+                22% APR, the balance never drops far enough to reach the $25
+                floor within 100 years. In practical terms, making only the 2%
+                minimum on a $10,000 balance at this rate means the debt is
+                never repaid within a normal lifetime.{"\n\n"}
+                The larger balance is dramatically worse, not merely twice as
+                bad. The reason is that at a 2% minimum, the ratio of interest
+                to principal stays high throughout the schedule, and a larger
+                starting balance means the balance decays from a higher point
+                and may never reach the $25 floor that would otherwise begin to
+                accelerate payoff.
               </p>
             </CardContent>
           </Card>
@@ -288,8 +291,8 @@ export default function CreditCardMinimumPaymentCalculatorPage() {
             minimum on a high-APR card is essentially an interest-only payment
             plan with a tiny principal reduction attached. If your card uses the
             2% formula, even a modest increase to a fixed payment of $150 or
-            $200 per month can eliminate years of payments and thousands of
-            dollars in interest.
+            $200 per month can eliminate decades of payments and tens of
+            thousands of dollars in interest.
           </p>
         </section>
 
@@ -315,15 +318,18 @@ export default function CreditCardMinimumPaymentCalculatorPage() {
               <p className="text-sm text-muted-foreground leading-relaxed">
                 <strong>Month 1:</strong> 92% interest ($91.67), 8% principal
                 ($8.33).{"\n\n"}
-                <strong>Year 1 (average):</strong> Approximately 91% interest,
-                9% principal. The balance has barely moved.{"\n\n"}
-                <strong>Year 5:</strong> Approximately 80% interest, 20%
-                principal. A slight improvement, but the balance is still over
-                60% of the original amount.{"\n\n"}
-                <strong>Year 15:</strong> This is roughly the point where the
-                split flips, with more of each payment going to principal than
-                to interest. By this time you have already paid the vast
-                majority of the total interest.{"\n\n"}
+                <strong>Year 1 (average):</strong> Approximately 92% interest,
+                8% principal. The balance has barely moved.{"\n\n"}
+                <strong>Year 5:</strong> Still approximately 92% interest, 8%
+                principal, and the balance remains over 90% of the original
+                amount.{"\n\n"}
+                <strong>Year 15:</strong> The split is still approximately 92%
+                interest, 8% principal. Because both the minimum and the
+                interest charge scale with the balance, the ratio stays
+                essentially fixed for as long as the percentage formula applies.
+                It only begins to shift once the balance drops far enough for
+                the $25 floor to take over, which at 22% APR does not happen
+                until around year 69.{"\n\n"}
                 The compounding effect is what makes this so expensive. Each
                 month, you pay interest on the previous month&apos;s interest.
                 Because the principal declines so slowly, the interest base
@@ -363,33 +369,34 @@ export default function CreditCardMinimumPaymentCalculatorPage() {
               <p className="text-sm text-muted-foreground leading-relaxed">
                 <strong>Minimum payment schedule:</strong>{"\n"}
                 Month 1: $100.00 minimum.{"\n"}
-                Month 50: minimum drops to roughly $50 (balance approximately
-                $2,500).{"\n"}
-                Month 100: minimum drops to roughly $30 (balance approximately
-                $1,400, approaching the floor).{"\n"}
-                After month 100, the minimum hits the $25 floor and stays
-                there, causing payoff to accelerate slightly.{"\n"}
-                Total: approximately 267 months (22 years), roughly $6,100 in
-                interest.{"\n\n"}
+                Month 50: minimum is still about $92 (balance approximately
+                $4,600).{"\n"}
+                Month 100: minimum is still about $85 (balance approximately
+                $4,232).{"\n"}
+                The minimum stays well above the $25 floor for decades. The
+                floor only takes over around month 833 (year 69), when the
+                balance finally drops below $1,250.{"\n"}
+                Total: approximately 968 months (over 80 years), roughly
+                $43,400 in interest.{"\n\n"}
                 <strong>Fixed $200/month:</strong>{"\n"}
-                Payoff in approximately 33 months (under 3 years).{"\n"}
-                Total interest: roughly $1,580.{"\n\n"}
-                <strong>Savings:</strong> 234 fewer months (19.5 years) and
-                $4,520 less in interest. The fixed payment eliminates the
-                balance nearly 7 times faster and costs about one-quarter of
-                the total interest.
+                Payoff in approximately 34 months (under 3 years).{"\n"}
+                Total interest: roughly $1,750.{"\n\n"}
+                <strong>Savings:</strong> about 934 fewer months (over 78
+                years) and roughly $41,700 less in interest. The fixed payment
+                eliminates the balance nearly 28 times faster and costs less
+                than 5% of the total interest.
               </p>
             </CardContent>
           </Card>
           <p className="text-muted-foreground leading-relaxed">
             The contrast is stark. A fixed $200 per month, which is only double
-            the initial minimum, turns a 22-year ordeal into a sub-3-year plan
-            and saves $4,520. The reason is straightforward: a fixed payment
-            keeps a consistent and meaningful amount attacking the principal
-            each month, so the interest base shrinks rapidly instead of barely
-            moving. Use the calculator above to model your own $5,000 scenario
-            and experiment with different fixed payment amounts to find the
-            right balance between monthly cost and total savings.
+            the initial minimum, turns an 80-year ordeal into a sub-3-year plan
+            and saves over $41,000. The reason is straightforward: a fixed
+            payment keeps a consistent and meaningful amount attacking the
+            principal each month, so the interest base shrinks rapidly instead
+            of barely moving. Use the calculator above to model your own $5,000
+            scenario and experiment with different fixed payment amounts to
+            find the right balance between monthly cost and total savings.
           </p>
         </section>
 

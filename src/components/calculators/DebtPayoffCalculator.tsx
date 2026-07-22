@@ -80,7 +80,7 @@ export const DEFAULT_INPUTS: DebtInputs = {
 const fmtCurrency = (v: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
 
-const fmtPercent = (v: number) => `${(v / 100).toFixed(2)}%`;
+const fmtPercent = (v: number) => `${v.toFixed(2)}%`;
 
 /* ─── Calculation Engine ─── */
 
